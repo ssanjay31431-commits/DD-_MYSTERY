@@ -6,7 +6,6 @@ import { CardSkeleton } from '../components/common/SkeletonLoader';
 import { useWishlist } from '../context/WishlistContext';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
-
 import { DEFAULT_PRODUCTS } from '../utils/defaultProducts';
 
 export const ProductDetails = () => {
@@ -20,20 +19,27 @@ export const ProductDetails = () => {
   const { addToCart } = useCart();
   const { addToast } = useToast();
 
+  const findFallbackProduct = (paramId) => {
+    if (!paramId) return DEFAULT_PRODUCTS[0];
+    const found = DEFAULT_PRODUCTS.find(
+      (p) => p._id === paramId || String(p.price) === String(paramId) || p.name.toLowerCase().includes(String(paramId).toLowerCase())
+    );
+    return found || DEFAULT_PRODUCTS[0];
+  };
+
   useEffect(() => {
     const fetchProduct = async () => {
       try {
         const { data } = await API.get(`/products/${id}`);
-        if (data) {
+        const isValid = data && data._id && data.name && data.price !== undefined && !data.message;
+        if (isValid) {
           setProduct(data);
         } else {
-          const fallback = DEFAULT_PRODUCTS.find(p => p._id === id || p.price === Number(id)) || DEFAULT_PRODUCTS[0];
-          setProduct(fallback);
+          setProduct(findFallbackProduct(id));
         }
       } catch (err) {
         console.error('Product details fetch error, using fallback:', err);
-        const fallback = DEFAULT_PRODUCTS.find(p => p._id === id || p.price === Number(id)) || DEFAULT_PRODUCTS[0];
-        setProduct(fallback);
+        setProduct(findFallbackProduct(id));
       } finally {
         setLoading(false);
       }
@@ -42,25 +48,27 @@ export const ProductDetails = () => {
   }, [id]);
 
   const handleAddToCart = async () => {
+    const targetProduct = product || findFallbackProduct(id);
     const customizationDefault = {
       recipientName: 'Birthday Star',
       birthdayDate: '2026-08-25',
-      favoriteColor: product?.price === 499 ? 'Purple' : 'Pink',
-      theme: product?.price === 499 ? 'Nostalgia' : 'Choco Party',
-      personalMessage: `Happy Birthday! Enjoy your ${product?.name} surprise!`
+      favoriteColor: targetProduct?.price === 499 ? 'Purple' : 'Pink',
+      theme: targetProduct?.price === 499 ? 'Nostalgia' : 'Choco Party',
+      personalMessage: `Happy Birthday! Enjoy your ${targetProduct?.name} surprise!`
     };
-    await addToCart(product, customizationDefault, quantity);
+    await addToCart(targetProduct, customizationDefault, quantity);
   };
 
   const handleBuyNow = async () => {
+    const targetProduct = product || findFallbackProduct(id);
     const customizationDefault = {
       recipientName: 'Birthday Star',
       birthdayDate: '2026-08-25',
-      favoriteColor: product?.price === 499 ? 'Purple' : 'Pink',
-      theme: product?.price === 499 ? 'Nostalgia' : 'Choco Party',
-      personalMessage: `Happy Birthday! Enjoy your ${product?.name} surprise!`
+      favoriteColor: targetProduct?.price === 499 ? 'Purple' : 'Pink',
+      theme: targetProduct?.price === 499 ? 'Nostalgia' : 'Choco Party',
+      personalMessage: `Happy Birthday! Enjoy your ${targetProduct?.name} surprise!`
     };
-    await addToCart(product, customizationDefault, quantity);
+    await addToCart(targetProduct, customizationDefault, quantity);
     navigate('/checkout');
   };
 
@@ -68,16 +76,10 @@ export const ProductDetails = () => {
     return <div className="max-w-5xl mx-auto p-8"><CardSkeleton /></div>;
   }
 
-  if (!product) {
-    return (
-      <div className="text-center py-20">
-        <h2 className="text-xl text-white font-bold">Product Box Not Found</h2>
-        <Link to="/shop" className="text-pink-400 text-sm font-semibold hover:underline mt-2 inline-block">Back to Shop</Link>
-      </div>
-    );
-  }
-
-  const isWishlisted = isInWishlist(product._id);
+  const currentProduct = product && product.name ? product : findFallbackProduct(id);
+  const isWishlisted = isInWishlist(currentProduct._id);
+  const contents = currentProduct.contents || [];
+  const price = currentProduct.price || 499;
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8">
@@ -90,16 +92,16 @@ export const ProductDetails = () => {
         {/* Left Column: Product Image & Highlights */}
         <div className="space-y-6">
           <div className="relative rounded-3xl overflow-hidden bg-slate-900 aspect-square flex items-center justify-center border-2 border-purple-500/30 shadow-2xl">
-            <img src={product.image} alt={product.name} className="w-full h-full object-cover rounded-3xl" />
+            <img src={currentProduct.image} alt={currentProduct.name} className="w-full h-full object-cover rounded-3xl" />
             
-            {product.tag && (
+            {currentProduct.tag && (
               <span className="absolute top-4 left-4 px-4 py-1.5 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 text-white font-black text-xs uppercase tracking-widest shadow-lg shadow-pink-500/30">
-                {product.tag}
+                {currentProduct.tag}
               </span>
             )}
 
             <button
-              onClick={() => toggleWishlist(product._id)}
+              onClick={() => toggleWishlist(currentProduct._id)}
               className="absolute top-4 right-4 p-3 rounded-full bg-slate-900/90 backdrop-blur-md border border-slate-700 text-slate-300 hover:text-pink-400"
               title="Save to Wishlist"
             >
@@ -108,13 +110,13 @@ export const ProductDetails = () => {
           </div>
 
           {/* Highlights Checklist */}
-          {product.highlights && product.highlights.length > 0 && (
+          {currentProduct.highlights && currentProduct.highlights.length > 0 && (
             <div className="p-5 rounded-2xl bg-slate-950/80 border border-purple-500/20 space-y-2">
               <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
                 <Award className="w-4 h-4" /> Quality & Guarantee Highlights
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-                {product.highlights.map((hl, idx) => (
+                {currentProduct.highlights.map((hl, idx) => (
                   <div key={idx} className="flex items-center gap-2 text-xs text-slate-200">
                     <Check className="w-4 h-4 text-emerald-400 shrink-0" />
                     <span className="font-semibold">{hl}</span>
@@ -134,19 +136,19 @@ export const ProductDetails = () => {
                   <Star key={i} className="w-4 h-4 fill-amber-400" />
                 ))}
               </div>
-              <span>{product.rating || 4.9} / 5.0</span>
-              <span className="text-slate-400 font-normal">({product.numReviews || 128} reviews)</span>
+              <span>{currentProduct.rating || 4.9} / 5.0</span>
+              <span className="text-slate-400 font-normal">({currentProduct.numReviews || 128} reviews)</span>
             </div>
 
-            <h1 className="text-3xl font-black text-white font-display leading-tight">{product.name}</h1>
-            {product.tagline && (
-              <p className="text-sm font-bold text-pink-400 italic mt-1">"{product.tagline}"</p>
+            <h1 className="text-3xl font-black text-white font-display leading-tight">{currentProduct.name}</h1>
+            {currentProduct.tagline && (
+              <p className="text-sm font-bold text-pink-400 italic mt-1">"{currentProduct.tagline}"</p>
             )}
 
             <div className="flex items-center gap-4 mt-3 pb-4 border-b border-slate-800">
-              <span className="text-4xl font-black text-white font-display">₹{product.price}</span>
-              {product.originalPrice && (
-                <span className="text-lg text-slate-400 line-through">₹{product.originalPrice}</span>
+              <span className="text-4xl font-black text-white font-display">₹{price}</span>
+              {currentProduct.originalPrice && (
+                <span className="text-lg text-slate-400 line-through">₹{currentProduct.originalPrice}</span>
               )}
               <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-md border border-emerald-500/20">
                 Advance + COD Available
@@ -154,11 +156,11 @@ export const ProductDetails = () => {
             </div>
 
             <p className="text-slate-300 text-xs sm:text-sm leading-relaxed mt-4">
-              {product.description}
+              {currentProduct.description}
             </p>
 
             {/* Special MrBeast Surprise callout banner for Choco Box */}
-            {product.price === 199 && (
+            {price === 199 && (
               <div className="mt-4 p-4 rounded-2xl bg-gradient-to-r from-amber-500/20 via-purple-600/20 to-pink-500/20 border border-amber-500/40 flex items-center gap-3">
                 <Sparkles className="w-8 h-8 text-amber-400 animate-bounce shrink-0" />
                 <div>
@@ -169,19 +171,19 @@ export const ProductDetails = () => {
               </div>
             )}
 
-            {/* Complete "What's Inside?" Section (Renders photos + titles) */}
+            {/* Complete "What's Inside?" Section */}
             <div className="mt-6 p-5 rounded-2xl bg-slate-950/90 border-2 border-pink-500/30 space-y-3">
               <div className="flex justify-between items-center pb-2 border-b border-slate-800">
                 <h3 className="text-sm font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-amber-300 font-display uppercase flex items-center gap-2">
                   <Gift className="w-4 h-4 text-pink-400" /> Complete Box Contents ("What's Inside?")
                 </h3>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-300">
-                  {product.contents?.length || 0} Items Included
+                  {contents.length} Items Included
                 </span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-200 max-h-60 overflow-y-auto pr-1">
-                {product.contents?.map((item, idx) => {
+                {contents.map((item, idx) => {
                   const isObj = typeof item === 'object' && item !== null;
                   const name = isObj ? item.name : item;
                   const img = isObj ? item.image : '';
@@ -237,7 +239,7 @@ export const ProductDetails = () => {
               </div>
 
               <Link
-                to={`/customize/${product._id}`}
+                to={`/customize/${currentProduct._id}`}
                 className="text-xs font-bold text-purple-400 hover:text-pink-400 flex items-center gap-1"
               >
                 <Sparkles className="w-3.5 h-3.5" /> Customize Details →
@@ -256,7 +258,7 @@ export const ProductDetails = () => {
                 onClick={handleBuyNow}
                 className="py-4 px-6 rounded-2xl bg-gradient-to-r from-pink-500 via-purple-600 to-amber-500 text-white font-black text-xs uppercase tracking-wider shadow-xl shadow-pink-500/30 hover:scale-105 transition-all flex items-center justify-center gap-2"
               >
-                <Zap className="w-4 h-4 fill-white" /> Buy Now (₹{product.price * quantity})
+                <Zap className="w-4 h-4 fill-white" /> Buy Now (₹{price * quantity})
               </button>
             </div>
           </div>
