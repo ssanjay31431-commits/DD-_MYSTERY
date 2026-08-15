@@ -1,0 +1,139 @@
+import React, { useEffect, useState } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { Package, MapPin, Calendar, CreditCard, Sparkles, ArrowLeft, ShieldAlert } from 'lucide-react';
+import API from '../services/api';
+import { OrderTimeline } from '../components/order/OrderTimeline';
+import { CardSkeleton } from '../components/common/SkeletonLoader';
+import { useToast } from '../context/ToastContext';
+
+export const OrderDetails = () => {
+  const { id } = useParams();
+  const [order, setOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const { addToast } = useToast();
+
+  useEffect(() => {
+    const fetchOrder = async () => {
+      try {
+        const { data } = await API.get(`/orders/${id}`);
+        setOrder(data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchOrder();
+  }, [id]);
+
+  const handleCancelOrder = async () => {
+    if (!window.confirm('Are you sure you want to cancel this order?')) return;
+    try {
+      const { data } = await API.put(`/orders/${order._id}/cancel`, { reason: 'Cancelled by customer from order details' });
+      setOrder(data);
+      addToast('Order cancelled successfully', 'info');
+    } catch (err) {
+      addToast(err.response?.data?.message || 'Failed to cancel order', 'error');
+    }
+  };
+
+  if (loading) return <div className="max-w-5xl mx-auto p-8"><CardSkeleton /></div>;
+  if (!order) return <div className="text-center py-20 text-white font-bold">Order Not Found</div>;
+
+  return (
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8">
+      <Link to="/my-orders" className="inline-flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-white">
+        <ArrowLeft className="w-4 h-4" /> Back to My Orders
+      </Link>
+
+      <div className="glass-panel p-8 rounded-3xl border border-purple-500/30 space-y-8">
+        
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-6 border-b border-slate-800">
+          <div>
+            <span className="text-xs font-bold text-slate-400 uppercase">Order ID</span>
+            <h1 className="text-2xl font-black text-white font-display">{order.orderId}</h1>
+            <span className="text-xs text-slate-400">Placed on: {new Date(order.createdAt).toLocaleString()}</span>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <span className="px-3 py-1 rounded-full text-xs font-extrabold uppercase bg-purple-500/20 text-purple-300 border border-purple-500/30">
+              {order.orderStatus}
+            </span>
+            {['Pending', 'Confirmed', 'Preparing'].includes(order.orderStatus) && (
+              <button
+                onClick={handleCancelOrder}
+                className="px-3 py-1 rounded-xl bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 border border-rose-500/30 text-xs font-bold"
+              >
+                Cancel Order
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Timeline */}
+        <OrderTimeline currentStatus={order.orderStatus} trackingHistory={order.trackingHistory} />
+
+        {/* Items & Customizations List */}
+        <div>
+          <h3 className="text-sm font-extrabold uppercase tracking-wider text-pink-400 mb-4 flex items-center gap-2">
+            <Package className="w-4 h-4" /> Ordered Birthday Mystery Boxes
+          </h3>
+
+          <div className="space-y-4">
+            {order.items?.map((item, idx) => (
+              <div key={idx} className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 flex flex-col sm:flex-row justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <img src={item.productSnapshot?.image} alt="" className="w-16 h-16 rounded-xl object-cover" />
+                  <div>
+                    <h4 className="font-bold text-white text-sm">{item.productSnapshot?.name}</h4>
+                    <p className="text-xs text-pink-300 font-semibold">
+                      For: {item.customizationSnapshot?.recipientName} • Theme: {item.customizationSnapshot?.theme}
+                    </p>
+                    <p className="text-[11px] text-slate-400">
+                      Color: {item.customizationSnapshot?.favoriteColor} | Qty: {item.quantity}
+                    </p>
+                    {item.customizationSnapshot?.personalMessage && (
+                      <p className="text-[11px] text-slate-300 italic mt-1">"{item.customizationSnapshot.personalMessage}"</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <span className="text-base font-black text-white font-display">₹{item.unitPrice * item.quantity}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Delivery & Payment Snapshots */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-slate-800">
+          <div>
+            <h4 className="font-bold text-white text-sm flex items-center gap-2 mb-2">
+              <MapPin className="w-4 h-4 text-pink-400" /> Delivery Address
+            </h4>
+            <p className="text-xs text-slate-300">
+              {order.deliveryAddressSnapshot?.fullName}<br />
+              {order.deliveryAddressSnapshot?.houseNo}, {order.deliveryAddressSnapshot?.street}, {order.deliveryAddressSnapshot?.area}<br />
+              {order.deliveryAddressSnapshot?.city}, {order.deliveryAddressSnapshot?.state} - {order.deliveryAddressSnapshot?.pincode}<br />
+              Mobile: {order.deliveryAddressSnapshot?.mobileNumber}
+            </p>
+          </div>
+
+          <div>
+            <h4 className="font-bold text-white text-sm flex items-center gap-2 mb-2">
+              <CreditCard className="w-4 h-4 text-purple-400" /> Payment Details
+            </h4>
+            <div className="text-xs text-slate-300 space-y-1">
+              <p>Status: <span className="font-bold text-emerald-400">{order.paymentInfo?.status || 'Paid'}</span></p>
+              <p>Method: {order.paymentInfo?.method || 'Online Razorpay'}</p>
+              <p>Total Paid: <span className="font-bold text-white">₹{order.totalAmount}</span></p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+};

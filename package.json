@@ -1,0 +1,15 @@
+{
+  "name": "dd-mystery-box-monorepo",
+  "version": "2.0.0",
+  "description": "DD MYSTERY BOX - Dual Frontend E-Commerce Platform",
+  "scripts": {
+    "server": "cd server && npm start",
+    "customer": "cd customer && npm run dev",
+    "admin": "cd admin && npm run dev",
+    "seed": "cd server && npm run seed",
+    "dev": "concurrently \"npm run server\" \"npm run customer\" \"npm run admin\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
