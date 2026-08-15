@@ -20,9 +20,9 @@ const registerOrderInStore = (orderData) => {
     orderId: orderData.orderId || `DD-2026-${Math.floor(1000 + Math.random() * 9000)}`,
     user: {
       _id: orderData.user?._id || `usr_${Date.now()}`,
-      name: orderData.user?.name || orderData.deliveryAddressSnapshot?.fullName || 'Customer',
-      email: orderData.user?.email || orderData.deliveryAddressSnapshot?.email || 'customer@example.com',
-      phone: orderData.user?.phone || orderData.deliveryAddressSnapshot?.mobileNumber || '9876543210'
+      name: orderData.user?.name || orderData.deliveryAddressSnapshot?.fullName || orderData.deliveryAddress?.fullName || 'Customer',
+      email: orderData.user?.email || orderData.deliveryAddressSnapshot?.email || orderData.deliveryAddress?.email || 'customer@example.com',
+      phone: orderData.user?.phone || orderData.deliveryAddressSnapshot?.mobileNumber || orderData.deliveryAddress?.mobileNumber || '9876543210'
     },
     deliveryAddressSnapshot: orderData.deliveryAddressSnapshot || orderData.deliveryAddress || {},
     items: orderData.items || [],
@@ -45,7 +45,7 @@ const registerOrderInStore = (orderData) => {
 
 // API Endpoints
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'Active', brand: 'DD MYSTERY BOX', serverless: true });
+  res.json({ status: 'Active', brand: 'DD MYSTERY BOX', serverless: true, count: inMemoryOrders.length });
 });
 
 app.post('/api/orders', (req, res) => {

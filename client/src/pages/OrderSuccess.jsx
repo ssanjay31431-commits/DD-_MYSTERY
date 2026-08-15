@@ -16,24 +16,41 @@ export const OrderSuccess = () => {
       origin: { y: 0.5 }
     });
 
-    const fetchOrder = async () => {
-      try {
-        const { data } = await API.get(`/orders/${orderId}`);
-        if (data && data._id && data.totalAmount !== undefined && !data.message) {
-          setOrder(data);
-        } else {
-          const localOrders = JSON.parse(localStorage.getItem('dd_orders') || '[]');
-          const found = localOrders.find((o) => o._id === orderId || o.orderId === orderId);
-          setOrder(found || localOrders[0] || null);
+    const syncAndFetchOrder = async () => {
+      const localOrders = JSON.parse(localStorage.getItem('dd_orders') || '[]');
+      const found = localOrders.find((o) => o._id === orderId || o.orderId === orderId) || localOrders[0];
+
+      if (found) {
+        const confirmedOrder = {
+          ...found,
+          orderStatus: 'Confirmed',
+          paymentStatus: 'Confirmed'
+        };
+        setOrder(confirmedOrder);
+
+        // Update local storage
+        const updatedOrders = [confirmedOrder, ...localOrders.filter(o => o._id !== confirmedOrder._id && o.orderId !== confirmedOrder.orderId)];
+        localStorage.setItem('dd_orders', JSON.stringify(updatedOrders));
+
+        // Sync order to Serverless API so Admin Dashboard displays it
+        try {
+          await API.post('/orders', confirmedOrder);
+        } catch (e) {
+          console.warn('Serverless order sync notice:', e.message);
         }
-      } catch (err) {
-        console.warn('Fetch order error, checking local orders:', err.message);
-        const localOrders = JSON.parse(localStorage.getItem('dd_orders') || '[]');
-        const found = localOrders.find((o) => o._id === orderId || o.orderId === orderId);
-        setOrder(found || localOrders[0] || null);
+      } else {
+        try {
+          const { data } = await API.get(`/orders/${orderId}`);
+          if (data && data._id && !data.message) {
+            setOrder(data);
+          }
+        } catch (err) {
+          console.warn('Fetch order notice:', err.message);
+        }
       }
     };
-    fetchOrder();
+
+    syncAndFetchOrder();
   }, [orderId]);
 
   const activeOrder = order || {};
@@ -88,10 +105,10 @@ export const OrderSuccess = () => {
               <MapPin className="w-4 h-4 text-pink-400" /> Delivery Address
             </h4>
             <p className="text-xs text-slate-300">
-              {activeOrder.deliveryAddressSnapshot?.fullName || 'Customer'}<br />
+              {activeOrder.deliveryAddressSnapshot?.fullName || activeOrder.user?.name || 'Customer'}<br />
               {activeOrder.deliveryAddressSnapshot?.houseNo}, {activeOrder.deliveryAddressSnapshot?.street}, {activeOrder.deliveryAddressSnapshot?.area}<br />
               {activeOrder.deliveryAddressSnapshot?.city}, {activeOrder.deliveryAddressSnapshot?.state} - {activeOrder.deliveryAddressSnapshot?.pincode}<br />
-              Phone: {activeOrder.deliveryAddressSnapshot?.mobileNumber}
+              Phone: {activeOrder.deliveryAddressSnapshot?.mobileNumber || activeOrder.user?.phone}
             </p>
           </div>
 
