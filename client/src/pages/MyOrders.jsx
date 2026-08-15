@@ -13,9 +13,10 @@ export const MyOrders = () => {
     const fetchOrders = async () => {
       try {
         const { data } = await API.get('/orders');
-        setOrders(data);
+        setOrders(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error(err);
+        setOrders([]);
       } finally {
         setLoading(false);
       }
@@ -27,7 +28,9 @@ export const MyOrders = () => {
     return <div className="max-w-5xl mx-auto p-8"><CardSkeleton /><CardSkeleton /></div>;
   }
 
-  if (orders.length === 0) {
+  const orderList = Array.isArray(orders) ? orders : [];
+
+  if (orderList.length === 0) {
     return (
       <div className="max-w-5xl mx-auto px-4 py-16">
         <EmptyState
@@ -54,7 +57,7 @@ export const MyOrders = () => {
       </div>
 
       <div className="space-y-4">
-        {orders.map((order) => (
+        {orderList.map((order) => (
           <div key={order._id} className="glass-panel p-6 rounded-3xl border border-purple-500/20 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
             
             <div className="space-y-2">
@@ -75,7 +78,7 @@ export const MyOrders = () => {
 
               <div className="text-xs text-slate-300 space-y-0.5">
                 <p className="font-bold text-white">
-                  Items: {order.items?.map((i) => i.productSnapshot?.name).join(', ')}
+                  Items: {Array.isArray(order.items) ? order.items.map((i) => i.productSnapshot?.name).join(', ') : 'Mystery Box'}
                 </p>
                 <p className="text-slate-400">
                   Placed on: {new Date(order.createdAt).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}

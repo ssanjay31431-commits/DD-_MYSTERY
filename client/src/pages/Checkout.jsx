@@ -48,7 +48,8 @@ export const Checkout = () => {
           API.get('/settings').catch(() => ({ data: { codAdvanceType: 'fixed', codAdvanceValue: 100 } }))
         ]);
 
-        const fetchedAddresses = addrRes.data || [];
+        const rawAddresses = addrRes.data;
+        const fetchedAddresses = Array.isArray(rawAddresses) ? rawAddresses : [];
         setAddresses(fetchedAddresses);
         if (fetchedAddresses.length > 0) {
           const defaultAddr = fetchedAddresses.find((a) => a.isDefault) || fetchedAddresses[0];
@@ -77,7 +78,8 @@ export const Checkout = () => {
           }
         }
 
-        setSettings(setRes.data || { codAdvanceType: 'fixed', codAdvanceValue: 100 });
+        const rawSettings = setRes.data;
+        setSettings(rawSettings && typeof rawSettings === 'object' && !rawSettings.message ? rawSettings : { codAdvanceType: 'fixed', codAdvanceValue: 100 });
       } catch (err) {
         console.error(err);
       } finally {
@@ -119,7 +121,7 @@ export const Checkout = () => {
         addressType: addressType || 'Home',
         latitude: location.latitude,
         longitude: location.longitude,
-        isDefault: addresses.length === 0
+        isDefault: (Array.isArray(addresses) ? addresses : []).length === 0
       };
 
       if (autoAddress.fullName) setFullName(autoAddress.fullName);
@@ -139,7 +141,8 @@ export const Checkout = () => {
       if (user && token && autoAddress.fullName && autoAddress.mobileNumber && autoAddress.houseNo && autoAddress.street && autoAddress.pincode) {
         try {
           const { data } = await API.post('/addresses', autoAddress);
-          setAddresses([data, ...addresses.filter(a => a._id !== data._id)]);
+          const currentList = Array.isArray(addresses) ? addresses : [];
+          setAddresses([data, ...currentList.filter(a => a._id !== data._id)]);
           setSelectedAddress(data);
           setShowAddForm(false);
           addToast('Address saved to your account!');
@@ -214,6 +217,8 @@ export const Checkout = () => {
       return;
     }
 
+    const currentAddresses = Array.isArray(addresses) ? addresses : [];
+
     const addrData = {
       fullName: fullName.trim(),
       mobileNumber: cleanPhone,
@@ -228,7 +233,7 @@ export const Checkout = () => {
       addressType: addressType || 'Home',
       latitude: liveLocation?.latitude,
       longitude: liveLocation?.longitude,
-      isDefault: addresses.length === 0
+      isDefault: currentAddresses.length === 0
     };
 
     let savedOnBackend = false;
@@ -237,7 +242,7 @@ export const Checkout = () => {
     if (user && token) {
       try {
         const { data } = await API.post('/addresses', addrData);
-        setAddresses([data, ...addresses.filter(a => a._id !== data._id)]);
+        setAddresses([data, ...currentAddresses.filter(a => a._id !== data._id)]);
         setSelectedAddress(data);
         setShowAddForm(false);
         addToast('Delivery address saved successfully!');
@@ -273,12 +278,12 @@ export const Checkout = () => {
 
     try {
       const orderPayload = {
-        items: cartItems,
+        items: Array.isArray(cartItems) ? cartItems : [],
         deliveryAddress: selectedAddress,
         subtotal,
         deliveryFee,
-        couponDiscount: couponApplied.discountAmount,
-        couponCode: couponApplied.code,
+        couponDiscount: couponApplied?.discountAmount || 0,
+        couponCode: couponApplied?.code || '',
         paymentMethod: selectedPaymentMethod
       };
 
@@ -306,6 +311,9 @@ export const Checkout = () => {
     advanceRequired = Math.min(totalAmount, 100);
   }
   const remainingCodAmount = Math.max(0, Math.round((totalAmount - advanceRequired) * 100) / 100);
+
+  const addressList = Array.isArray(addresses) ? addresses : [];
+  const itemList = Array.isArray(cartItems) ? cartItems : [];
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -355,9 +363,9 @@ export const Checkout = () => {
             </div>
 
             {/* Saved Addresses List */}
-            {!showAddForm && addresses.length > 0 && (
+            {!showAddForm && addressList.length > 0 && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {addresses.map((addr) => (
+                {addressList.map((addr) => (
                   <div
                     key={addr._id || addr.houseNo}
                     onClick={() => setSelectedAddress(addr)}
@@ -485,7 +493,7 @@ export const Checkout = () => {
             </h3>
 
             <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
-              {cartItems.map((item) => (
+              {itemList.map((item) => (
                 <div key={item._id} className="flex justify-between text-xs text-slate-300">
                   <span className="truncate max-w-[180px]">
                     {item.product?.name || 'Mystery Box'} (x{item.quantity})
@@ -504,7 +512,7 @@ export const Checkout = () => {
                 <span>Delivery Charge</span>
                 <span className="font-bold text-emerald-400">{deliveryFee === 0 ? 'FREE' : `₹${deliveryFee}`}</span>
               </div>
-              {couponApplied.discountAmount > 0 && (
+              {couponApplied?.discountAmount > 0 && (
                 <div className="flex justify-between text-emerald-400">
                   <span>Coupon Discount</span>
                   <span>-₹{couponApplied.discountAmount}</span>
