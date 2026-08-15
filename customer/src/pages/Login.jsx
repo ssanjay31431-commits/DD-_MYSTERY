@@ -132,7 +132,6 @@ export const Login = () => {
             shape="pill"
             text="continue_with"
             size="large"
-            width="100%"
           />
         </div>
 
