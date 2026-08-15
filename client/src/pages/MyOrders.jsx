@@ -11,12 +11,17 @@ export const MyOrders = () => {
 
   useEffect(() => {
     const fetchOrders = async () => {
+      const localOrders = JSON.parse(localStorage.getItem('dd_orders') || '[]');
       try {
         const { data } = await API.get('/orders');
-        setOrders(Array.isArray(data) ? data : []);
+        if (Array.isArray(data) && data.length > 0) {
+          setOrders(data);
+        } else {
+          setOrders(localOrders);
+        }
       } catch (err) {
-        console.error(err);
-        setOrders([]);
+        console.warn('API get orders notice, loading local orders:', err.message);
+        setOrders(localOrders);
       } finally {
         setLoading(false);
       }
@@ -58,7 +63,7 @@ export const MyOrders = () => {
 
       <div className="space-y-4">
         {orderList.map((order) => (
-          <div key={order._id} className="glass-panel p-6 rounded-3xl border border-purple-500/20 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          <div key={order._id || order.orderId} className="glass-panel p-6 rounded-3xl border border-purple-500/20 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
             
             <div className="space-y-2">
               <div className="flex items-center gap-3">
@@ -78,7 +83,7 @@ export const MyOrders = () => {
 
               <div className="text-xs text-slate-300 space-y-0.5">
                 <p className="font-bold text-white">
-                  Items: {Array.isArray(order.items) ? order.items.map((i) => i.productSnapshot?.name).join(', ') : 'Mystery Box'}
+                  Items: {Array.isArray(order.items) ? order.items.map((i) => i.productSnapshot?.name || i.product?.name).join(', ') : 'Mystery Box'}
                 </p>
                 <p className="text-slate-400">
                   Placed on: {new Date(order.createdAt).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}

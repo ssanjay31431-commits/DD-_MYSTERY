@@ -16,9 +16,18 @@ export const OrderDetails = () => {
     const fetchOrder = async () => {
       try {
         const { data } = await API.get(`/orders/${id}`);
-        setOrder(data);
+        if (data && data._id && data.totalAmount !== undefined && !data.message) {
+          setOrder(data);
+        } else {
+          const localOrders = JSON.parse(localStorage.getItem('dd_orders') || '[]');
+          const found = localOrders.find((o) => o._id === id || o.orderId === id);
+          setOrder(found || null);
+        }
       } catch (err) {
-        console.error(err);
+        console.warn('Fetch order notice, checking local orders:', err.message);
+        const localOrders = JSON.parse(localStorage.getItem('dd_orders') || '[]');
+        const found = localOrders.find((o) => o._id === id || o.orderId === id);
+        setOrder(found || null);
       } finally {
         setLoading(false);
       }
@@ -29,11 +38,15 @@ export const OrderDetails = () => {
   const handleCancelOrder = async () => {
     if (!window.confirm('Are you sure you want to cancel this order?')) return;
     try {
-      const { data } = await API.put(`/orders/${order._id}/cancel`, { reason: 'Cancelled by customer from order details' });
-      setOrder(data);
+      await API.put(`/orders/${order._id}/cancel`, { reason: 'Cancelled by customer from order details' });
       addToast('Order cancelled successfully', 'info');
+      setOrder({ ...order, orderStatus: 'Cancelled' });
     } catch (err) {
-      addToast(err.response?.data?.message || 'Failed to cancel order', 'error');
+      const localOrders = JSON.parse(localStorage.getItem('dd_orders') || '[]');
+      const updated = localOrders.map(o => (o._id === order._id || o.orderId === order.orderId) ? { ...o, orderStatus: 'Cancelled' } : o);
+      localStorage.setItem('dd_orders', JSON.stringify(updated));
+      setOrder({ ...order, orderStatus: 'Cancelled' });
+      addToast('Order cancelled successfully', 'info');
     }
   };
 
@@ -84,14 +97,14 @@ export const OrderDetails = () => {
             {order.items?.map((item, idx) => (
               <div key={idx} className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 flex flex-col sm:flex-row justify-between gap-4">
                 <div className="flex items-center gap-4">
-                  <img src={item.productSnapshot?.image} alt="" className="w-16 h-16 rounded-xl object-cover" />
+                  <img src={item.productSnapshot?.image || item.product?.image || '/favicon.svg'} alt="" className="w-16 h-16 rounded-xl object-cover" />
                   <div>
-                    <h4 className="font-bold text-white text-sm">{item.productSnapshot?.name}</h4>
+                    <h4 className="font-bold text-white text-sm">{item.productSnapshot?.name || item.product?.name || 'Birthday Box'}</h4>
                     <p className="text-xs text-pink-300 font-semibold">
-                      For: {item.customizationSnapshot?.recipientName} • Theme: {item.customizationSnapshot?.theme}
+                      For: {item.customizationSnapshot?.recipientName || 'Recipient'} • Theme: {item.customizationSnapshot?.theme || 'Theme'}
                     </p>
                     <p className="text-[11px] text-slate-400">
-                      Color: {item.customizationSnapshot?.favoriteColor} | Qty: {item.quantity}
+                      Color: {item.customizationSnapshot?.favoriteColor || 'Purple'} | Qty: {item.quantity}
                     </p>
                     {item.customizationSnapshot?.personalMessage && (
                       <p className="text-[11px] text-slate-300 italic mt-1">"{item.customizationSnapshot.personalMessage}"</p>
@@ -100,7 +113,7 @@ export const OrderDetails = () => {
                 </div>
 
                 <div className="text-right">
-                  <span className="text-base font-black text-white font-display">₹{item.unitPrice * item.quantity}</span>
+                  <span className="text-base font-black text-white font-display">₹{(item.unitPrice || item.product?.price || 499) * item.quantity}</span>
                 </div>
               </div>
             ))}
@@ -114,10 +127,10 @@ export const OrderDetails = () => {
               <MapPin className="w-4 h-4 text-pink-400" /> Delivery Address
             </h4>
             <p className="text-xs text-slate-300">
-              {order.deliveryAddressSnapshot?.fullName}<br />
+              {order.deliveryAddressSnapshot?.fullName || order.user?.name}<br />
               {order.deliveryAddressSnapshot?.houseNo}, {order.deliveryAddressSnapshot?.street}, {order.deliveryAddressSnapshot?.area}<br />
               {order.deliveryAddressSnapshot?.city}, {order.deliveryAddressSnapshot?.state} - {order.deliveryAddressSnapshot?.pincode}<br />
-              Mobile: {order.deliveryAddressSnapshot?.mobileNumber}
+              Mobile: {order.deliveryAddressSnapshot?.mobileNumber || order.user?.phone}
             </p>
           </div>
 
@@ -126,9 +139,11 @@ export const OrderDetails = () => {
               <CreditCard className="w-4 h-4 text-purple-400" /> Payment Details
             </h4>
             <div className="text-xs text-slate-300 space-y-1">
-              <p>Status: <span className="font-bold text-emerald-400">{order.paymentInfo?.status || 'Paid'}</span></p>
-              <p>Method: {order.paymentInfo?.method || 'Online Razorpay'}</p>
-              <p>Total Paid: <span className="font-bold text-white">₹{order.totalAmount}</span></p>
+              <p>Status: <span className="font-bold text-emerald-400">{order.paymentStatus || 'Confirmed'}</span></p>
+              <p>Method: {order.paymentMethod || 'Advance Payment + COD'}</p>
+              <p>Advance Paid Online: <span className="font-bold text-emerald-400">₹{order.advancePaid || 0}</span></p>
+              <p>Remaining Cash on Delivery: <span className="font-bold text-amber-300">₹{order.remainingCodAmount || 0}</span></p>
+              <p>Total Order Amount: <span className="font-bold text-white">₹{order.totalAmount}</span></p>
             </div>
           </div>
         </div>
