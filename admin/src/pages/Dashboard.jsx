@@ -22,18 +22,48 @@ export const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [dateFilter, setDateFilter] = useState('7Days');
 
+  const computeStatsFromLocalOrders = () => {
+    const localOrders = JSON.parse(localStorage.getItem('dd_orders') || '[]');
+    if (!Array.isArray(localOrders) || localOrders.length === 0) {
+      return DEFAULT_ADMIN_STATS;
+    }
+
+    const totalRev = localOrders.reduce((acc, o) => acc + (o.totalAmount || 0), 0);
+    const advanceColl = localOrders.reduce((acc, o) => acc + (o.advancePaid || 0), 0);
+    const codColl = localOrders.reduce((acc, o) => acc + (o.remainingCodAmount || 0), 0);
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const todayRev = localOrders
+      .filter((o) => o.createdAt && o.createdAt.startsWith(todayStr))
+      .reduce((acc, o) => acc + (o.totalAmount || 0), 0);
+
+    const pendingCount = localOrders.filter((o) => o.orderStatus !== 'Delivered' && o.orderStatus !== 'Cancelled').length;
+    const deliveredCount = localOrders.filter((o) => o.orderStatus === 'Delivered').length;
+
+    return {
+      totalRevenue: totalRev,
+      todayRevenue: todayRev,
+      advanceCollected: advanceColl,
+      expectedCodCollection: codColl,
+      totalOrders: localOrders.length,
+      pendingOrders: pendingCount,
+      deliveredOrders: deliveredCount,
+      recentOrders: localOrders
+    };
+  };
+
   const fetchStats = async () => {
     setLoading(true);
     try {
       const { data } = await API.get(`/admin/dashboard?period=${dateFilter}`);
-      if (data && typeof data === 'object' && data.totalRevenue !== undefined) {
+      if (data && typeof data === 'object' && data.totalRevenue !== undefined && !data.message) {
         setStats(data);
       } else {
-        setStats(DEFAULT_ADMIN_STATS);
+        setStats(computeStatsFromLocalOrders());
       }
     } catch (err) {
-      console.error('Dashboard fetch error, using fallback:', err);
-      setStats(DEFAULT_ADMIN_STATS);
+      console.warn('Dashboard fetch notice, loading real orders from local store:', err.message);
+      setStats(computeStatsFromLocalOrders());
     } finally {
       setLoading(false);
     }
@@ -43,8 +73,8 @@ export const Dashboard = () => {
     fetchStats();
   }, [dateFilter]);
 
-  const currentStats = stats || DEFAULT_ADMIN_STATS;
-  const recentOrders = Array.isArray(currentStats.recentOrders) ? currentStats.recentOrders : DEFAULT_ADMIN_STATS.recentOrders;
+  const currentStats = stats || computeStatsFromLocalOrders();
+  const recentOrders = Array.isArray(currentStats.recentOrders) ? currentStats.recentOrders : [];
 
   return (
     <div className="flex min-h-screen bg-[#0c0a17]">
@@ -92,10 +122,10 @@ export const Dashboard = () => {
               <DollarSign className="w-5 h-5 text-emerald-400" />
             </div>
             <span className="text-3xl font-black text-white font-display block">
-              ₹{(currentStats.totalRevenue || 24950).toLocaleString()}
+              ₹{(currentStats.totalRevenue || 0).toLocaleString()}
             </span>
             <span className="text-[11px] text-emerald-400 font-bold block">
-              Today: ₹{(currentStats.todayRevenue || 1497).toLocaleString()}
+              Today: ₹{(currentStats.todayRevenue || 0).toLocaleString()}
             </span>
           </div>
 
@@ -105,9 +135,9 @@ export const Dashboard = () => {
               <CreditCard className="w-5 h-5 text-pink-400" />
             </div>
             <span className="text-3xl font-black text-pink-400 font-display block">
-              ₹{(currentStats.advanceCollected || 2800).toLocaleString()}
+              ₹{(currentStats.advanceCollected || 0).toLocaleString()}
             </span>
-            <span className="text-[11px] text-slate-400 block">Verified via Razorpay</span>
+            <span className="text-[11px] text-slate-400 block">Verified via Online Gateway</span>
           </div>
 
           <div className="glass-panel p-6 rounded-3xl border border-purple-500/30 space-y-2">
@@ -116,7 +146,7 @@ export const Dashboard = () => {
               <Clock className="w-5 h-5 text-amber-400" />
             </div>
             <span className="text-3xl font-black text-amber-400 font-display block">
-              ₹{(currentStats.expectedCodCollection || 22150).toLocaleString()}
+              ₹{(currentStats.expectedCodCollection || 0).toLocaleString()}
             </span>
             <span className="text-[11px] text-slate-400 block">Pending delivery collection</span>
           </div>
@@ -127,10 +157,10 @@ export const Dashboard = () => {
               <ShoppingBag className="w-5 h-5 text-purple-400" />
             </div>
             <span className="text-3xl font-black text-white font-display block">
-              {currentStats.totalOrders || 28}
+              {currentStats.totalOrders || 0}
             </span>
             <span className="text-[11px] text-purple-400 font-bold block">
-              Pending: {currentStats.pendingOrders || 5} | Delivered: {currentStats.deliveredOrders || 21}
+              Pending: {currentStats.pendingOrders || 0} | Delivered: {currentStats.deliveredOrders || 0}
             </span>
           </div>
 
@@ -154,21 +184,29 @@ export const Dashboard = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/80">
-                {recentOrders.map((ord) => (
-                  <tr key={ord._id} className="hover:bg-slate-900/50 transition-colors">
-                    <td className="p-3 font-mono font-bold text-amber-300">{ord.orderId}</td>
-                    <td className="p-3 font-bold text-white">{ord.user?.name || ord.deliveryAddressSnapshot?.fullName || 'Customer'}</td>
-                    <td className="p-3 font-bold text-white">₹{ord.totalAmount}</td>
-                    <td className="p-3 text-emerald-400 font-bold">₹{ord.advancePaid || ord.advanceRequired || 100}</td>
-                    <td className="p-3 text-amber-300 font-bold">₹{ord.remainingCodAmount || (ord.totalAmount - 100)}</td>
-                    <td className="p-3">
-                      <span className="px-2.5 py-1 rounded-md bg-purple-500/20 text-purple-300 font-bold text-[10px]">
-                        {ord.orderStatus}
-                      </span>
+                {recentOrders.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" className="p-8 text-center text-slate-400">
+                      No customer orders recorded yet. Place an order on the customer store!
                     </td>
-                    <td className="p-3 text-slate-400">{new Date(ord.createdAt).toLocaleDateString()}</td>
                   </tr>
-                ))}
+                ) : (
+                  recentOrders.map((ord) => (
+                    <tr key={ord._id} className="hover:bg-slate-900/50 transition-colors">
+                      <td className="p-3 font-mono font-bold text-amber-300">{ord.orderId}</td>
+                      <td className="p-3 font-bold text-white">{ord.user?.name || ord.deliveryAddressSnapshot?.fullName || 'Customer'}</td>
+                      <td className="p-3 font-bold text-white">₹{ord.totalAmount}</td>
+                      <td className="p-3 text-emerald-400 font-bold">₹{ord.advancePaid || ord.advanceRequired || 0}</td>
+                      <td className="p-3 text-amber-300 font-bold">₹{ord.remainingCodAmount || 0}</td>
+                      <td className="p-3">
+                        <span className="px-2.5 py-1 rounded-md bg-purple-500/20 text-purple-300 font-bold text-[10px]">
+                          {ord.orderStatus}
+                        </span>
+                      </td>
+                      <td className="p-3 text-slate-400">{new Date(ord.createdAt).toLocaleDateString()}</td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

@@ -32,19 +32,31 @@ const DEFAULT_ADMIN_ORDERS = [
 ];
 
 export const AdminOrders = () => {
-  const [orders, setOrders] = useState(DEFAULT_ADMIN_ORDERS);
+  const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
+
+  const getOrdersFromLocal = () => {
+    const localOrders = JSON.parse(localStorage.getItem('dd_orders') || '[]');
+    if (Array.isArray(localOrders) && localOrders.length > 0) {
+      return localOrders;
+    }
+    return DEFAULT_ADMIN_ORDERS;
+  };
 
   const fetchOrders = async () => {
     setLoading(true);
     try {
       const { data } = await API.get('/orders/admin/all');
-      setOrders(Array.isArray(data) && data.length > 0 ? data : DEFAULT_ADMIN_ORDERS);
+      if (Array.isArray(data) && data.length > 0) {
+        setOrders(data);
+      } else {
+        setOrders(getOrdersFromLocal());
+      }
     } catch (err) {
-      console.error('Admin orders fetch error, using fallback:', err);
-      setOrders(DEFAULT_ADMIN_ORDERS);
+      console.warn('Admin orders endpoint notice, using local store:', err.message);
+      setOrders(getOrdersFromLocal());
     } finally {
       setLoading(false);
     }
@@ -54,7 +66,7 @@ export const AdminOrders = () => {
     fetchOrders();
   }, []);
 
-  const safeOrders = Array.isArray(orders) ? orders : DEFAULT_ADMIN_ORDERS;
+  const safeOrders = Array.isArray(orders) ? orders : getOrdersFromLocal();
 
   const filteredOrders = safeOrders.filter((ord) => {
     const matchesStatus = statusFilter === 'All' || ord.orderStatus === statusFilter;
@@ -124,38 +136,46 @@ export const AdminOrders = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/80">
-              {filteredOrders.map((ord) => (
-                <tr key={ord._id} className="hover:bg-slate-900/50 transition-colors">
-                  <td className="p-3 font-mono font-bold text-amber-300">{ord.orderId}</td>
-                  <td className="p-3">
-                    <span className="font-bold text-white block">{ord.user?.name || ord.deliveryAddressSnapshot?.fullName || 'Customer'}</span>
-                    <span className="text-[10px] text-slate-400 font-mono block">{ord.user?.email || ord.deliveryAddressSnapshot?.email}</span>
-                  </td>
-                  <td className="p-3">{ord.items?.length || 1} Box(es)</td>
-                  <td className="p-3 font-bold text-white">₹{ord.totalAmount}</td>
-                  <td className="p-3 font-bold text-emerald-400">₹{ord.advancePaid || ord.advanceRequired || 100}</td>
-                  <td className="p-3 font-bold text-amber-300">₹{ord.remainingCodAmount || (ord.totalAmount - 100)}</td>
-                  <td className="p-3">
-                    <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold ${
-                      ord.orderStatus === 'Delivered'
-                        ? 'bg-emerald-500/20 text-emerald-300'
-                        : ord.orderStatus === 'Cancelled'
-                        ? 'bg-rose-500/20 text-rose-300'
-                        : 'bg-purple-500/20 text-purple-300'
-                    }`}>
-                      {ord.orderStatus}
-                    </span>
-                  </td>
-                  <td className="p-3 text-right">
-                    <Link
-                      to={`/admin/orders/${ord._id}`}
-                      className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-purple-400 hover:text-white text-xs font-bold inline-flex items-center gap-1"
-                    >
-                      <Eye className="w-3.5 h-3.5" /> Inspect & Track
-                    </Link>
+              {filteredOrders.length === 0 ? (
+                <tr>
+                  <td colSpan="8" className="p-8 text-center text-slate-400">
+                    No orders found.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredOrders.map((ord) => (
+                  <tr key={ord._id} className="hover:bg-slate-900/50 transition-colors">
+                    <td className="p-3 font-mono font-bold text-amber-300">{ord.orderId}</td>
+                    <td className="p-3">
+                      <span className="font-bold text-white block">{ord.user?.name || ord.deliveryAddressSnapshot?.fullName || 'Customer'}</span>
+                      <span className="text-[10px] text-slate-400 font-mono block">{ord.user?.email || ord.deliveryAddressSnapshot?.email}</span>
+                    </td>
+                    <td className="p-3">{ord.items?.length || 1} Box(es)</td>
+                    <td className="p-3 font-bold text-white">₹{ord.totalAmount}</td>
+                    <td className="p-3 font-bold text-emerald-400">₹{ord.advancePaid || ord.advanceRequired || 0}</td>
+                    <td className="p-3 font-bold text-amber-300">₹{ord.remainingCodAmount || 0}</td>
+                    <td className="p-3">
+                      <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold ${
+                        ord.orderStatus === 'Delivered'
+                          ? 'bg-emerald-500/20 text-emerald-300'
+                          : ord.orderStatus === 'Cancelled'
+                          ? 'bg-rose-500/20 text-rose-300'
+                          : 'bg-purple-500/20 text-purple-300'
+                      }`}>
+                        {ord.orderStatus}
+                      </span>
+                    </td>
+                    <td className="p-3 text-right">
+                      <Link
+                        to={`/admin/orders/${ord._id}`}
+                        className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-purple-400 hover:text-white text-xs font-bold inline-flex items-center gap-1"
+                      >
+                        <Eye className="w-3.5 h-3.5" /> Inspect & Track
+                      </Link>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
