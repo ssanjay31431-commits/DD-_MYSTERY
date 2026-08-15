@@ -130,7 +130,7 @@ const googleAuth = async (req, res) => {
     try {
       const ticket = await googleClient.verifyIdToken({
         idToken: tokenToVerify,
-        audience: [process.env.GOOGLE_CLIENT_ID, '637646427248-346hj45leah9i9ho215mjpok1k8jv9f2.apps.googleusercontent.com']
+        audience: [process.env.GOOGLE_CLIENT_ID, '637646427248-vqdpama7cu5e8tn0q91od64h8j2e46cu.apps.googleusercontent.com']
       });
       payload = ticket.getPayload();
     } catch (err) {

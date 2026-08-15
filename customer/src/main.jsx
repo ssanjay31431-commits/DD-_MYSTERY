@@ -4,7 +4,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import App from './App';
 import './index.css';
 
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '637646427248-346hj45leah9i9ho215mjpok1k8jv9f2.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '637646427248-vqdpama7cu5e8tn0q91od64h8j2e46cu.apps.googleusercontent.com';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
