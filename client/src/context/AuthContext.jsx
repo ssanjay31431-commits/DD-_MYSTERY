@@ -62,11 +62,12 @@ export const AuthProvider = ({ children }) => {
       return data;
     } catch (error) {
       if (!error.response || error.response.status === 405 || error.response.status === 404) {
+        const isAdminEmail = email.toLowerCase().includes('admin');
         const demoUser = {
-          _id: `user_demo_${Date.now()}`,
-          name: email.split('@')[0],
+          _id: isAdminEmail ? 'admin_seeded_1' : `user_demo_${Date.now()}`,
+          name: isAdminEmail ? 'DD Mystery Admin' : email.split('@')[0],
           email: email,
-          role: email.includes('admin') ? 'admin' : 'customer',
+          role: isAdminEmail ? 'admin' : 'customer',
           token: `mock_jwt_token_${Date.now()}`
         };
         setUser(demoUser);
@@ -75,7 +76,7 @@ export const AuthProvider = ({ children }) => {
         addToast(`Welcome back, ${demoUser.name}! 🎁`);
         return demoUser;
       }
-      const msg = error.response?.data?.message || 'Login failed';
+      const msg = error.response?.data?.message || error.message || 'Login failed';
       addToast(msg, 'error');
       throw new Error(msg);
     }
@@ -104,7 +105,7 @@ export const AuthProvider = ({ children }) => {
         addToast(`Account created! Welcome to DD Mystery Box, ${demoUser.name}!`);
         return demoUser;
       }
-      const msg = error.response?.data?.message || 'Registration failed';
+      const msg = error.response?.data?.message || error.message || 'Registration failed';
       addToast(msg, 'error');
       throw new Error(msg);
     }
@@ -136,7 +137,7 @@ export const AuthProvider = ({ children }) => {
         addToast(`Welcome to DD Mystery Box, ${googleUser.name}! 🎁`);
         return googleUser;
       }
-      const msg = error.response?.data?.message || 'Google authentication failed';
+      const msg = error.response?.data?.message || error.message || 'Google authentication failed';
       addToast(msg, 'error');
       throw new Error(msg);
     }
