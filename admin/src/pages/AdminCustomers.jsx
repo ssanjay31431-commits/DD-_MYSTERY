@@ -3,29 +3,6 @@ import { Users, Search, Mail, ShieldCheck, ShoppingBag } from 'lucide-react';
 import API from '../services/api';
 import { AdminSidebar } from '../components/AdminSidebar';
 
-const DEFAULT_CUSTOMERS = [
-  {
-    _id: 'cust_101',
-    name: 'Rahul Sharma',
-    email: 'rahul@example.com',
-    phone: '9876543210',
-    googleId: true,
-    totalOrders: 2,
-    totalSpent: 998,
-    createdAt: new Date().toISOString()
-  },
-  {
-    _id: 'cust_102',
-    name: 'Priya Patel',
-    email: 'priya@example.com',
-    phone: '9123456789',
-    googleId: false,
-    totalOrders: 1,
-    totalSpent: 199,
-    createdAt: new Date().toISOString()
-  }
-];
-
 export const AdminCustomers = () => {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -35,7 +12,7 @@ export const AdminCustomers = () => {
   const getCustomersFromLocal = () => {
     const orders = JSON.parse(localStorage.getItem('dd_orders') || '[]');
     if (!Array.isArray(orders) || orders.length === 0) {
-      return DEFAULT_CUSTOMERS;
+      return [];
     }
     const map = {};
     orders.forEach((ord) => {
@@ -68,7 +45,6 @@ export const AdminCustomers = () => {
         setCustomers(getCustomersFromLocal());
       }
     } catch (err) {
-      console.warn('Admin customers fetch notice, loading real local customers:', err.message);
       setCustomers(getCustomersFromLocal());
     } finally {
       setLoading(false);
@@ -148,7 +124,7 @@ export const AdminCustomers = () => {
               {filteredCustomers.length === 0 ? (
                 <tr>
                   <td colSpan="6" className="p-8 text-center text-slate-400">
-                    No customers found.
+                    No registered customers yet. Real customers who place orders on the website will appear here!
                   </td>
                 </tr>
               ) : (

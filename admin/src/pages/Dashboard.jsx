@@ -3,29 +3,26 @@ import { ShoppingBag, Users, DollarSign, CreditCard, Clock, CheckCircle2, AlertT
 import API from '../services/api';
 import { AdminSidebar } from '../components/AdminSidebar';
 
-const DEFAULT_ADMIN_STATS = {
-  totalRevenue: 24950,
-  todayRevenue: 1497,
-  advanceCollected: 2800,
-  expectedCodCollection: 22150,
-  totalOrders: 28,
-  pendingOrders: 5,
-  deliveredOrders: 21,
-  recentOrders: [
-    { _id: 'ord_demo_1', orderId: 'DD-2026-9821', user: { name: 'Rahul Sharma' }, totalAmount: 499, advancePaid: 100, remainingCodAmount: 399, orderStatus: 'Packed', createdAt: '2026-08-15' },
-    { _id: 'ord_demo_2', orderId: 'DD-2026-9822', user: { name: 'Priya Patel' }, totalAmount: 199, advancePaid: 100, remainingCodAmount: 99, orderStatus: 'Dispatched', createdAt: '2026-08-15' }
-  ]
+const EMPTY_ADMIN_STATS = {
+  totalRevenue: 0,
+  todayRevenue: 0,
+  advanceCollected: 0,
+  expectedCodCollection: 0,
+  totalOrders: 0,
+  pendingOrders: 0,
+  deliveredOrders: 0,
+  recentOrders: []
 };
 
 export const Dashboard = () => {
-  const [stats, setStats] = useState(DEFAULT_ADMIN_STATS);
+  const [stats, setStats] = useState(EMPTY_ADMIN_STATS);
   const [loading, setLoading] = useState(true);
   const [dateFilter, setDateFilter] = useState('7Days');
 
   const computeStatsFromLocalOrders = () => {
     const localOrders = JSON.parse(localStorage.getItem('dd_orders') || '[]');
     if (!Array.isArray(localOrders) || localOrders.length === 0) {
-      return DEFAULT_ADMIN_STATS;
+      return EMPTY_ADMIN_STATS;
     }
 
     const totalRev = localOrders.reduce((acc, o) => acc + (o.totalAmount || 0), 0);
@@ -62,7 +59,6 @@ export const Dashboard = () => {
         setStats(computeStatsFromLocalOrders());
       }
     } catch (err) {
-      console.warn('Dashboard fetch notice, loading real orders from local store:', err.message);
       setStats(computeStatsFromLocalOrders());
     } finally {
       setLoading(false);
@@ -73,7 +69,7 @@ export const Dashboard = () => {
     fetchStats();
   }, [dateFilter]);
 
-  const currentStats = stats || computeStatsFromLocalOrders();
+  const currentStats = stats || EMPTY_ADMIN_STATS;
   const recentOrders = Array.isArray(currentStats.recentOrders) ? currentStats.recentOrders : [];
 
   return (
@@ -187,7 +183,7 @@ export const Dashboard = () => {
                 {recentOrders.length === 0 ? (
                   <tr>
                     <td colSpan="7" className="p-8 text-center text-slate-400">
-                      No customer orders recorded yet. Place an order on the customer store!
+                      No customer orders placed yet. Real orders placed on the website will appear here instantly!
                     </td>
                   </tr>
                 ) : (
@@ -196,7 +192,7 @@ export const Dashboard = () => {
                       <td className="p-3 font-mono font-bold text-amber-300">{ord.orderId}</td>
                       <td className="p-3 font-bold text-white">{ord.user?.name || ord.deliveryAddressSnapshot?.fullName || 'Customer'}</td>
                       <td className="p-3 font-bold text-white">₹{ord.totalAmount}</td>
-                      <td className="p-3 text-emerald-400 font-bold">₹{ord.advancePaid || ord.advanceRequired || 0}</td>
+                      <td className="p-3 text-emerald-400 font-bold">₹{ord.advancePaid || 0}</td>
                       <td className="p-3 text-amber-300 font-bold">₹{ord.remainingCodAmount || 0}</td>
                       <td className="p-3">
                         <span className="px-2.5 py-1 rounded-md bg-purple-500/20 text-purple-300 font-bold text-[10px]">

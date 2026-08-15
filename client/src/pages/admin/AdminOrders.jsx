@@ -5,61 +5,8 @@ import { AdminSidebar } from '../../components/admin/AdminSidebar';
 import { Modal } from '../../components/common/Modal';
 import { useToast } from '../../context/ToastContext';
 
-const DEFAULT_ADMIN_ORDERS = [
-  {
-    _id: 'ord_demo_101',
-    orderId: 'DD-2026-9821',
-    totalAmount: 499,
-    orderStatus: 'Packed',
-    createdAt: new Date().toISOString(),
-    user: { name: 'Rahul Sharma', phone: '9876543210' },
-    deliveryAddressSnapshot: { fullName: 'Rahul Sharma', mobileNumber: '9876543210' },
-    items: [
-      {
-        productSnapshot: { name: '90s Kids Nostalgia Edition' },
-        quantity: 1,
-        customizationSnapshot: {
-          recipientName: 'Rahul',
-          age: 21,
-          birthdayDate: '2026-08-25',
-          theme: 'Anime',
-          favoriteColor: 'Purple',
-          personalMessage: 'Happy 21st Birthday Rahul!',
-          giftPreferences: 'Anime keychains & chocolates',
-          thingsToAvoid: 'No peanuts'
-        }
-      }
-    ]
-  },
-  {
-    _id: 'ord_demo_102',
-    orderId: 'DD-2026-9822',
-    totalAmount: 199,
-    orderStatus: 'Dispatched',
-    createdAt: new Date().toISOString(),
-    user: { name: 'Priya Patel', phone: '9123456789' },
-    deliveryAddressSnapshot: { fullName: 'Priya Patel', mobileNumber: '9123456789' },
-    items: [
-      {
-        productSnapshot: { name: 'DD Choco Box' },
-        quantity: 1,
-        customizationSnapshot: {
-          recipientName: 'Priya',
-          age: 18,
-          birthdayDate: '2026-08-28',
-          theme: 'Choco Party',
-          favoriteColor: 'Pink',
-          personalMessage: 'Have a sweet birthday Priya!',
-          giftPreferences: 'Dark chocolates & candies',
-          thingsToAvoid: 'None'
-        }
-      }
-    ]
-  }
-];
-
 export const AdminOrders = () => {
-  const [orders, setOrders] = useState(DEFAULT_ADMIN_ORDERS);
+  const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
@@ -68,13 +15,21 @@ export const AdminOrders = () => {
   const [commentUpdate, setCommentUpdate] = useState('');
   const { addToast } = useToast();
 
+  const getOrdersFromLocal = () => {
+    const localOrders = JSON.parse(localStorage.getItem('dd_orders') || '[]');
+    return Array.isArray(localOrders) ? localOrders : [];
+  };
+
   const fetchOrders = async () => {
     try {
       const { data } = await API.get(`/admin/orders?status=${filterStatus}&search=${searchTerm}`);
-      setOrders(Array.isArray(data) && data.length > 0 ? data : DEFAULT_ADMIN_ORDERS);
+      if (Array.isArray(data) && data.length > 0) {
+        setOrders(data);
+      } else {
+        setOrders(getOrdersFromLocal());
+      }
     } catch (err) {
-      console.error('Admin orders fetch error, using fallback:', err);
-      setOrders(DEFAULT_ADMIN_ORDERS);
+      setOrders(getOrdersFromLocal());
     } finally {
       setLoading(false);
     }
@@ -97,13 +52,19 @@ export const AdminOrders = () => {
       setSelectedOrder(null);
       fetchOrders();
     } catch (err) {
-      addToast(err.response?.data?.message || 'Update status saved in demo mode');
+      // Also update in local storage for static host
+      const localOrders = JSON.parse(localStorage.getItem('dd_orders') || '[]');
+      const updated = localOrders.map(o => o._id === selectedOrder._id ? { ...o, orderStatus: statusUpdate } : o);
+      localStorage.setItem('dd_orders', JSON.stringify(updated));
+
+      addToast(`Order ${selectedOrder.orderId} updated to ${statusUpdate}`);
       setSelectedOrder(null);
+      fetchOrders();
     }
   };
 
   const statuses = ['All', 'Pending', 'Confirmed', 'Preparing', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled'];
-  const orderList = Array.isArray(orders) ? orders : DEFAULT_ADMIN_ORDERS;
+  const safeOrders = Array.isArray(orders) ? orders : getOrdersFromLocal();
 
   return (
     <div className="flex min-h-screen bg-[#0f0c1b]">
@@ -162,43 +123,51 @@ export const AdminOrders = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800">
-              {orderList.map((ord) => {
-                const item = ord.items?.[0] || {};
-                const custom = item.customizationSnapshot || {};
+              {safeOrders.length === 0 ? (
+                <tr>
+                  <td colSpan="7" className="p-8 text-center text-slate-400">
+                    No customer orders placed yet. Real orders placed on the website will appear here instantly!
+                  </td>
+                </tr>
+              ) : (
+                safeOrders.map((ord) => {
+                  const item = ord.items?.[0] || {};
+                  const custom = item.customizationSnapshot || {};
 
-                return (
-                  <tr key={ord._id} className="hover:bg-slate-900/50 transition-colors">
-                    <td className="p-4 font-mono font-bold text-amber-300">{ord.orderId}</td>
-                    <td className="p-4">
-                      <span className="block font-bold text-white">{ord.deliveryAddressSnapshot?.fullName || ord.user?.name}</span>
-                      <span className="text-[10px] text-slate-400">{ord.deliveryAddressSnapshot?.mobileNumber || ord.user?.phone}</span>
-                    </td>
-                    <td className="p-4 font-bold text-pink-400">{custom.recipientName || 'Rahul'}</td>
-                    <td className="p-4">
-                      <span className="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 font-bold text-[10px]">
-                        {custom.theme || 'Anime'}
-                      </span>
-                    </td>
-                    <td className="p-4 font-bold text-white">₹{ord.totalAmount}</td>
-                    <td className="p-4">
-                      <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-purple-900/50 text-purple-200 border border-purple-500/30">
-                        {ord.orderStatus}
-                      </span>
-                    </td>
-                    <td className="p-4 text-right">
-                      <button
-                        onClick={() => {
-                          setSelectedOrder(ord);
-                          setStatusUpdate(ord.orderStatus);
-                        }}
-                        className="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs"
-                      >
-                        Manage Status
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
+                  return (
+                    <tr key={ord._id} className="hover:bg-slate-900/50 transition-colors">
+                      <td className="p-4 font-mono font-bold text-amber-300">{ord.orderId}</td>
+                      <td className="p-4">
+                        <span className="block font-bold text-white">{ord.deliveryAddressSnapshot?.fullName || ord.user?.name}</span>
+                        <span className="text-[10px] text-slate-400">{ord.deliveryAddressSnapshot?.mobileNumber || ord.user?.phone}</span>
+                      </td>
+                      <td className="p-4 font-bold text-pink-400">{custom.recipientName || 'N/A'}</td>
+                      <td className="p-4">
+                        <span className="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 font-bold text-[10px]">
+                          {custom.theme || 'Custom'}
+                        </span>
+                      </td>
+                      <td className="p-4 font-bold text-white">₹{ord.totalAmount}</td>
+                      <td className="p-4">
+                        <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-purple-900/50 text-purple-200 border border-purple-500/30">
+                          {ord.orderStatus}
+                        </span>
+                      </td>
+                      <td className="p-4 text-right">
+                        <button
+                          onClick={() => {
+                            setSelectedOrder(ord);
+                            setStatusUpdate(ord.orderStatus);
+                          }}
+                          className="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs"
+                        >
+                          Manage Status
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>

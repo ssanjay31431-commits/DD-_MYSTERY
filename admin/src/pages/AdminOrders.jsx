@@ -4,33 +4,6 @@ import { ShoppingBag, Search, Eye, Filter, CheckCircle2, Clock, Truck } from 'lu
 import API from '../services/api';
 import { AdminSidebar } from '../components/AdminSidebar';
 
-const DEFAULT_ADMIN_ORDERS = [
-  {
-    _id: 'ord_demo_101',
-    orderId: 'DD-2026-9821',
-    totalAmount: 499,
-    advancePaid: 100,
-    remainingCodAmount: 399,
-    orderStatus: 'Packed',
-    createdAt: new Date().toISOString(),
-    user: { name: 'Rahul Sharma', email: 'rahul@example.com' },
-    deliveryAddressSnapshot: { fullName: 'Rahul Sharma', email: 'rahul@example.com' },
-    items: [{ quantity: 1 }]
-  },
-  {
-    _id: 'ord_demo_102',
-    orderId: 'DD-2026-9822',
-    totalAmount: 199,
-    advancePaid: 100,
-    remainingCodAmount: 99,
-    orderStatus: 'Dispatched',
-    createdAt: new Date().toISOString(),
-    user: { name: 'Priya Patel', email: 'priya@example.com' },
-    deliveryAddressSnapshot: { fullName: 'Priya Patel', email: 'priya@example.com' },
-    items: [{ quantity: 1 }]
-  }
-];
-
 export const AdminOrders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -39,10 +12,7 @@ export const AdminOrders = () => {
 
   const getOrdersFromLocal = () => {
     const localOrders = JSON.parse(localStorage.getItem('dd_orders') || '[]');
-    if (Array.isArray(localOrders) && localOrders.length > 0) {
-      return localOrders;
-    }
-    return DEFAULT_ADMIN_ORDERS;
+    return Array.isArray(localOrders) ? localOrders : [];
   };
 
   const fetchOrders = async () => {
@@ -55,7 +25,6 @@ export const AdminOrders = () => {
         setOrders(getOrdersFromLocal());
       }
     } catch (err) {
-      console.warn('Admin orders endpoint notice, using local store:', err.message);
       setOrders(getOrdersFromLocal());
     } finally {
       setLoading(false);
@@ -139,7 +108,7 @@ export const AdminOrders = () => {
               {filteredOrders.length === 0 ? (
                 <tr>
                   <td colSpan="8" className="p-8 text-center text-slate-400">
-                    No orders found.
+                    No customer orders placed yet. Place an order on the customer store to view real orders here!
                   </td>
                 </tr>
               ) : (
@@ -152,7 +121,7 @@ export const AdminOrders = () => {
                     </td>
                     <td className="p-3">{ord.items?.length || 1} Box(es)</td>
                     <td className="p-3 font-bold text-white">₹{ord.totalAmount}</td>
-                    <td className="p-3 font-bold text-emerald-400">₹{ord.advancePaid || ord.advanceRequired || 0}</td>
+                    <td className="p-3 font-bold text-emerald-400">₹{ord.advancePaid || 0}</td>
                     <td className="p-3 font-bold text-amber-300">₹{ord.remainingCodAmount || 0}</td>
                     <td className="p-3">
                       <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold ${

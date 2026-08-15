@@ -7,19 +7,50 @@ export const AdminCustomers = () => {
   const [customers, setCustomers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
 
+  const getCustomersFromLocal = () => {
+    const orders = JSON.parse(localStorage.getItem('dd_orders') || '[]');
+    if (!Array.isArray(orders) || orders.length === 0) {
+      return [];
+    }
+    const map = {};
+    orders.forEach((ord) => {
+      const email = ord.user?.email || ord.deliveryAddressSnapshot?.email || 'customer@example.com';
+      if (!map[email]) {
+        map[email] = {
+          _id: `cust_${email}`,
+          name: ord.user?.name || ord.deliveryAddressSnapshot?.fullName || 'Customer',
+          email,
+          phone: ord.user?.phone || ord.deliveryAddressSnapshot?.mobileNumber || 'N/A',
+          totalOrders: 0,
+          totalSpent: 0,
+          createdAt: ord.createdAt
+        };
+      }
+      map[email].totalOrders += 1;
+      map[email].totalSpent += (ord.totalAmount || 0);
+    });
+    return Object.values(map);
+  };
+
   useEffect(() => {
     const fetchCustomers = async () => {
       try {
         const { data } = await API.get('/admin/customers');
-        setCustomers(data);
+        if (Array.isArray(data) && data.length > 0) {
+          setCustomers(data);
+        } else {
+          setCustomers(getCustomersFromLocal());
+        }
       } catch (err) {
-        console.error(err);
+        setCustomers(getCustomersFromLocal());
       }
     };
     fetchCustomers();
   }, []);
 
-  const filtered = customers.filter(
+  const safeCustomers = Array.isArray(customers) ? customers : getCustomersFromLocal();
+
+  const filtered = safeCustomers.filter(
     (c) =>
       c.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       c.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -61,21 +92,29 @@ export const AdminCustomers = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800">
-              {filtered.map((cust) => (
-                <tr key={cust._id} className="hover:bg-slate-900/50 transition-colors">
-                  <td className="p-4 font-bold text-white flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-pink-500/20 text-pink-400 flex items-center justify-center font-bold">
-                      {cust.name?.charAt(0)}
-                    </div>
-                    <span>{cust.name}</span>
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="p-8 text-center text-slate-400">
+                    No registered customers yet. Real customers who place orders on the website will appear here!
                   </td>
-                  <td className="p-4 text-slate-300">{cust.email}</td>
-                  <td className="p-4 font-mono text-slate-400">{cust.phone}</td>
-                  <td className="p-4 font-bold text-amber-300">{cust.totalOrders} Orders</td>
-                  <td className="p-4 font-bold text-pink-400">₹{cust.totalSpent}</td>
-                  <td className="p-4 text-slate-400">{new Date(cust.createdAt).toLocaleDateString()}</td>
                 </tr>
-              ))}
+              ) : (
+                filtered.map((cust) => (
+                  <tr key={cust._id} className="hover:bg-slate-900/50 transition-colors">
+                    <td className="p-4 font-bold text-white flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-pink-500/20 text-pink-400 flex items-center justify-center font-bold">
+                        {cust.name?.charAt(0)}
+                      </div>
+                      <span>{cust.name}</span>
+                    </td>
+                    <td className="p-4 text-slate-300">{cust.email}</td>
+                    <td className="p-4 font-mono text-slate-400">{cust.phone}</td>
+                    <td className="p-4 font-bold text-amber-300">{cust.totalOrders} Orders</td>
+                    <td className="p-4 font-bold text-pink-400">₹{cust.totalSpent}</td>
+                    <td className="p-4 text-slate-400">{new Date(cust.createdAt).toLocaleDateString()}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
