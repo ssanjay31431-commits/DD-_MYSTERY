@@ -4,6 +4,7 @@ import { ProductCard } from '../components/product/ProductCard';
 import { CardSkeleton } from '../components/common/SkeletonLoader';
 import { EmptyState } from '../components/common/EmptyState';
 import { Search, Sparkles } from 'lucide-react';
+import { DEFAULT_PRODUCTS } from '../utils/defaultProducts';
 
 export const Shop = () => {
   const [products, setProducts] = useState([]);
@@ -14,9 +15,14 @@ export const Shop = () => {
     const fetchProducts = async () => {
       try {
         const { data } = await API.get('/products');
-        setProducts(data);
+        if (Array.isArray(data) && data.length > 0) {
+          setProducts(data);
+        } else {
+          setProducts(DEFAULT_PRODUCTS);
+        }
       } catch (err) {
-        console.error(err);
+        console.error('API fetch error, using default products fallback:', err);
+        setProducts(DEFAULT_PRODUCTS);
       } finally {
         setLoading(false);
       }

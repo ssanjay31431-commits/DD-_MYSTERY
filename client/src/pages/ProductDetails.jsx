@@ -7,6 +7,8 @@ import { useWishlist } from '../context/WishlistContext';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
 
+import { DEFAULT_PRODUCTS } from '../utils/defaultProducts';
+
 export const ProductDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -22,9 +24,16 @@ export const ProductDetails = () => {
     const fetchProduct = async () => {
       try {
         const { data } = await API.get(`/products/${id}`);
-        setProduct(data);
+        if (data) {
+          setProduct(data);
+        } else {
+          const fallback = DEFAULT_PRODUCTS.find(p => p._id === id || p.price === Number(id)) || DEFAULT_PRODUCTS[0];
+          setProduct(fallback);
+        }
       } catch (err) {
-        console.error(err);
+        console.error('Product details fetch error, using fallback:', err);
+        const fallback = DEFAULT_PRODUCTS.find(p => p._id === id || p.price === Number(id)) || DEFAULT_PRODUCTS[0];
+        setProduct(fallback);
       } finally {
         setLoading(false);
       }

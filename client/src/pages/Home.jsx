@@ -4,6 +4,7 @@ import { Sparkles, Gift, Heart, ShieldCheck, Star, ArrowRight, Truck, PartyPoppe
 import API from '../services/api';
 import { ProductCard } from '../components/product/ProductCard';
 import { CardSkeleton } from '../components/common/SkeletonLoader';
+import { DEFAULT_PRODUCTS } from '../utils/defaultProducts';
 
 export const Home = () => {
   const [products, setProducts] = useState([]);
@@ -14,13 +15,18 @@ export const Home = () => {
     const fetchData = async () => {
       try {
         const [prodRes, themeRes] = await Promise.all([
-          API.get('/products'),
-          API.get('/themes')
+          API.get('/products').catch(() => ({ data: null })),
+          API.get('/themes').catch(() => ({ data: null }))
         ]);
-        setProducts(prodRes.data);
-        setThemes(themeRes.data);
+        if (Array.isArray(prodRes?.data) && prodRes.data.length > 0) {
+          setProducts(prodRes.data);
+        } else {
+          setProducts(DEFAULT_PRODUCTS);
+        }
+        setThemes(themeRes?.data || []);
       } catch (err) {
-        console.error(err);
+        console.error('Home page fetch error, using default products fallback:', err);
+        setProducts(DEFAULT_PRODUCTS);
       } finally {
         setLoading(false);
       }
