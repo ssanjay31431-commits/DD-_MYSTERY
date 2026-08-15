@@ -5,6 +5,7 @@ import API from '../services/api';
 import { LiveBoxPreview } from '../components/customization/LiveBoxPreview';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
+import { DEFAULT_PRODUCTS } from '../utils/defaultProducts';
 
 export const CustomizeBox = () => {
   const { productId } = useParams();
@@ -13,8 +14,8 @@ export const CustomizeBox = () => {
   const { addToCart } = useCart();
   const { addToast } = useToast();
 
-  const [products, setProducts] = useState([]);
-  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [products, setProducts] = useState(DEFAULT_PRODUCTS);
+  const [selectedProduct, setSelectedProduct] = useState(DEFAULT_PRODUCTS[0]);
   const [loading, setLoading] = useState(true);
 
   // Form State
@@ -40,16 +41,20 @@ export const CustomizeBox = () => {
     const fetchProducts = async () => {
       try {
         const { data } = await API.get('/products');
-        setProducts(data);
+        const list = Array.isArray(data) && data.length > 0 ? data : DEFAULT_PRODUCTS;
+        setProducts(list);
         if (productId && productId !== 'default') {
-          const found = data.find((p) => p._id === productId);
+          const found = list.find((p) => p._id === productId || p.price === Number(productId));
           if (found) setSelectedProduct(found);
-          else setSelectedProduct(data[1] || data[0]);
+          else setSelectedProduct(list[0]);
         } else {
-          setSelectedProduct(data[1] || data[0]); // Default to Standard Box (Best Seller)
+          setSelectedProduct(list[0]);
         }
       } catch (err) {
-        console.error(err);
+        console.error('CustomizeBox fetch error, using default products fallback:', err);
+        setProducts(DEFAULT_PRODUCTS);
+        const found = DEFAULT_PRODUCTS.find((p) => p._id === productId || p.price === Number(productId)) || DEFAULT_PRODUCTS[0];
+        setSelectedProduct(found);
       } finally {
         setLoading(false);
       }
@@ -81,6 +86,8 @@ export const CustomizeBox = () => {
     await addToCart(selectedProduct, customizationObj, quantity);
     navigate('/cart');
   };
+
+  const productList = Array.isArray(products) && products.length > 0 ? products : DEFAULT_PRODUCTS;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -117,7 +124,7 @@ export const CustomizeBox = () => {
                 Select Mystery Box Budget Tier:
               </label>
               <div className="grid grid-cols-3 gap-2">
-                {products.map((p) => (
+                {productList.map((p) => (
                   <button
                     key={p._id}
                     type="button"
@@ -128,7 +135,7 @@ export const CustomizeBox = () => {
                         : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:border-purple-500/40'
                     }`}
                   >
-                    <span className="block text-xs font-bold truncate">{p.name.split(' ')[0]}</span>
+                    <span className="block text-xs font-bold truncate">{p.name ? p.name.split(' ')[0] : 'Box'}</span>
                     <span className="block text-sm font-black text-pink-400 mt-0.5">₹{p.price}</span>
                   </button>
                 ))}
