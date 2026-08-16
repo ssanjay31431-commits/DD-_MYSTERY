@@ -2,6 +2,7 @@ const Order = require('../models/Order');
 const Cart = require('../models/Cart');
 const Product = require('../models/Product');
 const AdminSettings = require('../models/AdminSettings');
+const NotificationLog = require('../models/NotificationLog');
 const { generateOrderId } = require('../utils/orderIdGenerator');
 const { sendNotification } = require('../utils/emailService');
 
@@ -101,6 +102,26 @@ const createOrder = async (req, res) => {
     });
 
     const createdOrder = await order.save();
+
+    // Create an admin-visible notification log so admin dashboard shows a new order alert
+    try {
+      await NotificationLog.create({
+        orderId: createdOrder.orderId,
+        userId: createdOrder.user || null,
+        customerName: createdOrder.deliveryAddressSnapshot?.fullName || createdOrder.user?.name || 'Customer',
+        recipient: 'ADMIN',
+        channel: 'Email',
+        type: 'NEW_ORDER',
+        event: 'NEW_ORDER',
+        status: 'Sent',
+        provider: 'System',
+        subject: `New order ${createdOrder.orderId}`,
+        content: `New order ${createdOrder.orderId} placed by ${createdOrder.deliveryAddressSnapshot?.fullName || 'Customer'}`,
+        idempotencyKey: `ADMIN_${createdOrder.orderId}_NEW_ORDER`
+      });
+    } catch (logErr) {
+      console.error(`[Order ${createdOrder.orderId}] Admin notification log error:`, logErr.message);
+    }
 
     // Clear cart after placing order
     await Cart.findOneAndUpdate({ user: req.user._id }, { items: [], couponApplied: { code: '', discountAmount: 0 } });
