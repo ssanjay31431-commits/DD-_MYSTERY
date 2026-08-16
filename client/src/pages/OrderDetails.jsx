@@ -13,6 +13,9 @@ export const OrderDetails = () => {
   const { addToast } = useToast();
 
   useEffect(() => {
+    let pollInterval = null;
+    let isPageVisible = true;
+
     const fetchOrder = async () => {
       try {
         const { data } = await API.get(`/orders/${id}`);
@@ -29,7 +32,34 @@ export const OrderDetails = () => {
         setLoading(false);
       }
     };
-    fetchOrder();
+
+    const startPolling = () => {
+      // Start immediate fetch then poll every 12s
+      fetchOrder();
+      if (pollInterval) clearInterval(pollInterval);
+      pollInterval = setInterval(() => {
+        if (isPageVisible) fetchOrder();
+      }, 12000);
+    };
+
+    const handleVisibility = () => {
+      isPageVisible = document.visibilityState === 'visible';
+      if (isPageVisible) {
+        // Refresh immediately when user comes back
+        fetchOrder();
+      }
+    };
+
+    // Initial start
+    startPolling();
+
+    // Pause polling when tab not visible to save network
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      if (pollInterval) clearInterval(pollInterval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [id]);
 
   const handleCancelOrder = async () => {
