@@ -5,7 +5,7 @@ const apiOrigin = (typeof import.meta !== 'undefined' && import.meta.env && impo
   ? String(import.meta.env.VITE_API_URL).replace(/\/$/, '')
   : '';
 
-const baseURL = apiOrigin ? `${apiOrigin}/api` : '/api';
+const baseURL = apiOrigin ? (apiOrigin.endsWith('/api') ? apiOrigin : `${apiOrigin}/api`) : '/api';
 
 const API = axios.create({
   baseURL,
@@ -27,7 +27,7 @@ API.interceptors.request.use((config) => {
   return Promise.reject(error);
 });
 
-// Response interceptor to handle token expiration and helpful errors
+// Response interceptor to handle token expiration and helpful 405 error diagnostics
 API.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -39,8 +39,8 @@ API.interceptors.response.use(
     }
 
     if (status === 405) {
-      // Helpful console message when frontend is hitting the wrong host (static host returning 405)
-      console.error('[API] Method Not Allowed (405) - verify VITE_API_URL / proxy configuration and that the request is targeting your backend server');
+      console.error('[API 405 Error] Method Not Allowed. Request URL:', error.config?.url, 'Target:', `${error.config?.baseURL}${error.config?.url}`);
+      console.error('[API] Verify VITE_API_URL / proxy configuration and that the request is targeting your backend server.');
     }
 
     return Promise.reject(error);
