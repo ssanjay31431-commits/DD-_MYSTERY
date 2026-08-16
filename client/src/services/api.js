@@ -1,14 +1,28 @@
 import axios from 'axios';
 
-// Use Vite environment variable when available (production builds) otherwise fallback to relative /api for dev + proxy
-const apiOrigin = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL)
-  ? String(import.meta.env.VITE_API_URL).replace(/\/$/, '')
-  : '';
+// Default Production Render Express Backend
+const RENDER_BACKEND_URL = 'https://dd-mystery.onrender.com';
 
-const baseURL = apiOrigin ? (apiOrigin.endsWith('/api') ? apiOrigin : `${apiOrigin}/api`) : '/api';
+const getBaseURL = () => {
+  const envUrl = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_API_URL : '';
+
+  if (envUrl && typeof envUrl === 'string' && envUrl.trim() !== '') {
+    const clean = envUrl.trim().replace(/\/$/, '');
+    return clean.endsWith('/api') ? clean : `${clean}/api`;
+  }
+
+  // If running in browser on production domain (e.g. vercel.app), default directly to Render backend
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    return `${RENDER_BACKEND_URL}/api`;
+  }
+
+  // Local development fallback
+  return '/api';
+};
 
 const API = axios.create({
-  baseURL,
+  baseURL: getBaseURL(),
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json'
   }
@@ -32,15 +46,17 @@ API.interceptors.response.use(
   (response) => response,
   (error) => {
     const status = error.response?.status;
+    const requestUrl = error.config?.url || '';
+    const fullTarget = `${error.config?.baseURL || ''}${requestUrl}`;
+
+    if (status === 405) {
+      console.error(`[API 405 Error] 405 Method Not Allowed when sending to ${fullTarget}. Verify VITE_API_URL or backend CORS routing.`);
+    }
+
     if (status === 401) {
       localStorage.removeItem('dd_token');
       localStorage.removeItem('dd_user');
       window.dispatchEvent(new Event('auth_logout'));
-    }
-
-    if (status === 405) {
-      console.error('[API 405 Error] Method Not Allowed. Request URL:', error.config?.url, 'Target:', `${error.config?.baseURL}${error.config?.url}`);
-      console.error('[API] Verify VITE_API_URL / proxy configuration and that the request is targeting your backend server.');
     }
 
     return Promise.reject(error);
