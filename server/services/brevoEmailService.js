@@ -1,4 +1,5 @@
 const axios = require('axios');
+const nodemailer = require('nodemailer');
 
 const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
 
@@ -10,8 +11,74 @@ const getBrevoHeaders = () => ({
 
 const getSender = () => ({
   name: process.env.BREVO_SENDER_NAME || 'DD MYSTERY BOX',
-  email: process.env.BREVO_SENDER_EMAIL || 'support@ddmysterybox.com'
+  email: process.env.BREVO_SENDER_EMAIL || process.env.SMTP_USER || 'support@ddmysterybox.com'
 });
+
+const sendViaSmtp = async ({ recipientEmail, recipientName, subject, htmlContent }) => {
+  const smtpHost = process.env.SMTP_HOST;
+  const smtpPort = Number(process.env.SMTP_PORT || 587);
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPass = process.env.SMTP_PASS;
+
+  if (!smtpHost || !smtpUser || !smtpPass) {
+    const errorMsg = 'SMTP settings are not configured (SMTP_HOST, SMTP_USER, SMTP_PASS)';
+    console.error('[EMAIL ERROR] To:', recipientEmail, '| Provider: Brevo SMTP | Error:', errorMsg);
+    return { success: false, error: errorMsg };
+  }
+
+  const sender = getSender();
+  const transporter = nodemailer.createTransport({
+    host: smtpHost,
+    port: smtpPort,
+    secure: Number(smtpPort) === 465,
+    auth: {
+      user: smtpUser,
+      pass: smtpPass
+    }
+  });
+
+  try {
+    const response = await transporter.sendMail({
+      from: `${sender.name} <${sender.email}>`,
+      to: recipientEmail,
+      subject,
+      html: htmlContent
+    });
+
+    console.log('\n[EMAIL]');
+    console.log(`To: ${recipientEmail}`);
+    console.log(`Sender: ${sender.email}`);
+    console.log('Provider: Brevo SMTP');
+    console.log(`HTTP: 250`);
+    console.log(`Message ID: ${response.messageId || 'N/A'}`);
+    console.log('Full SMTP response:', JSON.stringify(response, null, 2));
+    console.log('Status: accepted\n');
+
+    return {
+      success: true,
+      providerMessageId: response.messageId || `brevo_smtp_${Date.now()}`,
+      providerResponse: response,
+      httpStatus: 250
+    };
+  } catch (error) {
+    const errorText = error?.response?.body || error?.message || 'SMTP send failed';
+    console.error('\n[EMAIL ERROR] Full SMTP error response:');
+    console.error(errorText);
+    console.error('\n[EMAIL ERROR] Summary:');
+    console.error(`To: ${recipientEmail}`);
+    console.error(`Sender: ${sender.email}`);
+    console.error('Provider: Brevo SMTP');
+    console.error(`HTTP: ${error?.response?.status || 'N/A'}`);
+    console.error(`Error: ${errorText}\n`);
+
+    return {
+      success: false,
+      error: errorText,
+      providerResponse: error?.response?.body || error?.response || null,
+      httpStatus: error?.response?.status || null
+    };
+  }
+};
 
 // Helper to generate DD Mystery Box branded HTML Email
 const generateEmailTemplate = ({ title, bannerColor = '#ec4899', customerName, orderId, order, currentStage = 'Confirmed', customMessage = '' }) => {
@@ -186,13 +253,6 @@ const generateEmailTemplate = ({ title, bannerColor = '#ec4899', customerName, o
 
 // Generic Brevo API sender helper
 const sendBrevoEmail = async ({ recipientEmail, recipientName, subject, htmlContent }) => {
-  const apiKey = process.env.BREVO_API_KEY;
-  if (!apiKey) {
-    const errorMsg = 'BREVO_API_KEY is not defined in backend environment variables';
-    console.error('[EMAIL ERROR] To:', recipientEmail, '| Provider: Brevo | Error:', errorMsg);
-    return { success: false, error: errorMsg };
-  }
-
   if (!recipientEmail || !recipientEmail.includes('@')) {
     const errorMsg = `Invalid recipient email address: "${recipientEmail}"`;
     console.error('[EMAIL ERROR] To:', recipientEmail, '| Provider: Brevo | Error:', errorMsg);
@@ -201,68 +261,86 @@ const sendBrevoEmail = async ({ recipientEmail, recipientName, subject, htmlCont
 
   const sender = getSender();
   if (!sender.email || !sender.email.includes('@')) {
-    const errorMsg = `Invalid BREVO_SENDER_EMAIL address: "${sender.email}"`;
+    const errorMsg = `Invalid sender email address: "${sender.email}". Set BREVO_SENDER_EMAIL or SMTP_USER to a verified Brevo sender.`;
     console.error('[EMAIL ERROR] To:', recipientEmail, '| Provider: Brevo | Error:', errorMsg);
     return { success: false, error: errorMsg };
   }
 
-  try {
-    const payload = {
-      sender,
-      to: [{ email: recipientEmail, name: recipientName || recipientEmail }],
-      subject: subject,
-      htmlContent: htmlContent
-    };
+  const apiKey = process.env.BREVO_API_KEY;
+  const hasSmtpConfig = !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
 
-    const response = await axios.post(BREVO_API_URL, payload, { headers: getBrevoHeaders() });
-    const messageId = response.data?.messageId || response.data?.id;
+  if (!apiKey && !hasSmtpConfig) {
+    const errorMsg = 'BREVO_API_KEY and SMTP credentials are not configured in the backend environment';
+    console.error('[EMAIL ERROR] To:', recipientEmail, '| Provider: Brevo | Error:', errorMsg);
+    return { success: false, error: errorMsg };
+  }
 
-    console.log('\n[EMAIL]');
-    console.log(`To: ${recipientEmail}`);
-    console.log(`Sender: ${sender.email}`);
-    console.log(`Provider: Brevo`);
-    console.log(`HTTP: ${response.status}`);
-    console.log(`Message ID: ${messageId || 'N/A'}`);
-    console.log('Full Brevo response:', JSON.stringify(response.data, null, 2));
-    console.log(`Status: accepted\n`);
-
-    if (response.status === 201 || response.status === 200) {
-      return {
-        success: true,
-        providerMessageId: messageId || `brevo_${Date.now()}`,
-        providerResponse: response.data,
-        httpStatus: response.status
+  if (apiKey) {
+    try {
+      const payload = {
+        sender,
+        to: [{ email: recipientEmail, name: recipientName || recipientEmail }],
+        subject: subject,
+        htmlContent: htmlContent
       };
-    } else {
+
+      const response = await axios.post(BREVO_API_URL, payload, { headers: getBrevoHeaders() });
+      const messageId = response.data?.messageId || response.data?.id;
+
+      console.log('\n[EMAIL]');
+      console.log(`To: ${recipientEmail}`);
+      console.log(`Sender: ${sender.email}`);
+      console.log(`Provider: Brevo`);
+      console.log(`HTTP: ${response.status}`);
+      console.log(`Message ID: ${messageId || 'N/A'}`);
+      console.log('Full Brevo response:', JSON.stringify(response.data, null, 2));
+      console.log(`Status: accepted\n`);
+
+      if (response.status === 201 || response.status === 200) {
+        return {
+          success: true,
+          providerMessageId: messageId || `brevo_${Date.now()}`,
+          providerResponse: response.data,
+          httpStatus: response.status
+        };
+      }
+
       return {
         success: false,
         error: `Unexpected response status from Brevo: ${response.status}`,
         providerResponse: response.data,
         httpStatus: response.status
       };
+    } catch (error) {
+      const httpStatus = error.response?.status || 'N/A';
+      const providerResponse = error.response?.data || null;
+      const errorMsg = providerResponse?.message || providerResponse?.code || error.message || 'Brevo API call failed';
+
+      console.error('\n[EMAIL ERROR] Full Brevo error response:');
+      try { console.error(JSON.stringify(providerResponse, null, 2)); } catch (e) { console.error(providerResponse); }
+
+      console.error('\n[EMAIL ERROR] Summary:');
+      console.error(`To: ${recipientEmail}`);
+      console.error(`Sender: ${sender.email}`);
+      console.error(`Provider: Brevo`);
+      console.error(`HTTP: ${httpStatus}`);
+      console.error(`Error: ${errorMsg}\n`);
+
+      if (hasSmtpConfig) {
+        console.warn('[EMAIL WARN] Brevo API rejected the message. Falling back to Brevo SMTP with configured SMTP credentials.');
+        return sendViaSmtp({ recipientEmail, recipientName, subject, htmlContent });
+      }
+
+      return {
+        success: false,
+        error: errorMsg,
+        providerResponse,
+        httpStatus
+      };
     }
-  } catch (error) {
-    const httpStatus = error.response?.status || 'N/A';
-    const providerResponse = error.response?.data || null;
-    const errorMsg = providerResponse?.message || providerResponse?.code || error.message || 'Brevo API call failed';
-
-    console.error('\n[EMAIL ERROR] Full Brevo error response:');
-    try { console.error(JSON.stringify(providerResponse, null, 2)); } catch (e) { console.error(providerResponse); }
-
-    console.error('\n[EMAIL ERROR] Summary:');
-    console.error(`To: ${recipientEmail}`);
-    console.error(`Sender: ${sender.email}`);
-    console.error(`Provider: Brevo`);
-    console.error(`HTTP: ${httpStatus}`);
-    console.error(`Error: ${errorMsg}\n`);
-
-    return {
-      success: false,
-      error: errorMsg,
-      providerResponse,
-      httpStatus
-    };
   }
+
+  return sendViaSmtp({ recipientEmail, recipientName, subject, htmlContent });
 };
 
 // Specialized Brevo Email Functions
