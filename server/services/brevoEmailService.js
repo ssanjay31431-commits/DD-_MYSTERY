@@ -223,24 +223,33 @@ const sendBrevoEmail = async ({ recipientEmail, recipientName, subject, htmlCont
     console.log(`Provider: Brevo`);
     console.log(`HTTP: ${response.status}`);
     console.log(`Message ID: ${messageId || 'N/A'}`);
+    console.log('Full Brevo response:', JSON.stringify(response.data, null, 2));
     console.log(`Status: accepted\n`);
 
     if (response.status === 201 || response.status === 200) {
       return {
         success: true,
-        providerMessageId: messageId || `brevo_${Date.now()}`
+        providerMessageId: messageId || `brevo_${Date.now()}`,
+        providerResponse: response.data,
+        httpStatus: response.status
       };
     } else {
       return {
         success: false,
-        error: `Unexpected response status from Brevo: ${response.status}`
+        error: `Unexpected response status from Brevo: ${response.status}`,
+        providerResponse: response.data,
+        httpStatus: response.status
       };
     }
   } catch (error) {
-    const errorMsg = error.response?.data?.message || error.response?.data?.code || error.message || 'Brevo API call failed';
     const httpStatus = error.response?.status || 'N/A';
+    const providerResponse = error.response?.data || null;
+    const errorMsg = providerResponse?.message || providerResponse?.code || error.message || 'Brevo API call failed';
 
-    console.error('\n[EMAIL ERROR]');
+    console.error('\n[EMAIL ERROR] Full Brevo error response:');
+    try { console.error(JSON.stringify(providerResponse, null, 2)); } catch (e) { console.error(providerResponse); }
+
+    console.error('\n[EMAIL ERROR] Summary:');
     console.error(`To: ${recipientEmail}`);
     console.error(`Sender: ${sender.email}`);
     console.error(`Provider: Brevo`);
@@ -249,7 +258,9 @@ const sendBrevoEmail = async ({ recipientEmail, recipientName, subject, htmlCont
 
     return {
       success: false,
-      error: errorMsg
+      error: errorMsg,
+      providerResponse,
+      httpStatus
     };
   }
 };
