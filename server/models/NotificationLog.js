@@ -12,6 +12,8 @@ const notificationLogSchema = new mongoose.Schema(
     status: { type: String, enum: ['Sent', 'Delivered', 'Failed', 'Pending'], default: 'Pending' },
     provider: { type: String, default: 'Brevo' }, // Brevo / Fast2SMS
     providerMessageId: { type: String, default: '' },
+    providerResponse: { type: mongoose.Schema.Types.Mixed, default: null },
+    httpStatus: { type: Number, default: null },
     subject: { type: String, default: '' },
     content: { type: String, default: '' },
     error: { type: String, default: '' },
