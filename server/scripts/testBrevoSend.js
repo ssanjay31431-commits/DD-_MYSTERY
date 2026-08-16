@@ -1,4 +1,7 @@
-﻿const brevo = require('../services/brevoEmailService');
+﻿const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+
+const brevo = require('../services/brevoEmailService');
 
 (async () => {
   try {
