@@ -15,13 +15,45 @@ const app = express();
 
 // Security & Utility Middlewares
 app.use(helmet({ contentSecurityPolicy: false }));
+// Dynamic & Permissive CORS to prevent origin blocking across Vercel, Render & Localhost
+const allowedOrigins = [
+  'https://dd-mystery.vercel.app',
+  'https://dd-mystery.onrender.com',
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:3000'
+];
+
+if (process.env.CLIENT_URL) {
+  const envOrigin = process.env.CLIENT_URL.trim().replace(/\/$/, '');
+  if (!allowedOrigins.includes(envOrigin)) {
+    allowedOrigins.push(envOrigin);
+  }
+}
+
 const corsOptions = {
-  origin: process.env.CLIENT_URL || '*',
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+
+    if (
+      allowedOrigins.includes(origin) ||
+      origin.endsWith('.vercel.app') ||
+      origin.includes('localhost') ||
+      origin.includes('127.0.0.1')
+    ) {
+      return callback(null, true);
+    }
+
+    return callback(null, true);
+  },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With', 'x-api-version', 'x-client-id', 'x-client-secret'],
+  optionsSuccessStatus: 200
 };
+
 app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
