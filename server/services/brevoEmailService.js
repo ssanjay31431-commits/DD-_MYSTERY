@@ -11,7 +11,7 @@ const getBrevoHeaders = () => ({
 
 const getSender = () => ({
   name: process.env.BREVO_SENDER_NAME || 'DD MYSTERY BOX',
-  email: process.env.BREVO_SENDER_EMAIL || process.env.SMTP_USER || 'support@ddmysterybox.com'
+  email: process.env.BREVO_SENDER_EMAIL || 'ddmysterybox@gmail.com'
 });
 
 const sendViaSmtp = async ({ recipientEmail, recipientName, subject, htmlContent }) => {
@@ -261,7 +261,7 @@ const sendBrevoEmail = async ({ recipientEmail, recipientName, subject, htmlCont
 
   const sender = getSender();
   if (!sender.email || !sender.email.includes('@')) {
-    const errorMsg = `Invalid sender email address: "${sender.email}". Set BREVO_SENDER_EMAIL or SMTP_USER to a verified Brevo sender.`;
+    const errorMsg = `Invalid sender email address: "${sender.email}". Set BREVO_SENDER_EMAIL to a verified Brevo sender.`;
     console.error('[EMAIL ERROR] To:', recipientEmail, '| Provider: Brevo | Error:', errorMsg);
     return { success: false, error: errorMsg };
   }
