@@ -1,4 +1,4 @@
-import axios from 'axios';
+﻿import axios from 'axios';
 
 // Default Production Render Express Backend
 const RENDER_BACKEND_URL = 'https://dd-mystery.onrender.com';
@@ -28,7 +28,7 @@ const API = axios.create({
   }
 });
 
-// Interceptor to attach JWT Token to requests automatically
+// Interceptor to attach JWT Token to requests automatically (customer token)
 API.interceptors.request.use((config) => {
   const rawToken = localStorage.getItem('dd_token');
   const token = typeof rawToken === 'string' && rawToken !== 'undefined' && rawToken !== 'null' && rawToken !== '[object Object]' ? rawToken.trim() : '';
@@ -37,7 +37,9 @@ API.interceptors.request.use((config) => {
     config.headers = config.headers || {};
     config.headers.Authorization = `Bearer ${token}`;
   } else {
-    delete config.headers?.Authorization;
+    if (config.headers && config.headers.Authorization) {
+      delete config.headers.Authorization;
+    }
   }
   return config;
 }, (error) => {
@@ -62,6 +64,12 @@ API.interceptors.response.use(
       window.dispatchEvent(new Event('auth_logout'));
     }
 
+    if (error.response && (error.response.status === 502 || error.response.status === 503 || error.response.status === 504)) {
+      error.response.data = {
+        success: false,
+        message: `Backend server is offline or unreachable (${error.response.status} Bad Gateway). Make sure Node server is running on Render (https://dd-mystery.onrender.com).`
+      };
+    }
     return Promise.reject(error);
   }
 );

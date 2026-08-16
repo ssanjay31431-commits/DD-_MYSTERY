@@ -1,4 +1,4 @@
-import axios from 'axios';
+﻿import axios from 'axios';
 
 // Default Production Render Express Backend
 const RENDER_BACKEND_URL = 'https://dd-mystery.onrender.com';
@@ -28,16 +28,22 @@ const API = axios.create({
   }
 });
 
+// Interceptor to attach JWT Token to requests automatically (admin token)
 API.interceptors.request.use((config) => {
   const rawToken = localStorage.getItem('dd_admin_token');
   const token = typeof rawToken === 'string' && rawToken !== 'undefined' && rawToken !== 'null' && rawToken !== '[object Object]' ? rawToken.trim() : '';
+
   if (token) {
     config.headers = config.headers || {};
     config.headers.Authorization = `Bearer ${token}`;
   } else {
-    delete config.headers?.Authorization;
+    if (config.headers && config.headers.Authorization) {
+      delete config.headers.Authorization;
+    }
   }
   return config;
+}, (error) => {
+  return Promise.reject(error);
 });
 
 API.interceptors.response.use(
@@ -49,6 +55,13 @@ API.interceptors.response.use(
 
     if (status === 405) {
       console.error(`[API 405 Error] 405 Method Not Allowed when sending to ${fullTarget}. Verify VITE_API_URL or backend CORS routing.`);
+    }
+
+    if (status === 401) {
+      // On 401 remove admin token and notify app
+      localStorage.removeItem('dd_admin_token');
+      localStorage.removeItem('dd_admin_user');
+      window.dispatchEvent(new Event('auth_logout'));
     }
 
     if (error.response && (error.response.status === 502 || error.response.status === 503 || error.response.status === 504)) {
