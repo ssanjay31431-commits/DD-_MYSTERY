@@ -18,7 +18,7 @@ export const AdminSettings = () => {
 
   const fetchSettings = async () => {
     try {
-      const { data } = await API.get('/settings');
+      const { data } = await API.get('/admin/settings');
       if (data) {
         setCodAdvanceType(data.codAdvanceType || 'percentage');
         setCodAdvanceValue(data.codAdvanceValue ?? 20);
@@ -43,7 +43,7 @@ export const AdminSettings = () => {
     setSaving(true);
 
     try {
-      await API.put('/settings', {
+      await API.put('/admin/settings', {
         codAdvanceType,
         codAdvanceValue: Number(codAdvanceValue),
         deliveryCharge: Number(deliveryCharge),

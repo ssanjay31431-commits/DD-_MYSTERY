@@ -33,7 +33,9 @@ if (process.env.CLIENT_URL) {
 
 const corsOptions = {
   origin: (origin, callback) => {
-    if (!origin) return callback(null, true);
+    if (!origin) {
+      return callback(null, '*');
+    }
 
     if (
       allowedOrigins.includes(origin) ||
@@ -41,10 +43,10 @@ const corsOptions = {
       origin.includes('localhost') ||
       origin.includes('127.0.0.1')
     ) {
-      return callback(null, true);
+      return callback(null, origin);
     }
 
-    return callback(null, true);
+    return callback(null, origin);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],

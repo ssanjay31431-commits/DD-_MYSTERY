@@ -1,4 +1,5 @@
 const Order = require('../models/Order');
+const User = require('../models/User');
 const Product = require('../models/Product');
 const AdminSettings = require('../models/AdminSettings');
 const Cart = require('../models/Cart');
@@ -98,6 +99,10 @@ const createPaymentSession = async (req, res) => {
 // @route POST /api/orders/confirm-payment
 const confirmPaymentAndCreateOrder = async (req, res) => {
   try {
+    if (!req.user || (!req.user._id && !req.user.id && !req.user.userId)) {
+      return res.status(401).json({ success: false, message: 'Please login again' });
+    }
+
     const {
       paymentOrderId: inputPaymentOrderId,
       paymentSessionId = '',
@@ -110,38 +115,23 @@ const confirmPaymentAndCreateOrder = async (req, res) => {
 
     const paymentOrderId = inputPaymentOrderId || `CF_MOCK_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`;
 
+    const authenticatedUserId = req.user._id || req.user.id || req.user.userId;
+    const user = await User.findById(authenticatedUserId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
     // 1. IDEMPOTENCY CHECK: Return existing order if already processed for this payment
-    const existingOrder = await Order.findOne({ 'paymentInfo.paymentOrderId': paymentOrderId });
+    const existingOrder = await Order.findOne({
+      user: user._id,
+      'paymentInfo.paymentOrderId': paymentOrderId
+    });
     if (existingOrder) {
       console.log(`[Idempotent Order Check] Returning existing order ${existingOrder.orderNumber} for payment ${paymentOrderId}`);
       return res.json({ success: true, idempotent: true, order: existingOrder });
     }
 
-    // 2. Safe User Resolution (Supports Logged-In, Guest, and missing req.user)
-    let userObj = req.user;
-    if (!userObj || !userObj._id) {
-      const email = deliveryAddress.email || (deliveryAddress.mobileNumber ? `${deliveryAddress.mobileNumber}@customer.dd` : `customer_${Date.now()}@ddmysterybox.com`);
-      const name = deliveryAddress.fullName || 'Customer';
-      const phone = deliveryAddress.mobileNumber || '9999999999';
-
-      let foundUser = await User.findOne({ $or: [{ email }, { phone }] });
-      if (!foundUser) {
-        try {
-          foundUser = await User.create({
-            name,
-            email,
-            phone,
-            password: 'dd_customer_pass_123',
-            role: 'customer'
-          });
-        } catch (e) {
-          foundUser = await User.findOne({});
-        }
-      }
-      userObj = foundUser || { _id: `usr_guest_${Date.now()}`, name, email, phone };
-    }
-
-    // 3. Server-side verification (Auto-passes in mock/dev testing)
+    // 2. Server-side verification (must succeed before order creation)
     const verification = await cashfreeService.verifyOrderPayment(paymentOrderId);
 
     // 4. Recalculate Order Pricing from MongoDB Products
@@ -200,7 +190,7 @@ const confirmPaymentAndCreateOrder = async (req, res) => {
     const newOrderData = {
       orderNumber,
       orderId: orderNumber,
-      user: userObj._id,
+      user: user._id,
       items: orderItems,
       deliveryAddressSnapshot: deliveryAddress,
 
@@ -259,11 +249,11 @@ const confirmPaymentAndCreateOrder = async (req, res) => {
     const order = new Order(newOrderData);
     const createdOrder = await order.save();
 
-    console.log(`[ORDER CREATED IN MONGODB] Order #${createdOrder.orderNumber} saved successfully for ${userObj.name || 'Customer'}`);
+    console.log(`[ORDER CREATED IN MONGODB] Order #${createdOrder.orderNumber} saved successfully for ${user.name || 'Customer'}`);
 
     // 6. Clear User Cart
-    if (userObj._id) {
-      await Cart.findOneAndUpdate({ user: userObj._id }, { items: [], couponApplied: { code: '', discountAmount: 0 } }).catch(e => {});
+    if (user._id) {
+      await Cart.findOneAndUpdate({ user: user._id }, { items: [], couponApplied: { code: '', discountAmount: 0 } }).catch(e => {});
     }
 
     // 7. Asynchronous Notification Dispatch

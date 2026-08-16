@@ -4,7 +4,12 @@ const Address = require('../models/Address');
 // @route GET /api/addresses
 const getAddresses = async (req, res) => {
   try {
-    const addresses = await Address.find({ user: req.user._id }).sort({ isDefault: -1, createdAt: -1 });
+    if (!req.user || (!req.user._id && !req.user.id && !req.user.userId)) {
+      return res.status(401).json({ success: false, message: 'Please login again' });
+    }
+
+    const userId = req.user._id || req.user.id || req.user.userId;
+    const addresses = await Address.find({ user: userId }).sort({ isDefault: -1, createdAt: -1 });
     res.json(addresses);
   } catch (error) {
     console.error('Get addresses error:', error);
@@ -16,6 +21,11 @@ const getAddresses = async (req, res) => {
 // @route POST /api/addresses
 const createAddress = async (req, res) => {
   try {
+    if (!req.user || (!req.user._id && !req.user.id && !req.user.userId)) {
+      return res.status(401).json({ success: false, message: 'Please login again' });
+    }
+
+    const userId = req.user._id || req.user.id || req.user.userId;
     const { fullName, mobileNumber, houseNo, street, area, city, district, state, pincode, landmark, addressType, isDefault, latitude, longitude } = req.body;
 
     // Validate required fields
@@ -34,11 +44,11 @@ const createAddress = async (req, res) => {
     }
 
     if (isDefault) {
-      await Address.updateMany({ user: req.user._id }, { isDefault: false });
+      await Address.updateMany({ user: userId }, { isDefault: false });
     }
 
     const address = new Address({
-      user: req.user._id,
+      user: userId,
       fullName: fullName.trim(),
       mobileNumber: mobileNumber.trim(),
       houseNo: houseNo.trim(),
@@ -74,13 +84,18 @@ const createAddress = async (req, res) => {
 // @route PUT /api/addresses/:id
 const updateAddress = async (req, res) => {
   try {
-    const address = await Address.findOne({ _id: req.params.id, user: req.user._id });
+    if (!req.user || (!req.user._id && !req.user.id && !req.user.userId)) {
+      return res.status(401).json({ success: false, message: 'Please login again' });
+    }
+
+    const userId = req.user._id || req.user.id || req.user.userId;
+    const address = await Address.findOne({ _id: req.params.id, user: userId });
     if (!address) {
       return res.status(404).json({ message: 'Address not found' });
     }
 
     if (req.body.isDefault) {
-      await Address.updateMany({ user: req.user._id }, { isDefault: false });
+      await Address.updateMany({ user: userId }, { isDefault: false });
     }
 
     Object.assign(address, req.body);
@@ -95,7 +110,12 @@ const updateAddress = async (req, res) => {
 // @route DELETE /api/addresses/:id
 const deleteAddress = async (req, res) => {
   try {
-    const address = await Address.findOneAndDelete({ _id: req.params.id, user: req.user._id });
+    if (!req.user || (!req.user._id && !req.user.id && !req.user.userId)) {
+      return res.status(401).json({ success: false, message: 'Please login again' });
+    }
+
+    const userId = req.user._id || req.user.id || req.user.userId;
+    const address = await Address.findOneAndDelete({ _id: req.params.id, user: userId });
     if (address) {
       res.json({ message: 'Address deleted successfully' });
     } else {

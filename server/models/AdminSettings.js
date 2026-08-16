@@ -27,6 +27,14 @@ const adminSettingsSchema = new mongoose.Schema(
     freeDeliveryMinAmount: {
       type: Number,
       default: 499
+    },
+    instagramLink: {
+      type: String,
+      default: 'https://www.instagram.com/'
+    },
+    whatsappNumber: {
+      type: String,
+      default: '+91 00000 00000'
     }
   },
   { timestamps: true }

@@ -30,11 +30,14 @@ const API = axios.create({
 
 // Interceptor to attach JWT Token to requests automatically
 API.interceptors.request.use((config) => {
-  const token = localStorage.getItem('dd_token');
+  const rawToken = localStorage.getItem('dd_token');
+  const token = typeof rawToken === 'string' && rawToken !== 'undefined' && rawToken !== 'null' && rawToken !== '[object Object]' ? rawToken.trim() : '';
 
   if (token) {
     config.headers = config.headers || {};
     config.headers.Authorization = `Bearer ${token}`;
+  } else {
+    delete config.headers?.Authorization;
   }
   return config;
 }, (error) => {

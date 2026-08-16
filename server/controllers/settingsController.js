@@ -7,10 +7,14 @@ const getSettings = async (req, res) => {
     let settings = await AdminSettings.findOne();
     if (!settings) {
       settings = await AdminSettings.create({
+        advanceType: 'fixed',
+        advanceAmount: 100,
         codAdvanceType: 'fixed',
         codAdvanceValue: 100,
         deliveryCharge: 0,
-        freeDeliveryMinAmount: 199
+        freeDeliveryMinAmount: 199,
+        instagramLink: 'https://www.instagram.com/',
+        whatsappNumber: '+91 00000 00000'
       });
     }
     res.json(settings);
@@ -28,12 +32,25 @@ const updateSettings = async (req, res) => {
       settings = new AdminSettings();
     }
 
-    const { codAdvanceType, codAdvanceValue, deliveryCharge, freeDeliveryMinAmount } = req.body;
+    const {
+      advanceType,
+      advanceAmount,
+      codAdvanceType,
+      codAdvanceValue,
+      deliveryCharge,
+      freeDeliveryMinAmount,
+      instagramLink,
+      whatsappNumber
+    } = req.body;
 
+    if (advanceType) settings.advanceType = advanceType;
+    if (advanceAmount !== undefined) settings.advanceAmount = Number(advanceAmount);
     if (codAdvanceType) settings.codAdvanceType = codAdvanceType;
     if (codAdvanceValue !== undefined) settings.codAdvanceValue = Number(codAdvanceValue);
     if (deliveryCharge !== undefined) settings.deliveryCharge = Number(deliveryCharge);
     if (freeDeliveryMinAmount !== undefined) settings.freeDeliveryMinAmount = Number(freeDeliveryMinAmount);
+    if (instagramLink !== undefined) settings.instagramLink = instagramLink;
+    if (whatsappNumber !== undefined) settings.whatsappNumber = whatsappNumber;
 
     const updated = await settings.save();
     res.json(updated);
