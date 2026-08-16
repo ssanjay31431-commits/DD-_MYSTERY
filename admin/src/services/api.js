@@ -33,7 +33,9 @@ API.interceptors.request.use((config) => {
   const rawToken = localStorage.getItem('dd_admin_token');
   const token = typeof rawToken === 'string' && rawToken !== 'undefined' && rawToken !== 'null' && rawToken !== '[object Object]' ? rawToken.trim() : '';
 
-  if (token) {
+  // Only attach Authorization if token looks like a real JWT (three base64url parts separated by dots)
+  const jwtRegex = /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$/;
+  if (token && jwtRegex.test(token)) {
     config.headers = config.headers || {};
     config.headers.Authorization = `Bearer ${token}`;
   } else {
