@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Mail, CheckCircle2, Clock, Truck, ShieldCheck, Send, RefreshCw, User, MapPin } from 'lucide-react';
+import { ArrowLeft, Mail, CheckCircle2, Clock, Truck, ShieldCheck, Send, RefreshCw, User, MapPin, CreditCard, Package } from 'lucide-react';
 import API from '../services/api';
 import { AdminSidebar } from '../components/AdminSidebar';
 import { useToast } from '../context/ToastContext';
@@ -54,19 +54,6 @@ export const OrderDetailsView = () => {
     }
   };
 
-  const handleMarkCodCollected = async () => {
-    try {
-      const { data } = await API.put(`/orders/admin/${id}/status`, {
-        orderStatus: order.orderStatus,
-        codStatus: 'Collected'
-      });
-      setOrder(data);
-      addToast('COD payment marked as Collected ✓');
-    } catch (err) {
-      addToast('Update failed', 'error');
-    }
-  };
-
   const handleSendEmail = async (e) => {
     e.preventDefault();
     setSendingEmail(true);
@@ -74,7 +61,7 @@ export const OrderDetailsView = () => {
     try {
       const emailRecipient = order.deliveryAddressSnapshot?.email || order.user?.email;
       const { data } = await API.post('/admin/notifications/send-email', {
-        orderId: order.orderId,
+        orderId: order.orderNumber || order.orderId,
         recipientEmail: emailRecipient,
         templateType,
         subject: customSubject,
@@ -105,7 +92,7 @@ export const OrderDetailsView = () => {
     try {
       const phoneRecipient = order.deliveryAddressSnapshot?.mobileNumber || order.user?.phone;
       const { data } = await API.post('/admin/notifications/send-sms', {
-        orderId: order.orderId,
+        orderId: order.orderNumber || order.orderId,
         recipientPhone: phoneRecipient,
         templateType: smsTemplateType,
         message: smsMessage
@@ -146,18 +133,24 @@ export const OrderDetailsView = () => {
   }
 
   const statuses = [
-    'Order Placed',
-    'Order Confirmed',
-    'Preparing',
-    'Packed',
-    'Shipped',
-    'Out for Delivery',
-    'Delivered',
-    'Cancelled'
+    'ORDER PLACED',
+    'CONFIRMED',
+    'PREPARING',
+    'PACKED',
+    'SHIPPED',
+    'OUT FOR DELIVERY',
+    'DELIVERED',
+    'CANCELLED'
   ];
 
   const recipientEmail = order.deliveryAddressSnapshot?.email || order.user?.email || 'N/A';
   const recipientPhone = order.deliveryAddressSnapshot?.mobileNumber || order.user?.phone || 'N/A';
+  const ordNumber = order.orderNumber || order.orderId;
+  const total = order.pricing?.totalAmount || order.totalAmount || 0;
+  const paid = order.pricing?.amountPaid !== undefined ? order.pricing.amountPaid : (order.amountPaid || order.advancePaid || 0);
+  const rem = order.pricing?.remainingBalance !== undefined ? order.pricing.remainingBalance : (order.remainingBalance !== undefined ? order.remainingBalance : (order.remainingCodAmount || 0));
+  const isFull = order.paymentInfo?.method === 'FULL' || order.paymentMethod === 'FULL' || order.paymentMethod === 'full_online';
+  const cashfreeRef = order.paymentInfo?.cashfreePaymentId || order.paymentInfo?.cashfreeOrderId || order.paymentInfo?.transactionId || 'Verified Gateway';
 
   return (
     <div className="flex min-h-screen bg-[#0c0a17]">
@@ -176,7 +169,7 @@ export const OrderDetailsView = () => {
             </button>
             <div>
               <h1 className="text-2xl font-black text-white font-display">
-                ORDER #{order.orderId}
+                ORDER #{ordNumber}
               </h1>
               <p className="text-xs text-slate-400">Placed on {new Date(order.createdAt).toLocaleString()}</p>
             </div>
@@ -198,7 +191,7 @@ export const OrderDetailsView = () => {
           </div>
         </div>
 
-        {/* 8-Stage Order Tracking Status Controls */}
+        {/* Order Status Controls */}
         <div className="glass-panel p-6 rounded-3xl border border-purple-500/30 space-y-4">
           <h3 className="text-sm font-bold text-amber-300 font-display flex items-center gap-2">
             <Clock className="w-4 h-4 text-amber-400" /> Update Order Status & Timeline
@@ -211,7 +204,7 @@ export const OrderDetailsView = () => {
                 disabled={updatingStatus}
                 onClick={() => handleUpdateStatus(st)}
                 className={`px-3 py-2 rounded-xl text-xs font-bold transition-all ${
-                  order.orderStatus === st
+                  (order.orderStatus || '').toUpperCase() === st
                     ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-md shadow-pink-500/20 ring-2 ring-pink-400'
                     : 'bg-slate-900 border border-slate-800 text-slate-300 hover:text-white'
                 }`}
@@ -261,51 +254,59 @@ export const OrderDetailsView = () => {
               ].filter(Boolean).join(', ')} - {order.deliveryAddressSnapshot?.pincode}
             </p>
             <p className="text-xs text-slate-400 font-mono">
-              📞 Contact: {recipientPhone}
+              📞 Mobile: {recipientPhone}
             </p>
-            {order.deliveryAddressSnapshot?.latitude && order.deliveryAddressSnapshot?.longitude && (
-              <a
-                href={`https://www.google.com/maps?q=${order.deliveryAddressSnapshot.latitude},${order.deliveryAddressSnapshot.longitude}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-[11px] text-blue-400 hover:text-blue-300 font-bold underline mt-1"
-              >
-                📍 Open GPS Location in Google Maps ({order.deliveryAddressSnapshot.latitude.toFixed(4)}, {order.deliveryAddressSnapshot.longitude.toFixed(4)})
-              </a>
-            )}
           </div>
         </div>
 
-        {/* Payment Calculation & COD Collection Status */}
+        {/* Ordered Items List */}
         <div className="glass-panel p-6 rounded-3xl border border-purple-500/20 space-y-4">
-          <h3 className="text-sm font-bold text-white font-display border-b border-slate-800 pb-2">
-            Payment Breakdown (Advance + COD)
+          <h3 className="text-sm font-bold text-white font-display flex items-center gap-2 border-b border-slate-800 pb-2">
+            <Package className="w-4 h-4 text-pink-400" /> Ordered Items & Customizations
+          </h3>
+
+          <div className="space-y-3">
+            {order.items?.map((item, idx) => (
+              <div key={idx} className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between gap-4 text-xs">
+                <div className="flex items-center gap-3">
+                  <img src={item.productSnapshot?.image || item.product?.image || '/favicon.svg'} alt="" className="w-12 h-12 rounded-xl object-cover" />
+                  <div>
+                    <h4 className="font-bold text-white">{item.productSnapshot?.name || item.product?.name || 'DD Mystery Box'}</h4>
+                    <p className="text-pink-300">For: {item.customizationSnapshot?.recipientName || 'Recipient'} | Qty: {item.quantity}</p>
+                  </div>
+                </div>
+                <span className="font-black text-white font-display text-sm">₹{(item.unitPrice || item.price || 499) * item.quantity}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Payment Breakdown (Strictly No COD) */}
+        <div className="glass-panel p-6 rounded-3xl border border-purple-500/20 space-y-4">
+          <h3 className="text-sm font-bold text-white font-display border-b border-slate-800 pb-2 flex items-center gap-2">
+            <CreditCard className="w-4 h-4 text-purple-400" /> Payment & Financial Breakdown
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 text-xs">
-            <div className="p-3 rounded-2xl bg-slate-900 border border-slate-800">
+            <div className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800">
               <span className="text-[10px] text-slate-400 uppercase font-bold block">Total Amount</span>
-              <span className="text-lg font-black text-white font-display">₹{order.totalAmount}</span>
+              <span className="text-xl font-black text-white font-display">₹{total}</span>
             </div>
 
-            <div className="p-3 rounded-2xl bg-slate-900 border border-emerald-500/30">
-              <span className="text-[10px] text-emerald-400 uppercase font-bold block">Advance Paid Online</span>
-              <span className="text-lg font-black text-emerald-400 font-display">₹{order.advancePaid || order.advanceRequired}</span>
+            <div className="p-3.5 rounded-2xl bg-slate-900 border border-emerald-500/30">
+              <span className="text-[10px] text-emerald-400 uppercase font-bold block">Paid Online</span>
+              <span className="text-xl font-black text-emerald-400 font-display">₹{paid}</span>
             </div>
 
-            <div className="p-3 rounded-2xl bg-slate-900 border border-amber-500/30">
-              <span className="text-[10px] text-amber-400 uppercase font-bold block">Remaining COD</span>
-              <span className="text-lg font-black text-amber-400 font-display">₹{order.remainingCodAmount}</span>
+            <div className="p-3.5 rounded-2xl bg-slate-900 border border-amber-500/30">
+              <span className="text-[10px] text-amber-400 uppercase font-bold block">Remaining Balance</span>
+              <span className="text-xl font-black text-amber-400 font-display">₹{rem}</span>
             </div>
 
-            <div className="p-3 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col justify-between">
-              <span className="text-[10px] text-slate-400 uppercase font-bold block">COD Collection</span>
-              <button
-                onClick={handleMarkCodCollected}
-                className="mt-1 px-3 py-1 rounded-xl bg-emerald-500/20 text-emerald-300 font-bold text-[11px] hover:bg-emerald-500 hover:text-slate-950 transition-colors"
-              >
-                {order.codStatus === 'Collected' ? 'Collected ✓' : 'Mark COD Collected'}
-              </button>
+            <div className="p-3.5 rounded-2xl bg-slate-900 border border-purple-500/30">
+              <span className="text-[10px] text-purple-400 uppercase font-bold block">Payment Method</span>
+              <span className="text-xs font-bold text-white block mt-1">{isFull ? 'Full Online Payment' : 'Advance Payment'}</span>
+              <span className="text-[10px] font-mono text-slate-400 block truncate">Ref: {cashfreeRef}</span>
             </div>
           </div>
         </div>
@@ -318,7 +319,7 @@ export const OrderDetailsView = () => {
 
           <div className="space-y-2">
             {order.trackingHistory?.map((hist, idx) => (
-              <div key={idx} className="flex items-center gap-3 text-xs p-2 rounded-xl bg-slate-900/50">
+              <div key={idx} className="flex items-center gap-3 text-xs p-2.5 rounded-xl bg-slate-900/50">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                 <span className="font-bold text-white w-40">{hist.status}</span>
                 <span className="text-slate-400">{hist.comment || hist.message}</span>
@@ -332,7 +333,7 @@ export const OrderDetailsView = () => {
         <Modal isOpen={showEmailModal} onClose={() => setShowEmailModal(false)} title="Send Brevo Email Notification">
           <form onSubmit={handleSendEmail} className="space-y-4 text-xs text-slate-300">
             <div>
-              <label className="block mb-1 font-bold text-white">Recipient Email (Auto-populated)</label>
+              <label className="block mb-1 font-bold text-white">Recipient Email</label>
               <input
                 type="email"
                 disabled
@@ -402,7 +403,7 @@ export const OrderDetailsView = () => {
         <Modal isOpen={showSmsModal} onClose={() => setShowSmsModal(false)} title="Send SMS Notification to Customer">
           <form onSubmit={handleSendSms} className="space-y-4 text-xs text-slate-300">
             <div>
-              <label className="block mb-1 font-bold text-white">Recipient Phone Number (Auto-populated)</label>
+              <label className="block mb-1 font-bold text-white">Recipient Phone Number</label>
               <input
                 type="text"
                 disabled

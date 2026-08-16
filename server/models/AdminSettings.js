@@ -2,6 +2,15 @@ const mongoose = require('mongoose');
 
 const adminSettingsSchema = new mongoose.Schema(
   {
+    advanceType: {
+      type: String,
+      enum: ['percentage', 'fixed'],
+      default: 'fixed'
+    },
+    advanceAmount: {
+      type: Number,
+      default: 100 // Default ₹100 advance required
+    },
     codAdvanceType: {
       type: String,
       enum: ['percentage', 'fixed'],

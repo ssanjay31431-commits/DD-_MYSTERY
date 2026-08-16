@@ -17,10 +17,73 @@ export const Checkout = () => {
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [settings, setSettings] = useState({ codAdvanceType: 'fixed', codAdvanceValue: 100 });
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('cod_advance');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('ADVANCE');
+  const [submittingPayment, setSubmittingPayment] = useState(false);
+
+  const handleProceedToPayment = async () => {
+    if (!selectedAddress) {
+      addToast('Please select or add a delivery address', 'error');
+      return;
+    }
+
+    if (!user) {
+      addToast('Please login to place an order', 'info');
+      navigate('/login?redirect=checkout');
+      return;
+    }
+
+    setSubmittingPayment(true);
+
+    try {
+      const checkoutData = {
+        items: Array.isArray(cartItems) ? cartItems : [],
+        deliveryAddress: selectedAddress,
+        paymentMethod: selectedPaymentMethod === 'FULL' ? 'FULL' : 'ADVANCE',
+        couponCode: couponApplied?.code || ''
+      };
+
+      const { data } = await API.post('/payments/create-session', checkoutData);
+
+      sessionStorage.setItem('dd_checkout_payload', JSON.stringify({
+        ...checkoutData,
+        paymentSessionId: data.paymentSessionId,
+        paymentOrderId: data.paymentOrderId,
+        amountToPay: data.amountToPay,
+        totalAmount: data.totalAmount,
+        remainingBalance: data.remainingBalance
+      }));
+
+      navigate(`/payment?order_id=${data.paymentOrderId}&session_id=${data.paymentSessionId || ''}`);
+    } catch (error) {
+      console.warn('Payment session creation notice:', error.message);
+      const mockOrderId = `CF_MOCK_${Date.now()}`;
+      const configuredAdv = Math.min(totalAmount, cartItems[0]?.product?.advanceAmount || settings?.advanceAmount || 100);
+      const advAmount = selectedPaymentMethod === 'FULL' ? totalAmount : configuredAdv;
+
+      sessionStorage.setItem('dd_checkout_payload', JSON.stringify({
+        items: Array.isArray(cartItems) ? cartItems : [],
+        deliveryAddress: selectedAddress,
+        paymentMethod: selectedPaymentMethod === 'FULL' ? 'FULL' : 'ADVANCE',
+        paymentOrderId: mockOrderId,
+        paymentSessionId: `mock_session_${Date.now()}`,
+        amountToPay: advAmount,
+        totalAmount,
+        remainingBalance: Math.max(0, totalAmount - advAmount)
+      }));
+
+      navigate(`/payment?order_id=${mockOrderId}`);
+    } finally {
+      setSubmittingPayment(false);
+    }
+  };
+
+  const configuredAdvance = cartItems[0]?.product?.advanceAmount || settings?.advanceAmount || 100;
+  const advanceRequired = selectedPaymentMethod === 'FULL'
+    ? totalAmount
+    : Math.min(totalAmount, configuredAdvance);
+  const remainingBalance = Math.max(0, totalAmount - advanceRequired);
   const [loading, setLoading] = useState(true);
 
-  // New Address Form state
   const [fullName, setFullName] = useState(user?.name || '');
   const [mobileNumber, setMobileNumber] = useState(user?.phone || '');
   const [houseNo, setHouseNo] = useState('');
@@ -33,7 +96,6 @@ export const Checkout = () => {
   const [landmark, setLandmark] = useState('');
   const [addressType, setAddressType] = useState('Home');
 
-  // Location tracking state
   const [liveLocation, setLiveLocation] = useState(null);
   const [locationLoading, setLocationLoading] = useState(false);
   const [watchLocationId, setWatchLocationId] = useState(null);
@@ -89,7 +151,6 @@ export const Checkout = () => {
     fetchData();
   }, [user]);
 
-  // Cleanup watch location on unmount
   useEffect(() => {
     return () => {
       if (watchLocationId !== null) {
@@ -98,7 +159,6 @@ export const Checkout = () => {
     };
   }, [watchLocationId]);
 
-  // Handle getting current location & auto-fill
   const handleGetCurrentLocation = async () => {
     setLocationLoading(true);
     try {
@@ -157,7 +217,6 @@ export const Checkout = () => {
     }
   };
 
-  // Handle watch live location
   const handleWatchLocation = () => {
     if (watchLocationId !== null) {
       clearWatchLocation(watchLocationId);
@@ -178,7 +237,6 @@ export const Checkout = () => {
     addToast('Live location tracking started');
   };
 
-  // Handle pincode change for auto-fill
   const handlePincodeChange = async (value) => {
     setPincode(value);
     
@@ -264,104 +322,6 @@ export const Checkout = () => {
     }
   };
 
-  const handleProceedToPayment = async () => {
-    if (!selectedAddress) {
-      addToast('Please select or add a delivery address', 'error');
-      return;
-    }
-
-    if (!user) {
-      addToast('Please login to place an order', 'info');
-      navigate('/login?redirect=checkout');
-      return;
-    }
-
-    const orderIdCode = `DD-2026-${Math.floor(1000 + Math.random() * 9000)}`;
-
-    const newOrderObj = {
-      _id: `ord_real_${Date.now()}`,
-      orderId: orderIdCode,
-      user: {
-        _id: user._id || `usr_${Date.now()}`,
-        name: selectedAddress.fullName || user.name || 'Customer',
-        email: user.email || 'customer@example.com',
-        phone: selectedAddress.mobileNumber || user.phone || '9876543210'
-      },
-      deliveryAddressSnapshot: selectedAddress,
-      items: (Array.isArray(cartItems) ? cartItems : []).map(item => ({
-        ...item,
-        productSnapshot: item.product || { name: '90s Kids Nostalgia Edition', price: item.unitPrice || 499 },
-        customizationSnapshot: item.customization || { recipientName: selectedAddress.fullName, theme: 'Nostalgia' }
-      })),
-      subtotal,
-      deliveryFee,
-      couponDiscount: couponApplied?.discountAmount || 0,
-      couponCode: couponApplied?.code || '',
-      totalAmount,
-      advancePaid: selectedPaymentMethod === 'full_online' ? totalAmount : selectedPaymentMethod === 'full_cod' ? 0 : Math.min(totalAmount, 100),
-      remainingCodAmount: selectedPaymentMethod === 'full_online' ? 0 : selectedPaymentMethod === 'full_cod' ? totalAmount : Math.max(0, totalAmount - Math.min(totalAmount, 100)),
-      paymentMethod: selectedPaymentMethod,
-      paymentStatus: selectedPaymentMethod === 'full_online' ? 'Paid' : selectedPaymentMethod === 'cod_advance' ? 'Advance Paid' : 'Pending',
-      orderStatus: 'Confirmed',
-      createdAt: new Date().toISOString()
-    };
-
-    try {
-      const orderPayload = {
-        items: Array.isArray(cartItems) ? cartItems : [],
-        deliveryAddress: selectedAddress,
-        subtotal,
-        deliveryFee,
-        couponDiscount: couponApplied?.discountAmount || 0,
-        couponCode: couponApplied?.code || '',
-        paymentMethod: selectedPaymentMethod
-      };
-
-      const { data } = await API.post('/orders', orderPayload);
-      const activeOrder = (data && data._id) ? data : newOrderObj;
-
-      // Always save order into localStorage dd_orders for local admin/customer persistence
-      const existingOrders = JSON.parse(localStorage.getItem('dd_orders') || '[]');
-      const updatedOrders = [activeOrder, ...existingOrders.filter(o => o._id !== activeOrder._id && o.orderId !== activeOrder.orderId)];
-      localStorage.setItem('dd_orders', JSON.stringify(updatedOrders));
-
-      if (clearCart) clearCart();
-
-      if (selectedPaymentMethod === 'full_cod') {
-        addToast('Order confirmed via Cash on Delivery! 🎁');
-        navigate(`/order-success/${activeOrder._id}`);
-      } else {
-        navigate(`/payment?orderId=${activeOrder._id}`);
-      }
-    } catch (error) {
-      console.warn('Backend order creation endpoint error, storing local order:', error.message);
-      const existingOrders = JSON.parse(localStorage.getItem('dd_orders') || '[]');
-      const updatedOrders = [newOrderObj, ...existingOrders.filter(o => o._id !== newOrderObj._id)];
-      localStorage.setItem('dd_orders', JSON.stringify(updatedOrders));
-
-      if (clearCart) clearCart();
-
-      if (selectedPaymentMethod === 'full_cod') {
-        addToast('Order confirmed via Cash on Delivery! 🎁');
-        navigate(`/order-success/${newOrderObj._id}`);
-      } else {
-        navigate(`/payment?orderId=${newOrderObj._id}`);
-      }
-    }
-  };
-
-  // Compute Advance & COD Breakdown based on selected method
-  let advanceRequired = 0;
-  if (selectedPaymentMethod === 'full_online') {
-    advanceRequired = totalAmount;
-  } else if (selectedPaymentMethod === 'full_cod') {
-    advanceRequired = 0;
-  } else {
-    // Advance Payment ₹100 + COD
-    advanceRequired = Math.min(totalAmount, 100);
-  }
-  const remainingCodAmount = Math.max(0, Math.round((totalAmount - advanceRequired) * 100) / 100);
-
   const addressList = Array.isArray(addresses) ? addresses : [];
   const itemList = Array.isArray(cartItems) ? cartItems : [];
 
@@ -374,10 +334,7 @@ export const Checkout = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
-        {/* Left Column: Customer & Delivery Address */}
         <div className="lg:col-span-8 space-y-6">
-          
-          {/* Customer Info Card */}
           <div className="glass-panel p-6 rounded-3xl border border-purple-500/20">
             <h3 className="text-sm font-extrabold uppercase tracking-wider text-pink-400 mb-4 flex items-center gap-2">
               <User className="w-4 h-4" /> Customer Contact Information
@@ -398,7 +355,6 @@ export const Checkout = () => {
             </div>
           </div>
 
-          {/* Delivery Address Form / Selection */}
           <div className="glass-panel p-6 rounded-3xl border border-purple-500/20">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-extrabold uppercase tracking-wider text-purple-400 flex items-center gap-2">
@@ -412,7 +368,6 @@ export const Checkout = () => {
               </button>
             </div>
 
-            {/* Saved Addresses List */}
             {!showAddForm && addressList.length > 0 && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {addressList.map((addr) => (
@@ -440,11 +395,8 @@ export const Checkout = () => {
               </div>
             )}
 
-            {/* Add Address Form */}
             {showAddForm && (
               <form onSubmit={handleSaveAddress} className="space-y-4 pt-2">
-                
-                {/* Location Detection Buttons */}
                 <div className="flex gap-2 mb-4">
                   <button
                     type="button"
@@ -469,7 +421,6 @@ export const Checkout = () => {
                   </button>
                 </div>
 
-                {/* Live Location Display */}
                 {liveLocation && (
                   <div className="p-3 rounded-xl bg-blue-950/50 border border-blue-500/30 text-xs">
                     <p className="text-blue-400 font-bold mb-1">📍 Live Location</p>
@@ -532,10 +483,8 @@ export const Checkout = () => {
               </form>
             )}
           </div>
-
         </div>
 
-        {/* Right Column: Order Summary & Select Payment Options */}
         <div className="lg:col-span-4 space-y-6">
           <div className="glass-panel p-6 rounded-3xl border border-purple-500/30 space-y-6">
             <h3 className="text-lg font-bold text-white font-display border-b border-slate-800 pb-3">
@@ -574,95 +523,76 @@ export const Checkout = () => {
               </div>
             </div>
 
-            {/* Select Payment Method Cards */}
             <div className="space-y-3 pt-2 border-t border-slate-800">
               <h4 className="text-xs font-extrabold uppercase tracking-wider text-pink-400 flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4" /> Select Payment Method
+                <ShieldCheck className="w-4 h-4" /> SELECT PAYMENT METHOD
               </h4>
 
-              {/* Option 1: Advance ₹100 + COD */}
               <div
-                onClick={() => setSelectedPaymentMethod('cod_advance')}
-                className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
-                  selectedPaymentMethod === 'cod_advance'
+                onClick={() => setSelectedPaymentMethod('ADVANCE')}
+                className={`p-4 rounded-2xl border cursor-pointer transition-all ${
+                  selectedPaymentMethod === 'ADVANCE'
                     ? 'bg-amber-500/15 border-amber-500 text-white shadow-lg ring-1 ring-amber-500/50'
                     : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:border-slate-700'
                 }`}
               >
                 <div className="flex justify-between items-center mb-1">
                   <span className="font-bold text-xs text-amber-300 flex items-center gap-1.5">
-                    💵 Advance ₹100 + Cash on Delivery
+                    💰 ADVANCE PAYMENT
                   </span>
-                  {selectedPaymentMethod === 'cod_advance' && <Check className="w-4 h-4 text-amber-400" />}
+                  {selectedPaymentMethod === 'ADVANCE' && <Check className="w-4 h-4 text-amber-400" />}
                 </div>
-                <p className="text-[11px] text-slate-300 leading-snug">
-                  Pay initial advance of <strong className="text-amber-300">₹{Math.min(totalAmount, 100)}</strong> online. Remaining <strong className="text-white">₹{remainingCodAmount}</strong> on delivery.
+                <p className="text-xs text-slate-300 leading-snug">
+                  Pay ₹{advanceRequired} online now.
+                </p>
+                <p className="text-xs text-slate-400 mt-1">
+                  Remaining Balance: <strong className="text-amber-300 font-bold">₹{remainingBalance}</strong>
                 </p>
               </div>
 
-              {/* Option 2: Full Online Payment */}
               <div
-                onClick={() => setSelectedPaymentMethod('full_online')}
-                className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
-                  selectedPaymentMethod === 'full_online'
+                onClick={() => setSelectedPaymentMethod('FULL')}
+                className={`p-4 rounded-2xl border cursor-pointer transition-all ${
+                  selectedPaymentMethod === 'FULL'
                     ? 'bg-purple-600/20 border-pink-500 text-white shadow-lg ring-1 ring-pink-500/50'
                     : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:border-slate-700'
                 }`}
               >
                 <div className="flex justify-between items-center mb-1">
                   <span className="font-bold text-xs text-pink-400 flex items-center gap-1.5">
-                    💳 Full Online Payment (100% Online)
+                    💳 FULL ONLINE PAYMENT
                   </span>
-                  {selectedPaymentMethod === 'full_online' && <Check className="w-4 h-4 text-pink-400" />}
+                  {selectedPaymentMethod === 'FULL' && <Check className="w-4 h-4 text-pink-400" />}
                 </div>
-                <p className="text-[11px] text-slate-300 leading-snug">
-                  Pay total <strong className="text-pink-300">₹{totalAmount}</strong> online now. Fast confirmation, zero cash handling at delivery.
+                <p className="text-xs text-slate-300 leading-snug">
+                  Pay the complete ₹{totalAmount} online.
                 </p>
-              </div>
-
-              {/* Option 3: Full Cash on Delivery */}
-              <div
-                onClick={() => setSelectedPaymentMethod('full_cod')}
-                className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
-                  selectedPaymentMethod === 'full_cod'
-                    ? 'bg-emerald-500/15 border-emerald-500 text-white shadow-lg ring-1 ring-emerald-500/50'
-                    : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:border-slate-700'
-                }`}
-              >
-                <div className="flex justify-between items-center mb-1">
-                  <span className="font-bold text-xs text-emerald-400 flex items-center gap-1.5">
-                    🚚 100% Cash on Delivery (COD)
-                  </span>
-                  {selectedPaymentMethod === 'full_cod' && <Check className="w-4 h-4 text-emerald-400" />}
-                </div>
-                <p className="text-[11px] text-slate-300 leading-snug">
-                  Pay <strong className="text-emerald-300">₹{totalAmount}</strong> in cash directly when your box is delivered to your door.
+                <p className="text-xs text-slate-400 mt-1">
+                  Remaining Balance: <strong className="text-emerald-400 font-bold">₹0</strong>
                 </p>
               </div>
             </div>
 
-            {/* Dynamic Breakdown Explanation Box */}
             <div className="p-4 rounded-2xl bg-slate-950/90 border border-purple-500/30 space-y-1.5 text-xs">
               <div className="flex justify-between text-amber-300 font-bold">
-                <span>Online Advance Amount:</span>
+                <span>Online Paid Amount:</span>
                 <span>₹{advanceRequired}</span>
               </div>
               <div className="flex justify-between text-slate-300">
-                <span>Cash on Delivery Amount:</span>
-                <span className="font-bold text-white">₹{remainingCodAmount}</span>
+                <span>Remaining Balance:</span>
+                <span className="font-bold text-white">₹{remainingBalance}</span>
               </div>
             </div>
 
             <button
               onClick={handleProceedToPayment}
-              className="w-full py-4 rounded-2xl bg-gradient-to-r from-pink-500 via-purple-600 to-amber-500 text-white font-black text-xs uppercase tracking-wider shadow-2xl shadow-pink-500/30 hover:scale-105 transition-all flex items-center justify-center gap-2"
+              disabled={submittingPayment}
+              className="w-full py-4 rounded-2xl bg-gradient-to-r from-pink-500 via-purple-600 to-amber-500 text-white font-black text-xs uppercase tracking-wider shadow-2xl shadow-pink-500/30 hover:scale-105 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              {selectedPaymentMethod === 'full_cod' ? (
-                <>Place Order (Cash on Delivery) <ArrowRight className="w-4 h-4" /></>
-              ) : selectedPaymentMethod === 'full_online' ? (
-                <>Pay ₹{totalAmount} Online Now <ArrowRight className="w-4 h-4" /></>
+              {selectedPaymentMethod === 'FULL' ? (
+                <>PAY ₹{totalAmount} NOW →</>
               ) : (
-                <>Pay ₹{advanceRequired} Advance Now <ArrowRight className="w-4 h-4" /></>
+                <>PAY ₹{advanceRequired} ADVANCE NOW →</>
               )}
             </button>
           </div>

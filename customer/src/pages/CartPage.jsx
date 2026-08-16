@@ -36,7 +36,7 @@ export const CartPage = () => {
   } else {
     advanceRequired = Math.min(totalAmount, settings.codAdvanceValue);
   }
-  const remainingCodAmount = Math.round((totalAmount - advanceRequired) * 100) / 100;
+  const remainingBalance = Math.round((totalAmount - advanceRequired) * 100) / 100;
 
   if (cartItems.length === 0) {
     return (
@@ -208,24 +208,24 @@ export const CartPage = () => {
                 <span className="text-white">₹{totalAmount}</span>
               </div>
 
-              {/* Advance + COD Payment Rule Box */}
+              {/* Advance & Online Payment Breakdown Box */}
               <div className="p-4 rounded-2xl bg-slate-950/90 border border-purple-500/30 space-y-2 mt-4">
                 <span className="text-[11px] font-bold text-pink-400 uppercase tracking-wider block flex items-center gap-1">
-                  <ShieldCheck className="w-3.5 h-3.5" /> Advance + Cash on Delivery
+                  <ShieldCheck className="w-3.5 h-3.5" /> Flexible Online Payment
                 </span>
                 
                 <div className="flex justify-between text-xs text-amber-300 font-bold">
-                  <span>Advance Payment Online:</span>
+                  <span>Advance Payment (Online):</span>
                   <span>₹{advanceRequired}</span>
                 </div>
 
                 <div className="flex justify-between text-xs text-slate-300">
-                  <span>Remaining COD on Delivery:</span>
-                  <span className="font-bold text-white">₹{remainingCodAmount}</span>
+                  <span>Remaining Balance:</span>
+                  <span className="font-bold text-white">₹{remainingBalance}</span>
                 </div>
 
                 <p className="text-[10px] text-slate-400 italic pt-1">
-                  Pay ₹{advanceRequired} online now to confirm your order. Pay remaining ₹{remainingCodAmount} in cash when delivered.
+                  Pay ₹{advanceRequired} online now to confirm your order, or choose Full Online Payment at checkout.
                 </p>
               </div>
             </div>

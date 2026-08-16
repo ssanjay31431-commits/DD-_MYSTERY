@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ShoppingBag, Users, DollarSign, CreditCard, Clock, CheckCircle2, AlertTriangle, Calendar, RefreshCw } from 'lucide-react';
+import { ShoppingBag, Users, DollarSign, CreditCard, Clock, CheckCircle2, AlertTriangle, Calendar, RefreshCw, ShieldAlert } from 'lucide-react';
 import API from '../services/api';
 import { AdminSidebar } from '../components/AdminSidebar';
 
@@ -7,70 +7,68 @@ const EMPTY_ADMIN_STATS = {
   totalRevenue: 0,
   todayRevenue: 0,
   advanceCollected: 0,
+  remainingBalanceCollection: 0,
   expectedCodCollection: 0,
   totalOrders: 0,
   pendingOrders: 0,
   deliveredOrders: 0,
-  recentOrders: []
+  recentOrders: [],
+  failedPayments: []
 };
 
 export const Dashboard = () => {
   const [stats, setStats] = useState(EMPTY_ADMIN_STATS);
   const [loading, setLoading] = useState(true);
   const [dateFilter, setDateFilter] = useState('7Days');
+  const [recoveringId, setRecoveringId] = useState(null);
 
-  const computeStatsFromLocalOrders = () => {
-    const localOrders = JSON.parse(localStorage.getItem('dd_orders') || '[]');
-    if (!Array.isArray(localOrders) || localOrders.length === 0) {
-      return EMPTY_ADMIN_STATS;
-    }
-
-    const totalRev = localOrders.reduce((acc, o) => acc + (o.totalAmount || 0), 0);
-    const advanceColl = localOrders.reduce((acc, o) => acc + (o.advancePaid || 0), 0);
-    const codColl = localOrders.reduce((acc, o) => acc + (o.remainingCodAmount || 0), 0);
-
-    const todayStr = new Date().toISOString().split('T')[0];
-    const todayRev = localOrders
-      .filter((o) => o.createdAt && o.createdAt.startsWith(todayStr))
-      .reduce((acc, o) => acc + (o.totalAmount || 0), 0);
-
-    const pendingCount = localOrders.filter((o) => o.orderStatus !== 'Delivered' && o.orderStatus !== 'Cancelled').length;
-    const deliveredCount = localOrders.filter((o) => o.orderStatus === 'Delivered').length;
-
-    return {
-      totalRevenue: totalRev,
-      todayRevenue: todayRev,
-      advanceCollected: advanceColl,
-      expectedCodCollection: codColl,
-      totalOrders: localOrders.length,
-      pendingOrders: pendingCount,
-      deliveredOrders: deliveredCount,
-      recentOrders: localOrders
-    };
-  };
-
-  const fetchStats = async () => {
-    setLoading(true);
+  const fetchStats = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
       const { data } = await API.get(`/admin/dashboard?period=${dateFilter}`);
-      if (data && typeof data === 'object' && data.totalRevenue !== undefined && !data.message) {
+      if (data && typeof data === 'object') {
         setStats(data);
-      } else {
-        setStats(computeStatsFromLocalOrders());
       }
     } catch (err) {
-      setStats(computeStatsFromLocalOrders());
+      console.error('Failed to fetch admin stats from MongoDB:', err);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchStats();
+    fetchStats(true);
+
+    // Automatic polling every 12 seconds for real-time order dashboard refresh
+    const interval = setInterval(() => {
+      fetchStats(false);
+    }, 12000);
+
+    return () => clearInterval(interval);
   }, [dateFilter]);
+
+  const handleRecoverPayment = async (failedId) => {
+    setRecoveringId(failedId);
+    try {
+      const { data } = await API.post(`/admin/recover-payment/${failedId}`);
+      if (data.success) {
+        alert(`Order ${data.order?.orderNumber || ''} created successfully from payment reference!`);
+        fetchStats(true);
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to recover payment order');
+    } finally {
+      setRecoveringId(null);
+    }
+  };
 
   const currentStats = stats || EMPTY_ADMIN_STATS;
   const recentOrders = Array.isArray(currentStats.recentOrders) ? currentStats.recentOrders : [];
+  const failedPayments = Array.isArray(currentStats.failedPayments) ? currentStats.failedPayments : [];
+
+  const remainingBalanceTotal = currentStats.remainingBalanceCollection !== undefined
+    ? currentStats.remainingBalanceCollection
+    : (currentStats.expectedCodCollection || 0);
 
   return (
     <div className="flex min-h-screen bg-[#0c0a17]">
@@ -82,10 +80,9 @@ export const Dashboard = () => {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-purple-500/20">
           <div>
             <h1 className="text-3xl font-black text-white font-display">Business Analytics Dashboard</h1>
-            <p className="text-xs text-slate-400">Live order metrics, advance payments, expected COD collection, and customer activity.</p>
+            <p className="text-xs text-slate-400">Live order metrics & analytics direct from MongoDB. Auto-refresh active.</p>
           </div>
 
-          {/* Date Range Filter */}
           <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4 text-amber-400" />
             <select
@@ -100,14 +97,51 @@ export const Dashboard = () => {
               <option value="All">All Time</option>
             </select>
             <button
-              onClick={fetchStats}
+              onClick={() => fetchStats(true)}
               className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white"
-              title="Refresh Stats"
+              title="Refresh Dashboard"
             >
-              <RefreshCw className="w-4 h-4" />
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
           </div>
         </div>
+
+        {/* Failed Payment Recovery Alert Banner (Requirement 18) */}
+        {failedPayments.length > 0 && (
+          <div className="p-6 rounded-3xl bg-rose-950/80 border border-rose-500/50 space-y-4 shadow-xl">
+            <div className="flex items-center gap-3">
+              <ShieldAlert className="w-6 h-6 text-rose-400 animate-bounce" />
+              <div>
+                <h3 className="text-sm font-black text-white font-display uppercase tracking-wider">
+                  ⚠️ PAYMENT RECEIVED — ORDER CREATION FAILED ({failedPayments.length})
+                </h3>
+                <p className="text-xs text-rose-200">
+                  Cashfree payment was received, but MongoDB order creation failed. Click recover to generate the order document safely.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {failedPayments.map((fp) => (
+                <div key={fp._id} className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-xs">
+                  <div>
+                    <span className="font-bold text-white block">Payment ID: {fp.paymentOrderId}</span>
+                    <span className="text-slate-400 block">Customer: {fp.userSnapshot?.name} ({fp.userSnapshot?.email})</span>
+                    <span className="text-amber-300 font-bold block">Paid: ₹{fp.pricing?.amountPaid || fp.pricing?.advanceAmount} | Total: ₹{fp.pricing?.totalAmount}</span>
+                  </div>
+
+                  <button
+                    onClick={() => handleRecoverPayment(fp._id)}
+                    disabled={recoveringId === fp._id}
+                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 hover:scale-105 text-white font-black text-xs uppercase shadow-lg disabled:opacity-50"
+                  >
+                    {recoveringId === fp._id ? 'Creating Order...' : '[ CREATE ORDER FROM PAYMENT ]'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Analytics Cards Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -133,18 +167,18 @@ export const Dashboard = () => {
             <span className="text-3xl font-black text-pink-400 font-display block">
               ₹{(currentStats.advanceCollected || 0).toLocaleString()}
             </span>
-            <span className="text-[11px] text-slate-400 block">Verified via Online Gateway</span>
+            <span className="text-[11px] text-slate-400 block">Verified via Cashfree Gateway</span>
           </div>
 
           <div className="glass-panel p-6 rounded-3xl border border-purple-500/30 space-y-2">
             <div className="flex justify-between items-center">
-              <span className="text-xs font-extrabold uppercase text-slate-400">Expected COD Collection</span>
+              <span className="text-xs font-extrabold uppercase text-slate-400">Remaining Balance</span>
               <Clock className="w-5 h-5 text-amber-400" />
             </div>
             <span className="text-3xl font-black text-amber-400 font-display block">
-              ₹{(currentStats.expectedCodCollection || 0).toLocaleString()}
+              ₹{(remainingBalanceTotal || 0).toLocaleString()}
             </span>
-            <span className="text-[11px] text-slate-400 block">Pending delivery collection</span>
+            <span className="text-[11px] text-slate-400 block">Total uncollected remaining balance</span>
           </div>
 
           <div className="glass-panel p-6 rounded-3xl border border-purple-500/30 space-y-2">
@@ -162,46 +196,60 @@ export const Dashboard = () => {
 
         </div>
 
-        {/* Recent Orders Table */}
+        {/* Recent Orders Table (Requirement 19) */}
         <div className="glass-panel p-6 rounded-3xl border border-purple-500/20 space-y-4">
-          <h3 className="text-lg font-bold text-white font-display">Recent Customer Orders</h3>
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-bold text-white font-display">🔔 NEW & RECENT CUSTOMER ORDERS</h3>
+            <span className="text-xs font-mono text-purple-400">Synced with MongoDB</span>
+          </div>
           
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs text-slate-300">
               <thead className="bg-slate-900/90 text-slate-400 font-extrabold uppercase tracking-wider">
                 <tr>
-                  <th className="p-3">Order ID</th>
+                  <th className="p-3">Order Number</th>
                   <th className="p-3">Customer</th>
+                  <th className="p-3">Product</th>
                   <th className="p-3">Total Value</th>
-                  <th className="p-3">Advance Paid</th>
-                  <th className="p-3">Remaining COD</th>
+                  <th className="p-3">Paid</th>
+                  <th className="p-3">Remaining Balance</th>
+                  <th className="p-3">Payment</th>
                   <th className="p-3">Status</th>
-                  <th className="p-3">Date</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/80">
                 {recentOrders.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="p-8 text-center text-slate-400">
+                    <td colSpan="8" className="p-8 text-center text-slate-400">
                       No customer orders placed yet. Real orders placed on the website will appear here instantly!
                     </td>
                   </tr>
                 ) : (
-                  recentOrders.map((ord) => (
-                    <tr key={ord._id} className="hover:bg-slate-900/50 transition-colors">
-                      <td className="p-3 font-mono font-bold text-amber-300">{ord.orderId}</td>
-                      <td className="p-3 font-bold text-white">{ord.user?.name || ord.deliveryAddressSnapshot?.fullName || 'Customer'}</td>
-                      <td className="p-3 font-bold text-white">₹{ord.totalAmount}</td>
-                      <td className="p-3 text-emerald-400 font-bold">₹{ord.advancePaid || 0}</td>
-                      <td className="p-3 text-amber-300 font-bold">₹{ord.remainingCodAmount || 0}</td>
-                      <td className="p-3">
-                        <span className="px-2.5 py-1 rounded-md bg-purple-500/20 text-purple-300 font-bold text-[10px]">
-                          {ord.orderStatus}
-                        </span>
-                      </td>
-                      <td className="p-3 text-slate-400">{new Date(ord.createdAt).toLocaleDateString()}</td>
-                    </tr>
-                  ))
+                  recentOrders.map((ord) => {
+                    const ordNum = ord.orderNumber || ord.orderId;
+                    const productName = ord.items?.[0]?.productSnapshot?.name || ord.items?.[0]?.name || 'DD 90s Kids Mystery Box';
+                    const total = ord.pricing?.totalAmount || ord.totalAmount || 0;
+                    const paid = ord.pricing?.amountPaid !== undefined ? ord.pricing.amountPaid : (ord.amountPaid || ord.advancePaid || 0);
+                    const rem = ord.pricing?.remainingBalance !== undefined ? ord.pricing.remainingBalance : (ord.remainingBalance !== undefined ? ord.remainingBalance : (ord.remainingCodAmount || 0));
+                    const method = ord.paymentInfo?.method === 'FULL' || ord.paymentMethod === 'FULL' || ord.paymentMethod === 'full_online' ? 'Full Online' : 'Advance Payment';
+
+                    return (
+                      <tr key={ord._id || ordNum} className="hover:bg-slate-900/50 transition-colors">
+                        <td className="p-3 font-mono font-bold text-amber-300">#{ordNum}</td>
+                        <td className="p-3 font-bold text-white">{ord.user?.name || ord.deliveryAddressSnapshot?.fullName || 'Customer'}</td>
+                        <td className="p-3 text-slate-200">{productName}</td>
+                        <td className="p-3 font-bold text-white">₹{total}</td>
+                        <td className="p-3 text-emerald-400 font-bold">₹{paid}</td>
+                        <td className="p-3 text-amber-300 font-bold">₹{rem}</td>
+                        <td className="p-3 text-purple-300 font-semibold">{method}</td>
+                        <td className="p-3">
+                          <span className="px-2.5 py-1 rounded-md bg-purple-500/20 text-purple-300 font-bold text-[10px]">
+                            {ord.orderStatus}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>

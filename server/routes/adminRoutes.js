@@ -9,7 +9,9 @@ const {
   sendAdminManualEmail,
   sendAdminManualSms,
   testAdminEmail,
-  testAdminSms
+  testAdminSms,
+  getFailedPayments,
+  recoverPaymentOrder
 } = require('../controllers/adminController');
 const { protect, admin } = require('../middleware/authMiddleware');
 
@@ -19,6 +21,10 @@ router.get('/dashboard', getDashboardStats);
 router.get('/orders', getAllAdminOrders);
 router.put('/orders/:id/status', updateOrderStatus);
 router.get('/customers', getAdminCustomers);
+
+// Failed Payment Recovery Routes
+router.get('/failed-payments', getFailedPayments);
+router.post('/recover-payment/:id', recoverPaymentOrder);
 
 // Admin Notifications & Test Routes
 router.get('/notifications/logs', getNotificationLogs);

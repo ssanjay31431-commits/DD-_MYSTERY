@@ -156,53 +156,60 @@ const sendSmsMessage = async ({ recipientPhone, message, type, orderId }) => {
 // Dynamic SMS Template Helpers
 const generateSmsTemplates = {
   ORDER_CONFIRMATION: (order) => {
-    const productName = order.items?.[0]?.productSnapshot?.name || 'DD Mystery Box';
-    const total = order.totalAmount || 0;
-    const adv = order.advancePaid || order.advanceRequired || 0;
-    const cod = order.remainingCodAmount || 0;
-    return `DD Mystery Box: Your order #${order.orderId} is confirmed! 🎁 ${productName} - ₹${total}. Advance paid: ₹${adv}. COD: ₹${cod}. Tracking will be updated soon.`;
+    const orderNum = order.orderNumber || order.orderId;
+    const amountPaid = order.pricing?.amountPaid !== undefined ? order.pricing.amountPaid : (order.amountPaid || order.advancePaid || 0);
+    const remainingBalance = order.pricing?.remainingBalance !== undefined ? order.pricing.remainingBalance : (order.remainingBalance !== undefined ? order.remainingBalance : (order.remainingCodAmount || 0));
+    return `DD Mystery Box: Your order #${orderNum} is confirmed! Amount paid online: ₹${amountPaid}. Remaining balance: ₹${remainingBalance}. Thank you!`;
   },
   PAYMENT_CONFIRMATION: (order) => {
-    const adv = order.advancePaid || order.advanceRequired || 0;
-    const cod = order.remainingCodAmount || 0;
-    return `DD Mystery Box: Payment of ₹${adv} for order #${order.orderId} received! 💳 Remaining COD at delivery: ₹${cod}.`;
+    const orderNum = order.orderNumber || order.orderId;
+    const amountPaid = order.pricing?.amountPaid !== undefined ? order.pricing.amountPaid : (order.amountPaid || order.advancePaid || 0);
+    const remainingBalance = order.pricing?.remainingBalance !== undefined ? order.pricing.remainingBalance : (order.remainingBalance !== undefined ? order.remainingBalance : (order.remainingCodAmount || 0));
+    return `DD Mystery Box: Your order #${orderNum} is confirmed! Amount paid online: ₹${amountPaid}. Remaining balance: ₹${remainingBalance}. Thank you!`;
   },
   PREPARING: (order) => {
-    return `DD Mystery Box: Your order #${order.orderId} is now being prepared! 📦 We'll notify you when it's packed.`;
+    const orderNum = order.orderNumber || order.orderId;
+    return `DD Mystery Box: Your order #${orderNum} is now being prepared! 📦 We'll notify you when it's packed.`;
   },
   PACKED: (order) => {
-    return `DD Mystery Box: Order #${order.orderId} has been packed! 📦 It will be handed over to our courier partner soon.`;
+    const orderNum = order.orderNumber || order.orderId;
+    return `DD Mystery Box: Order #${orderNum} has been packed! 📦 It will be handed over to our courier partner soon.`;
   },
   SHIPMENT: (order) => {
-    const awb = order.awbNumber || order.trackingInfo?.awb || 'N/A';
-    const cod = order.remainingCodAmount || 0;
-    const trackUrl = order.trackingUrl || (awb !== 'N/A' ? `https://shiprocket.co/tracking/${awb}` : 'https://ddmysterybox.com/track');
-    return `DD Mystery Box: Order #${order.orderId} has been shipped! 🚚 AWB: ${awb}. Track: ${trackUrl}. COD: ₹${cod}.`;
+    const orderNum = order.orderNumber || order.orderId;
+    const awb = order.shipment?.awb || order.awbNumber || order.trackingInfo?.awb || 'N/A';
+    const trackUrl = order.shipment?.trackingUrl || order.trackingUrl || (awb !== 'N/A' ? `https://shiprocket.co/tracking/${awb}` : 'https://ddmysterybox.com/track');
+    return `DD Mystery Box: Order #${orderNum} has been shipped! 🚚 AWB: ${awb}. Track: ${trackUrl}`;
   },
   PICKUP: (order) => {
-    const trackUrl = order.trackingUrl || 'https://ddmysterybox.com/track';
-    const cod = order.remainingCodAmount || 0;
-    return `DD Mystery Box: Your order #${order.orderId} has been picked up by the courier! 🚚 Track: ${trackUrl} COD: ₹${cod}.`;
+    const orderNum = order.orderNumber || order.orderId;
+    const trackUrl = order.shipment?.trackingUrl || order.trackingUrl || 'https://ddmysterybox.com/track';
+    return `DD Mystery Box: Your order #${orderNum} has been picked up by the courier! 🚚 Track: ${trackUrl}`;
   },
   TRANSIT: (order) => {
-    const trackUrl = order.trackingUrl || 'https://ddmysterybox.com/track';
-    return `DD Mystery Box: Order #${order.orderId} is on its way! 🚚 Track your delivery: ${trackUrl}`;
+    const orderNum = order.orderNumber || order.orderId;
+    const trackUrl = order.shipment?.trackingUrl || order.trackingUrl || 'https://ddmysterybox.com/track';
+    return `DD Mystery Box: Order #${orderNum} is on its way! 🚚 Track your delivery: ${trackUrl}`;
   },
   OUT_FOR_DELIVERY: (order) => {
-    const cod = order.remainingCodAmount || 0;
-    return `DD Mystery Box: Order #${order.orderId} is OUT FOR DELIVERY! 🛵 ${cod > 0 ? `Please keep ₹${cod} ready for COD.` : 'Zero cash required.'}`;
+    const orderNum = order.orderNumber || order.orderId;
+    return `DD Mystery Box: Order #${orderNum} is OUT FOR DELIVERY! 🛵 Get ready to receive your mystery box.`;
   },
   DELIVERED: (order) => {
-    return `DD Mystery Box: Order #${order.orderId} has been delivered successfully! 🎉 Thank you for choosing DD Mystery Box!`;
+    const orderNum = order.orderNumber || order.orderId;
+    return `DD Mystery Box: Order #${orderNum} has been delivered successfully! 🎉 Thank you for choosing DD Mystery Box!`;
   },
   FAILED_DELIVERY: (order, reason) => {
-    return `DD Mystery Box: Delivery attempt for order #${order.orderId} was unsuccessful. Reason: ${reason || 'Customer unavailable'}. Next attempt will be updated soon.`;
+    const orderNum = order.orderNumber || order.orderId;
+    return `DD Mystery Box: Delivery attempt for order #${orderNum} was unsuccessful. Reason: ${reason || 'Customer unavailable'}. Next attempt will be updated soon.`;
   },
   RTO: (order) => {
-    return `DD Mystery Box: Order #${order.orderId} is being returned to our pickup location due to a delivery issue. We will contact you shortly.`;
+    const orderNum = order.orderNumber || order.orderId;
+    return `DD Mystery Box: Order #${orderNum} is being returned to our pickup location. We will contact you shortly.`;
   },
   CANCELLATION: (order) => {
-    return `DD Mystery Box: Order #${order.orderId} has been cancelled. Refund details will be shared separately if applicable.`;
+    const orderNum = order.orderNumber || order.orderId;
+    return `DD Mystery Box: Order #${orderNum} has been cancelled.`;
   }
 };
 

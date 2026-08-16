@@ -9,9 +9,12 @@ const {
   cancelOrder,
   getOrderTracking
 } = require('../controllers/orderController');
+const { confirmPaymentAndCreateOrder } = require('../controllers/paymentController');
 const { protect, admin } = require('../middleware/authMiddleware');
 
 router.use(protect);
+
+router.post('/confirm-payment', confirmPaymentAndCreateOrder);
 
 router.route('/')
   .post(createOrder)

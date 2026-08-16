@@ -139,11 +139,11 @@ export const OrderDetails = () => {
               <CreditCard className="w-4 h-4 text-purple-400" /> Payment Details
             </h4>
             <div className="text-xs text-slate-300 space-y-1">
-              <p>Status: <span className="font-bold text-emerald-400">{order.paymentStatus || 'Confirmed'}</span></p>
-              <p>Method: {order.paymentMethod || 'Advance Payment + COD'}</p>
-              <p>Advance Paid Online: <span className="font-bold text-emerald-400">₹{order.advancePaid || 0}</span></p>
-              <p>Remaining Cash on Delivery: <span className="font-bold text-amber-300">₹{order.remainingCodAmount || 0}</span></p>
-              <p>Total Order Amount: <span className="font-bold text-white">₹{order.totalAmount}</span></p>
+              <p>Status: <span className="font-bold text-emerald-400">{order.paymentInfo?.status || order.paymentStatus || 'CONFIRMED'}</span></p>
+              <p>Method: {order.paymentInfo?.method === 'FULL' ? 'Full Online Payment' : 'Advance Payment'}</p>
+              <p>Paid Online: <span className="font-bold text-emerald-400">₹{order.pricing?.amountPaid !== undefined ? order.pricing.amountPaid : (order.amountPaid || order.advancePaid || 0)}</span></p>
+              <p>Remaining Balance: <span className="font-bold text-amber-300">₹{order.pricing?.remainingBalance !== undefined ? order.pricing.remainingBalance : (order.remainingBalance !== undefined ? order.remainingBalance : (order.remainingCodAmount || 0))}</span></p>
+              <p>Total Order Amount: <span className="font-bold text-white">₹{order.totalAmount || order.pricing?.totalAmount || 0}</span></p>
             </div>
           </div>
         </div>

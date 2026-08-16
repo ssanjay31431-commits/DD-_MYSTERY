@@ -6,7 +6,10 @@ const Inventory = require('../models/Inventory');
 const NotificationLog = require('../models/NotificationLog');
 const { sendNotification } = require('../utils/emailService');
 
-// @desc Get Admin Dashboard Analytics Summary
+const FailedPayment = require('../models/FailedPayment');
+const { generateOrderId } = require('../utils/orderIdGenerator');
+
+// @desc Get Admin Dashboard Analytics Summary directly from MongoDB
 // @route GET /api/admin/dashboard
 const getDashboardStats = async (req, res) => {
   try {
@@ -15,43 +18,45 @@ const getDashboardStats = async (req, res) => {
 
     const totalOrders = await Order.countDocuments();
     const todayOrders = await Order.countDocuments({ createdAt: { $gte: todayStart } });
-    const pendingOrders = await Order.countDocuments({ orderStatus: { $in: ['Order Placed', 'Advance Payment Confirmed', 'Order Confirmed', 'Preparing', 'Packed', 'Shipped', 'Out for Delivery'] } });
-    const deliveredOrders = await Order.countDocuments({ orderStatus: 'Delivered' });
+    const pendingOrders = await Order.countDocuments({ orderStatus: { $nin: ['Delivered', 'DELIVERED', 'Cancelled', 'CANCELLED'] } });
+    const deliveredOrders = await Order.countDocuments({ orderStatus: { $in: ['Delivered', 'DELIVERED'] } });
     const totalCustomers = await User.countDocuments({ role: 'customer' });
 
-    // Revenue Aggregations
+    // Revenue Aggregations directly from MongoDB
     const totalRevenueData = await Order.aggregate([
-      { $match: { orderStatus: { $ne: 'Cancelled' } } },
+      { $match: { orderStatus: { $nin: ['Cancelled', 'CANCELLED'] } } },
       { $group: { _id: null, total: { $sum: '$totalAmount' } } }
     ]);
     const totalRevenue = totalRevenueData[0]?.total || 0;
 
     const advanceCollectedData = await Order.aggregate([
-      { $match: { orderStatus: { $ne: 'Cancelled' } } },
-      { $group: { _id: null, total: { $sum: '$advancePaid' } } }
+      { $match: { orderStatus: { $nin: ['Cancelled', 'CANCELLED'] } } },
+      { $group: { _id: null, total: { $sum: { $ifNull: ['$amountPaid', '$advancePaid'] } } } }
     ]);
     const advanceCollected = advanceCollectedData[0]?.total || 0;
 
-    const expectedCodData = await Order.aggregate([
-      { $match: { orderStatus: { $nin: ['Cancelled', 'Delivered'] } } },
-      { $group: { _id: null, total: { $sum: '$remainingCodAmount' } } }
+    const remainingBalanceData = await Order.aggregate([
+      { $match: { orderStatus: { $nin: ['Cancelled', 'CANCELLED', 'Delivered', 'DELIVERED'] } } },
+      { $group: { _id: null, total: { $sum: { $ifNull: ['$remainingBalance', '$remainingCodAmount'] } } } }
     ]);
-    const expectedCodCollection = expectedCodData[0]?.total || 0;
+    const remainingBalanceCollection = remainingBalanceData[0]?.total || 0;
 
     const todayRevenueData = await Order.aggregate([
-      { $match: { createdAt: { $gte: todayStart }, orderStatus: { $ne: 'Cancelled' } } },
+      { $match: { createdAt: { $gte: todayStart }, orderStatus: { $nin: ['Cancelled', 'CANCELLED'] } } },
       { $group: { _id: null, total: { $sum: '$totalAmount' } } }
     ]);
     const todayRevenue = todayRevenueData[0]?.total || 0;
 
     const averageOrderValue = totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0;
 
-    const recentOrders = await Order.find().sort({ createdAt: -1 }).limit(6).populate('user', 'name email');
+    const recentOrders = await Order.find().sort({ createdAt: -1 }).limit(10).populate('user', 'name email phone');
+    const unresolvedFailedPayments = await FailedPayment.find({ status: 'UNRESOLVED' }).sort({ createdAt: -1 });
 
     res.json({
       totalRevenue,
       advanceCollected,
-      expectedCodCollection,
+      expectedCodCollection: remainingBalanceCollection,
+      remainingBalanceCollection,
       todayRevenue,
       totalOrders,
       todayOrders,
@@ -59,14 +64,15 @@ const getDashboardStats = async (req, res) => {
       deliveredOrders,
       totalCustomers,
       averageOrderValue,
-      recentOrders
+      recentOrders,
+      failedPayments: unresolvedFailedPayments
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// @desc Admin Get All Orders with filtering
+// @desc Admin Get All Orders with filtering directly from MongoDB
 // @route GET /api/admin/orders
 const getAllAdminOrders = async (req, res) => {
   try {
@@ -74,11 +80,12 @@ const getAllAdminOrders = async (req, res) => {
     let filter = {};
 
     if (status && status !== 'All') {
-      filter.orderStatus = status;
+      filter.orderStatus = { $regex: new RegExp(`^${status}$`, 'i') };
     }
 
     if (search) {
       filter.$or = [
+        { orderNumber: { $regex: search, $options: 'i' } },
         { orderId: { $regex: search, $options: 'i' } },
         { 'deliveryAddressSnapshot.fullName': { $regex: search, $options: 'i' } },
         { 'deliveryAddressSnapshot.mobileNumber': { $regex: search, $options: 'i' } }
@@ -87,6 +94,113 @@ const getAllAdminOrders = async (req, res) => {
 
     const orders = await Order.find(filter).populate('user', 'name email phone').sort({ createdAt: -1 });
     res.json(orders);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc Get Failed Payments for Admin Alert
+// @route GET /api/admin/failed-payments
+const getFailedPayments = async (req, res) => {
+  try {
+    const failed = await FailedPayment.find({ status: 'UNRESOLVED' }).sort({ createdAt: -1 });
+    res.json(failed);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc Recover Failed Payment and Create Order
+// @route POST /api/admin/recover-payment/:id
+const recoverPaymentOrder = async (req, res) => {
+  try {
+    const failedPayment = await FailedPayment.findById(req.params.id);
+    if (!failedPayment) {
+      return res.status(404).json({ message: 'Failed payment record not found' });
+    }
+
+    if (failedPayment.status === 'RESOLVED') {
+      return res.status(400).json({ message: 'Payment record has already been resolved into an order' });
+    }
+
+    const orderNumber = await generateOrderId();
+    const expectedDelivery = new Date();
+    expectedDelivery.setDate(expectedDelivery.getDate() + 4);
+
+    const orderItems = (failedPayment.items || []).map((item) => ({
+      product: item.product?._id || item.product || null,
+      productSnapshot: {
+        name: item.productSnapshot?.name || item.name || 'DD Mystery Box',
+        image: item.productSnapshot?.image || item.image || '',
+        price: item.unitPrice || item.price || 499,
+        description: item.productSnapshot?.description || '',
+        contents: item.productSnapshot?.contents || []
+      },
+      customizationSnapshot: item.customizationSnapshot || item.customization || {},
+      quantity: item.quantity || 1,
+      unitPrice: item.unitPrice || item.price || 499
+    }));
+
+    const isFull = failedPayment.paymentMethod === 'FULL';
+    const amountPaid = failedPayment.pricing?.amountPaid || failedPayment.pricing?.advanceAmount || 0;
+    const totalAmount = failedPayment.pricing?.totalAmount || amountPaid;
+    const remainingBalance = Math.max(0, totalAmount - amountPaid);
+
+    const order = new Order({
+      orderNumber,
+      orderId: orderNumber,
+      user: failedPayment.user,
+      items: orderItems,
+      deliveryAddressSnapshot: failedPayment.deliveryAddress,
+      pricing: {
+        subtotal: failedPayment.pricing?.subtotal || totalAmount,
+        deliveryFee: failedPayment.pricing?.deliveryFee || 0,
+        couponDiscount: failedPayment.pricing?.couponDiscount || 0,
+        totalAmount,
+        advanceAmount: amountPaid,
+        amountPaid,
+        remainingBalance
+      },
+      subtotal: failedPayment.pricing?.subtotal || totalAmount,
+      deliveryFee: failedPayment.pricing?.deliveryFee || 0,
+      totalAmount,
+      advanceAmount: amountPaid,
+      amountPaid,
+      advancePaid: amountPaid,
+      remainingBalance,
+      remainingCodAmount: remainingBalance,
+      paymentInfo: {
+        method: isFull ? 'FULL' : 'ADVANCE',
+        provider: 'CASHFREE',
+        status: isFull ? 'PAID' : 'PARTIALLY_PAID',
+        paymentOrderId: failedPayment.paymentOrderId,
+        paymentSessionId: failedPayment.paymentSessionId || '',
+        transactionId: failedPayment.transactionId || ''
+      },
+      orderStatus: 'CONFIRMED',
+      shipment: { status: 'NOT_CREATED', provider: null, shipmentId: null, awb: null, trackingUrl: null },
+      trackingHistory: [
+        {
+          status: 'CONFIRMED',
+          comment: `Order created via Admin Recover Payment action. Payment ID: ${failedPayment.paymentOrderId}`
+        }
+      ],
+      expectedDeliveryDate: expectedDelivery
+    });
+
+    const createdOrder = await order.save();
+
+    failedPayment.status = 'RESOLVED';
+    failedPayment.resolvedOrderId = createdOrder.orderNumber;
+    await failedPayment.save();
+
+    sendNotification({
+      type: 'ORDER_CONFIRMATION',
+      order: createdOrder,
+      orderId: createdOrder.orderNumber
+    }).catch(err => console.error('[Recover Notification Error]', err.message));
+
+    res.json({ success: true, message: 'Order created successfully from payment record', order: createdOrder });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -368,6 +482,8 @@ module.exports = {
   sendAdminManualEmail,
   sendAdminManualSms,
   testAdminEmail,
-  testAdminSms
+  testAdminSms,
+  getFailedPayments,
+  recoverPaymentOrder
 };
 

@@ -33,7 +33,8 @@ const trackingEventSchema = new mongoose.Schema({
 
 const orderSchema = new mongoose.Schema(
   {
-    orderId: { type: String, required: true, unique: true }, // DDMB-2026-XXXXX
+    orderNumber: { type: String, required: true, unique: true }, // DDMB-2026-XXXXX
+    orderId: { type: String, required: true, unique: true }, // Same as orderNumber for compatibility
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     items: [orderItemSchema],
     deliveryAddressSnapshot: {
@@ -51,36 +52,63 @@ const orderSchema = new mongoose.Schema(
       latitude: Number,
       longitude: Number
     },
+    pricing: {
+      subtotal: { type: Number, required: true },
+      deliveryFee: { type: Number, default: 0 },
+      couponDiscount: { type: Number, default: 0 },
+      totalAmount: { type: Number, required: true },
+      advanceAmount: { type: Number, required: true },
+      amountPaid: { type: Number, required: true },
+      remainingBalance: { type: Number, required: true }
+    },
+    // Top-level pricing fields for easy querying / backwards compatibility:
     subtotal: { type: Number, required: true },
     deliveryFee: { type: Number, default: 0 },
     couponDiscount: { type: Number, default: 0 },
     couponCode: { type: String, default: '' },
-    totalAmount: { type: Number, required: true }, // Full order value
-    advanceRequired: { type: Number, required: true, default: 0 }, // Advance online payment amount
-    advancePaid: { type: Number, default: 0 },
-    remainingCodAmount: { type: Number, required: true, default: 0 }, // Remaining amount to collect on delivery
+    totalAmount: { type: Number, required: true },
+    advanceAmount: { type: Number, required: true, default: 0 },
+    advancePaid: { type: Number, default: 0 }, // Same as amountPaid
+    amountPaid: { type: Number, required: true, default: 0 },
+    remainingBalance: { type: Number, required: true, default: 0 },
+    remainingCodAmount: { type: Number, default: 0 }, // For backward compatibility with old records
+
     paymentInfo: {
-      razorpayOrderId: String,
-      razorpayPaymentId: String,
-      razorpaySignature: String,
-      method: { type: String, default: 'Advance + Cash on Delivery' },
-      advanceStatus: { type: String, enum: ['Pending', 'Paid', 'Failed'], default: 'Pending' },
-      codStatus: { type: String, enum: ['Pending', 'Collected'], default: 'Pending' }
+      method: { type: String, enum: ['ADVANCE', 'FULL'], required: true },
+      provider: { type: String, default: 'CASHFREE' },
+      status: { type: String, enum: ['PAID', 'PARTIALLY_PAID', 'PENDING', 'FAILED'], default: 'PAID' },
+      paymentOrderId: { type: String, unique: true, sparse: true },
+      paymentSessionId: { type: String, default: '' },
+      transactionId: { type: String, default: '' }
     },
     orderStatus: {
       type: String,
       enum: [
-        'Order Placed',
-        'Advance Payment Confirmed',
-        'Order Confirmed',
+        'ORDER PLACED',
+        'PAYMENT VERIFIED',
+        'CONFIRMED',
+        'Order Confirmed', // Compatibility
         'Preparing',
+        'PREPARING',
         'Packed',
+        'PACKED',
         'Shipped',
+        'SHIPPED',
         'Out for Delivery',
+        'OUT FOR DELIVERY',
         'Delivered',
-        'Cancelled'
+        'DELIVERED',
+        'Cancelled',
+        'CANCELLED'
       ],
-      default: 'Order Placed'
+      default: 'CONFIRMED'
+    },
+    shipment: {
+      status: { type: String, default: 'NOT_CREATED' },
+      provider: { type: String, default: null },
+      shipmentId: { type: String, default: null },
+      awb: { type: String, default: null },
+      trackingUrl: { type: String, default: null }
     },
     trackingHistory: [trackingEventSchema],
     expectedDeliveryDate: { type: Date },

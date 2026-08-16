@@ -17,13 +17,14 @@ const getSender = () => ({
 const generateEmailTemplate = ({ title, bannerColor = '#ec4899', customerName, orderId, order, currentStage = 'Confirmed', customMessage = '' }) => {
   const items = order?.items || [];
   const address = order?.deliveryAddressSnapshot || {};
-  const totalAmount = order?.totalAmount || 0;
-  const advancePaid = order?.advancePaid || order?.advanceRequired || 0;
-  const remainingCod = order?.remainingCodAmount || 0;
-  const paymentMethod = order?.paymentInfo?.method || 'Advance + Cash on Delivery';
-  const courier = order?.courierName || order?.trackingInfo?.courier || '';
-  const awb = order?.awbNumber || order?.trackingInfo?.awb || '';
-  const trackingUrl = order?.trackingUrl || (awb ? `https://shiprocket.co/tracking/${awb}` : '');
+  const totalAmount = order?.pricing?.totalAmount || order?.totalAmount || 0;
+  const advancePaid = order?.pricing?.amountPaid || order?.amountPaid || order?.advancePaid || order?.advanceRequired || 0;
+  const remainingBalance = order?.pricing?.remainingBalance !== undefined ? order.pricing.remainingBalance : (order?.remainingBalance !== undefined ? order.remainingBalance : Math.max(0, totalAmount - advancePaid));
+  const rawMethod = order?.paymentInfo?.method || order?.paymentMethod || 'ADVANCE';
+  const paymentMethod = rawMethod === 'FULL' || rawMethod === 'Full Online Payment' ? 'Full Online Payment' : 'Advance Payment';
+  const courier = order?.shipment?.provider || order?.courierName || order?.trackingInfo?.courier || '';
+  const awb = order?.shipment?.awb || order?.awbNumber || order?.trackingInfo?.awb || '';
+  const trackingUrl = order?.shipment?.trackingUrl || order?.trackingUrl || (awb ? `https://shiprocket.co/tracking/${awb}` : '');
 
   const stages = [
     { key: 'Confirmed', label: 'Order Confirmed' },
@@ -128,13 +129,13 @@ const generateEmailTemplate = ({ title, bannerColor = '#ec4899', customerName, o
             <h3 style="color: #38bdf8; font-size: 12px; font-weight: bold; text-transform: uppercase; margin: 0 0 10px 0;">Payment Details</h3>
             <table width="100%" style="font-size: 12px; color: #cbd5e1;">
               <tr><td style="padding: 3px 0;">Payment Method:</td><td align="right" style="color: #ffffff; font-weight: bold;">${paymentMethod}</td></tr>
-              <tr><td style="padding: 3px 0;">Delivery Charge:</td><td align="right" style="color: #ffffff; font-weight: bold;">₹${order?.deliveryFee || 0}</td></tr>
+              <tr><td style="padding: 3px 0;">Delivery Charge:</td><td align="right" style="color: #ffffff; font-weight: bold;">₹${order?.deliveryFee || order?.pricing?.deliveryFee || 0}</td></tr>
               <tr><td style="padding: 3px 0;">Total Order Value:</td><td align="right" style="color: #ffffff; font-weight: bold;">₹${totalAmount}</td></tr>
-              <tr><td style="padding: 3px 0;">Advance Paid Online:</td><td align="right" style="color: #4ade80; font-weight: bold;">₹${advancePaid}</td></tr>
-              <tr><td style="padding: 3px 0;">Remaining COD on Delivery:</td><td align="right" style="color: #fbbf24; font-weight: bold;">₹${remainingCod}</td></tr>
+              <tr><td style="padding: 3px 0;">Online Paid:</td><td align="right" style="color: #4ade80; font-weight: bold;">₹${advancePaid}</td></tr>
+              <tr><td style="padding: 3px 0;">Remaining Balance:</td><td align="right" style="color: #fbbf24; font-weight: bold;">₹${remainingBalance}</td></tr>
             </table>
             <p style="margin: 10px 0 0 0; font-size: 11px; color: #38bdf8; background-color: #0f172a; padding: 8px 12px; border-radius: 8px;">
-              ${remainingCod > 0 ? ` You have paid <strong>₹${advancePaid}</strong> online. <strong>₹${remainingCod}</strong> will be collected by the courier partner at delivery.` : ` <strong>₹${totalAmount}</strong> paid in full online. Zero cash required at delivery!`}
+              ${remainingBalance > 0 ? ` You have paid <strong>₹${advancePaid}</strong> online. Remaining Balance: <strong>₹${remainingBalance}</strong>.` : ` <strong>₹${totalAmount}</strong> paid in full online!`}
             </p>
           </div>
         </td>
@@ -268,14 +269,16 @@ const sendOrderConfirmationEmail = async ({ recipientEmail, recipientName, order
 };
 
 const sendPaymentConfirmationEmail = async ({ recipientEmail, recipientName, order }) => {
-  const subject = `💳 Advance Payment Received for Order — ${order.orderId}`;
+  const paid = order?.pricing?.amountPaid || order?.amountPaid || order?.advancePaid || 0;
+  const rem = order?.pricing?.remainingBalance !== undefined ? order.pricing.remainingBalance : (order?.remainingBalance || 0);
+  const subject = `💳 Payment Received for Order — ${order.orderId || order.orderNumber}`;
   const htmlContent = generateEmailTemplate({
-    title: `Advance Payment Confirmed!`,
+    title: `Payment Confirmed!`,
     customerName: recipientName,
-    orderId: order.orderId,
+    orderId: order.orderId || order.orderNumber,
     order,
     currentStage: 'Confirmed',
-    customMessage: `We have verified your advance online payment of ₹${order.advancePaid || order.advanceRequired}. Your remaining balance of ₹${order.remainingCodAmount} will be collected at delivery.`
+    customMessage: `We have verified your online payment of ₹${paid}. ${rem > 0 ? `Remaining balance: ₹${rem}.` : 'Order is fully paid!'}`
   });
   return sendBrevoEmail({ recipientEmail, recipientName, subject, htmlContent });
 };
@@ -345,14 +348,15 @@ const sendTransitEmail = async ({ recipientEmail, recipientName, order }) => {
 };
 
 const sendOutForDeliveryEmail = async ({ recipientEmail, recipientName, order }) => {
-  const subject = `🛵 Your DD Mystery Box Is Out for Delivery! — ${order.orderId}`;
+  const ordId = order.orderId || order.orderNumber;
+  const subject = `🛵 Your DD Mystery Box Is Out for Delivery! — ${ordId}`;
   const htmlContent = generateEmailTemplate({
     title: `Out For Delivery Today!`,
     customerName: recipientName,
-    orderId: order.orderId,
+    orderId: ordId,
     order,
     currentStage: 'Out for Delivery',
-    customMessage: `Get ready! Your mystery box is out for delivery today. ${order.remainingCodAmount > 0 ? `Please keep <strong>₹${order.remainingCodAmount}</strong> ready for Cash on Delivery.` : ''}`
+    customMessage: `Get ready! Your mystery box is out for delivery today.`
   });
   return sendBrevoEmail({ recipientEmail, recipientName, subject, htmlContent });
 };

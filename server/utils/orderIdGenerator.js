@@ -2,9 +2,20 @@ const Order = require('../models/Order');
 
 const generateOrderId = async () => {
   const year = new Date().getFullYear();
-  const count = await Order.countDocuments();
-  const sequence = String(count + 1).padStart(5, '0');
-  return `DDMB-${year}-${sequence}`;
+  let count = await Order.countDocuments();
+  let orderNumber;
+  let exists = true;
+  
+  while (exists) {
+    count++;
+    const sequence = String(count).padStart(5, '0');
+    orderNumber = `DDMB-${year}-${sequence}`;
+    const found = await Order.findOne({ $or: [{ orderNumber }, { orderId: orderNumber }] });
+    if (!found) {
+      exists = false;
+    }
+  }
+  return orderNumber;
 };
 
 module.exports = { generateOrderId };

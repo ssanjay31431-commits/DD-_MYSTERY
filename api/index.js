@@ -31,9 +31,9 @@ const registerOrderInStore = (orderData) => {
     couponDiscount: Number(orderData.couponDiscount) || 0,
     couponCode: orderData.couponCode || '',
     totalAmount: Number(orderData.totalAmount) || 499,
-    advancePaid: Number(orderData.advancePaid) || (orderData.paymentMethod === 'full_cod' ? 0 : 100),
-    remainingCodAmount: Number(orderData.remainingCodAmount) || (orderData.paymentMethod === 'full_cod' ? 499 : 399),
-    paymentMethod: orderData.paymentMethod || 'cod_advance',
+    advancePaid: Number(orderData.advancePaid) || (orderData.paymentMethod === 'FULL' ? 499 : 100),
+    remainingBalance: Number(orderData.remainingBalance) || (orderData.paymentMethod === 'FULL' ? 0 : 399),
+    paymentMethod: orderData.paymentMethod || 'ADVANCE',
     paymentStatus: orderData.paymentStatus || 'Confirmed',
     orderStatus: orderData.orderStatus || 'Confirmed',
     createdAt: orderData.createdAt || new Date().toISOString()
@@ -75,7 +75,7 @@ app.put('/api/admin/orders/:id/status', (req, res) => {
 app.get('/api/admin/dashboard', (req, res) => {
   const totalRev = inMemoryOrders.reduce((acc, o) => acc + (o.totalAmount || 0), 0);
   const advanceColl = inMemoryOrders.reduce((acc, o) => acc + (o.advancePaid || 0), 0);
-  const codColl = inMemoryOrders.reduce((acc, o) => acc + (o.remainingCodAmount || 0), 0);
+  const remColl = inMemoryOrders.reduce((acc, o) => acc + (o.remainingBalance || 0), 0);
   const todayStr = new Date().toISOString().split('T')[0];
   const todayRev = inMemoryOrders
     .filter((o) => o.createdAt && o.createdAt.startsWith(todayStr))
@@ -85,7 +85,8 @@ app.get('/api/admin/dashboard', (req, res) => {
     totalRevenue: totalRev,
     todayRevenue: todayRev,
     advanceCollected: advanceColl,
-    expectedCodCollection: codColl,
+    remainingBalanceCollection: remColl,
+    expectedCodCollection: remColl,
     totalOrders: inMemoryOrders.length,
     pendingOrders: inMemoryOrders.filter(o => o.orderStatus !== 'Delivered').length,
     deliveredOrders: inMemoryOrders.filter(o => o.orderStatus === 'Delivered').length,

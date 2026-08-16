@@ -29,14 +29,13 @@ export const CartPage = () => {
     applyCoupon(couponInput);
   };
 
-  // Compute Advance & COD Breakdown
   let advanceRequired = 0;
   if (settings.codAdvanceType === 'percentage') {
     advanceRequired = Math.round((totalAmount * (settings.codAdvanceValue / 100)) * 100) / 100;
   } else {
     advanceRequired = Math.min(totalAmount, settings.codAdvanceValue);
   }
-  const remainingCodAmount = Math.round((totalAmount - advanceRequired) * 100) / 100;
+  const remainingBalance = Math.round((totalAmount - advanceRequired) * 100) / 100;
 
   if (cartItems.length === 0) {
     return (
@@ -66,7 +65,6 @@ export const CartPage = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
-        {/* Cart Items List */}
         <div className="lg:col-span-8 space-y-4">
           {cartItems.map((item) => {
             const product = item.product || {};
@@ -87,7 +85,6 @@ export const CartPage = () => {
                       For: {customization.recipientName || 'Recipient'} • Theme: {customization.theme || 'Nostalgia'}
                     </p>
 
-                    {/* What's Inside brief summary */}
                     {product.contents && product.contents.length > 0 && (
                       <p className="text-[11px] text-slate-400 mt-1 line-clamp-1">
                         Includes: {product.contents.slice(0, 3).join(', ')}...
@@ -147,14 +144,12 @@ export const CartPage = () => {
           </div>
         </div>
 
-        {/* Order Summary & Advance + COD Breakdown Card */}
         <div className="lg:col-span-4">
           <div className="glass-panel p-6 rounded-3xl border border-purple-500/30 space-y-6">
             <h3 className="text-lg font-bold text-white font-display border-b border-slate-800 pb-4">
               Order Summary
             </h3>
 
-            {/* Coupon Code Section */}
             <form onSubmit={handleApplyCoupon} className="space-y-2">
               <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
                 <Tag className="w-3.5 h-3.5 text-pink-400" /> Apply Coupon Code
@@ -182,7 +177,6 @@ export const CartPage = () => {
               )}
             </form>
 
-            {/* Price & Advance/COD Breakdown */}
             <div className="space-y-3 text-xs border-t border-slate-800 pt-4">
               <div className="flex justify-between text-slate-300">
                 <span>Subtotal</span>
@@ -208,29 +202,27 @@ export const CartPage = () => {
                 <span className="text-white">₹{totalAmount}</span>
               </div>
 
-              {/* Advance + COD Payment Rule Box */}
               <div className="p-4 rounded-2xl bg-slate-950/90 border border-purple-500/30 space-y-2 mt-4">
                 <span className="text-[11px] font-bold text-pink-400 uppercase tracking-wider block flex items-center gap-1">
-                  <ShieldCheck className="w-3.5 h-3.5" /> Advance + Cash on Delivery
+                  <ShieldCheck className="w-3.5 h-3.5" /> Flexible Online Payment
                 </span>
                 
                 <div className="flex justify-between text-xs text-amber-300 font-bold">
-                  <span>Advance Payment Online:</span>
+                  <span>Advance Payment (Online):</span>
                   <span>₹{advanceRequired}</span>
                 </div>
 
                 <div className="flex justify-between text-xs text-slate-300">
-                  <span>Remaining COD on Delivery:</span>
-                  <span className="font-bold text-white">₹{remainingCodAmount}</span>
+                  <span>Remaining Balance:</span>
+                  <span className="font-bold text-white">₹{remainingBalance}</span>
                 </div>
 
                 <p className="text-[10px] text-slate-400 italic pt-1">
-                  Pay ₹{advanceRequired} online now to confirm your order. Pay remaining ₹{remainingCodAmount} in cash when delivered.
+                  Pay ₹{advanceRequired} online now to confirm your order, or choose Full Online Payment at checkout.
                 </p>
               </div>
             </div>
 
-            {/* Checkout Button */}
             <button
               onClick={() => navigate('/checkout')}
               className="w-full py-4 rounded-2xl bg-gradient-to-r from-pink-500 via-purple-600 to-amber-500 text-white font-black text-sm uppercase tracking-wider shadow-2xl shadow-pink-500/25 hover:scale-[1.02] transition-all flex items-center justify-center gap-2"

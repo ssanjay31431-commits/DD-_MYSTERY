@@ -1,156 +1,297 @@
-const crypto = require('crypto');
 const Order = require('../models/Order');
-const { getRazorpayInstance } = require('../config/razorpay');
+const Product = require('../models/Product');
+const AdminSettings = require('../models/AdminSettings');
+const Cart = require('../models/Cart');
+const FailedPayment = require('../models/FailedPayment');
+const cashfreeService = require('../services/cashfreeService');
+const { generateOrderId } = require('../utils/orderIdGenerator');
 const { sendNotification } = require('../utils/emailService');
 
-// @desc Create Razorpay Order for calculated Advance Required amount ONLY
-// @route POST /api/payments/create-order
-const createPaymentOrder = async (req, res) => {
+// @desc Create Cashfree Payment Order Session
+// @route POST /api/payments/create-session
+const createPaymentSession = async (req, res) => {
   try {
-    const { orderId } = req.body;
-    if (!orderId) {
-      return res.status(400).json({ message: 'Order ID is required' });
+    const { items, paymentMethod = 'ADVANCE', couponCode = '' } = req.body;
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ message: 'Cart items are required to create payment session' });
     }
 
-    let order;
-    if (orderId.startsWith('DDMB-')) {
-      order = await Order.findOne({ orderId });
+    // 1. Backend-driven product price and advance amount calculation
+    let calculatedSubtotal = 0;
+    let maxProductAdvance = 100;
+
+    const populatedItems = await Promise.all(
+      items.map(async (item) => {
+        const productId = item.product?._id || item.product || item._id;
+        let dbProduct = null;
+        if (productId) {
+          dbProduct = await Product.findById(productId);
+        }
+        
+        const price = dbProduct ? dbProduct.price : (item.unitPrice || item.price || 499);
+        const qty = item.quantity || 1;
+        calculatedSubtotal += price * qty;
+
+        if (dbProduct && dbProduct.advanceAmount) {
+          maxProductAdvance = dbProduct.advanceAmount;
+        }
+
+        return {
+          ...item,
+          unitPrice: price,
+          product: dbProduct || item.product
+        };
+      })
+    );
+
+    // Fetch Admin Settings for delivery fee & default advance
+    const settings = await AdminSettings.findOne() || {};
+    const defaultAdvance = settings.advanceAmount || settings.codAdvanceValue || maxProductAdvance;
+    const deliveryFee = settings.deliveryCharge || 0;
+    const totalAmount = Math.max(0, calculatedSubtotal + deliveryFee);
+
+    // Calculate dynamic advance and remaining balance
+    let advanceAmount = 0;
+    if (paymentMethod === 'FULL' || paymentMethod === 'full_online') {
+      advanceAmount = totalAmount;
     } else {
-      order = await Order.findById(orderId);
+      advanceAmount = Math.min(totalAmount, defaultAdvance);
     }
+    const remainingBalance = Math.max(0, totalAmount - advanceAmount);
 
-    if (!order) {
-      return res.status(404).json({ message: 'Order record not found' });
-    }
+    // Unique Cashfree payment order ID
+    const paymentOrderId = `CF_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`;
 
-    // ALWAYS use backend-calculated advanceRequired amount. Never trust frontend amount!
-    const advanceAmount = order.advanceRequired || Math.round(order.totalAmount * 0.2);
-    const amountInPaise = Math.round(advanceAmount * 100);
+    const returnUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/order-success?order_id=${paymentOrderId}`;
 
-    const razorpay = getRazorpayInstance();
+    const sessionData = await cashfreeService.createOrderSession({
+      orderId: paymentOrderId,
+      amount: advanceAmount,
+      currency: 'INR',
+      customer: {
+        id: req.user._id.toString(),
+        name: req.user.name || 'Customer',
+        email: req.user.email || 'customer@example.com',
+        phone: req.user.phone || '9999999999'
+      },
+      returnUrl
+    });
 
-    if (razorpay) {
-      const options = {
-        amount: amountInPaise,
-        currency: 'INR',
-        receipt: order.orderId
-      };
-      const razorpayOrder = await razorpay.orders.create(options);
-      return res.json({
-        id: razorpayOrder.id,
-        currency: razorpayOrder.currency,
-        amount: razorpayOrder.amount,
-        advanceAmount: advanceAmount,
-        totalAmount: order.totalAmount,
-        remainingCodAmount: order.remainingCodAmount,
-        isMockMode: false,
-        key: process.env.RAZORPAY_KEY_ID
-      });
-    } else {
-      // Safe Test/Mock Mode fallback for development
-      const mockRazorpayOrderId = `rzp_mock_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-      return res.json({
-        id: mockRazorpayOrderId,
-        currency: 'INR',
-        amount: amountInPaise,
-        advanceAmount: advanceAmount,
-        totalAmount: order.totalAmount,
-        remainingCodAmount: order.remainingCodAmount,
-        isMockMode: true,
-        key: 'rzp_test_mockkey123',
-        message: 'Development Mock Payment Mode active'
-      });
-    }
+    res.json({
+      success: true,
+      paymentSessionId: sessionData.paymentSessionId,
+      paymentOrderId: sessionData.paymentOrderId,
+      amountToPay: advanceAmount,
+      totalAmount,
+      remainingBalance,
+      paymentMethod: paymentMethod === 'FULL' || paymentMethod === 'full_online' ? 'FULL' : 'ADVANCE',
+      isMockMode: sessionData.isMockMode
+    });
   } catch (error) {
-    console.error('[Payment Controller Error]', error.message);
-    res.status(500).json({ message: error.message });
+    console.error('[Payment Session Error]', error.message);
+    res.status(500).json({ message: error.message || 'Payment session creation failed' });
   }
 };
 
-// @desc Verify Razorpay Payment Signature for Advance Payment
-// @route POST /api/payments/verify
-const verifyPayment = async (req, res) => {
+// @desc Verify Cashfree Payment and Create Order in MongoDB (Server-Side Flow)
+// @route POST /api/orders/confirm-payment
+const confirmPaymentAndCreateOrder = async (req, res) => {
   try {
-    const { dbOrderId, razorpay_order_id, razorpay_payment_id, razorpay_signature, isMockMode } = req.body;
+    const {
+      paymentOrderId,
+      paymentSessionId,
+      transactionId,
+      paymentMethod = 'ADVANCE',
+      items,
+      deliveryAddress,
+      couponCode = ''
+    } = req.body;
 
-    const order = await Order.findById(dbOrderId);
-    if (!order) {
-      return res.status(404).json({ message: 'Target order not found for payment verification' });
+    if (!paymentOrderId) {
+      return res.status(400).json({ message: 'Payment Order ID is required' });
     }
 
-    if (isMockMode || !process.env.RAZORPAY_KEY_SECRET || process.env.RAZORPAY_KEY_SECRET.includes('secretkey12345')) {
-      // Verification for Test / Mock Payment Mode
-      order.advancePaid = order.advanceRequired;
-      order.paymentInfo = {
-        razorpayOrderId: razorpay_order_id || `rzp_mock_${Date.now()}`,
-        razorpayPaymentId: razorpay_payment_id || `pay_mock_${Date.now()}`,
-        razorpaySignature: razorpay_signature || 'mock_valid_sig',
-        method: 'Advance + Cash on Delivery',
-        advanceStatus: 'Paid',
-        codStatus: 'Pending'
-      };
-      order.orderStatus = 'Order Confirmed';
-      order.trackingHistory.push({
-        status: 'Advance Payment Confirmed',
-        comment: `Advance payment of ₹${order.advanceRequired} verified. Remaining COD amount: ₹${order.remainingCodAmount}`
+    // 1. IDEMPOTENCY CHECK: Return existing order if already processed for this payment
+    const existingOrder = await Order.findOne({ 'paymentInfo.paymentOrderId': paymentOrderId });
+    if (existingOrder) {
+      console.log(`[Idempotent Order Check] Returning existing order ${existingOrder.orderNumber} for payment ${paymentOrderId}`);
+      return res.json({ success: true, idempotent: true, order: existingOrder });
+    }
+
+    // 2. Server-side verification with Cashfree
+    const verification = await cashfreeService.verifyOrderPayment(paymentOrderId);
+    if (!verification.isPaid) {
+      return res.status(400).json({
+        success: false,
+        message: `Payment verification failed with status: ${verification.status}`
       });
-
-      await order.save();
-
-      // AUTOMATIC NOTIFICATION DISPATCH (Brevo Email + SMS)
-      sendNotification({
-        type: 'PAYMENT_CONFIRMATION',
-        order,
-        orderId: order.orderId
-      }).catch(err => console.error('[Payment Notification Error]', err.message));
-
-      return res.json({ success: true, message: 'Test mode advance payment verified successfully', order });
     }
 
-    // Production / Live HMAC SHA256 Signature Verification
-    const body = razorpay_order_id + '|' + razorpay_payment_id;
-    const expectedSignature = crypto
-      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
-      .update(body.toString())
-      .digest('hex');
+    // 3. Recalculate Order Pricing from MongoDB Products
+    let calculatedSubtotal = 0;
+    let maxProductAdvance = 100;
 
-    const isAuthentic = expectedSignature === razorpay_signature;
+    const orderItems = await Promise.all(
+      (items || []).map(async (item) => {
+        const productId = item.product?._id || item.product || item._id;
+        let dbProduct = null;
+        if (productId) {
+          dbProduct = await Product.findById(productId);
+        }
 
-    if (isAuthentic) {
-      order.advancePaid = order.advanceRequired;
-      order.paymentInfo = {
-        razorpayOrderId: razorpay_order_id,
-        razorpayPaymentId: razorpay_payment_id,
-        razorpaySignature: razorpay_signature,
-        method: 'Advance + Cash on Delivery',
-        advanceStatus: 'Paid',
-        codStatus: 'Pending'
-      };
-      order.orderStatus = 'Order Confirmed';
-      order.trackingHistory.push({
-        status: 'Advance Payment Confirmed',
-        comment: `Advance online payment of ₹${order.advanceRequired} verified. Remaining COD to collect: ₹${order.remainingCodAmount}`
+        const price = dbProduct ? dbProduct.price : (item.unitPrice || item.price || 499);
+        const qty = item.quantity || 1;
+        calculatedSubtotal += price * qty;
+
+        if (dbProduct && dbProduct.advanceAmount) {
+          maxProductAdvance = dbProduct.advanceAmount;
+        }
+
+        return {
+          product: dbProduct ? dbProduct._id : null,
+          productSnapshot: {
+            name: dbProduct?.name || item.name || item.productSnapshot?.name || 'DD Mystery Box',
+            image: dbProduct?.image || item.image || item.productSnapshot?.image || '',
+            price: price,
+            description: dbProduct?.description || item.description || '',
+            contents: dbProduct?.contents?.map(c => c.name) || []
+          },
+          customizationSnapshot: item.customization || item.customizationSnapshot || {},
+          quantity: qty,
+          unitPrice: price
+        };
+      })
+    );
+
+    const settings = await AdminSettings.findOne() || {};
+    const defaultAdvance = settings.advanceAmount || settings.codAdvanceValue || maxProductAdvance;
+    const deliveryFee = settings.deliveryCharge || 0;
+    const totalAmount = Math.max(0, calculatedSubtotal + deliveryFee);
+
+    const isFullPayment = paymentMethod === 'FULL' || paymentMethod === 'full_online';
+    const advanceAmount = isFullPayment ? totalAmount : Math.min(totalAmount, defaultAdvance);
+    const amountPaid = advanceAmount;
+    const remainingBalance = Math.max(0, totalAmount - amountPaid);
+
+    const orderNumber = await generateOrderId();
+
+    const expectedDelivery = new Date();
+    expectedDelivery.setDate(expectedDelivery.getDate() + 4);
+
+    const newOrderData = {
+      orderNumber,
+      orderId: orderNumber,
+      user: req.user._id,
+      items: orderItems,
+      deliveryAddressSnapshot: deliveryAddress,
+
+      pricing: {
+        subtotal: calculatedSubtotal,
+        deliveryFee,
+        couponDiscount: 0,
+        totalAmount,
+        advanceAmount,
+        amountPaid,
+        remainingBalance
+      },
+
+      subtotal: calculatedSubtotal,
+      deliveryFee,
+      totalAmount,
+      advanceAmount,
+      amountPaid,
+      advancePaid: amountPaid,
+      remainingBalance,
+      remainingCodAmount: remainingBalance,
+
+      paymentInfo: {
+        method: isFullPayment ? 'FULL' : 'ADVANCE',
+        provider: 'CASHFREE',
+        status: isFullPayment ? 'PAID' : 'PARTIALLY_PAID',
+        paymentOrderId,
+        paymentSessionId: paymentSessionId || '',
+        transactionId: transactionId || verification.transactionId || ''
+      },
+
+      orderStatus: 'CONFIRMED',
+
+      shipment: {
+        status: 'NOT_CREATED',
+        provider: null,
+        shipmentId: null,
+        awb: null,
+        trackingUrl: null
+      },
+
+      trackingHistory: [
+        {
+          status: 'CONFIRMED',
+          comment: isFullPayment
+            ? `Order confirmed! Paid ₹${amountPaid} in full online via Cashfree.`
+            : `Order confirmed! Online advance payment of ₹${amountPaid} verified via Cashfree. Remaining balance: ₹${remainingBalance}`
+        }
+      ],
+
+      expectedDeliveryDate: expectedDelivery,
+      luckyRewardUnlocked: totalAmount >= 199
+    };
+
+    // 4. Save to MongoDB with Try-Catch for Recovery Safety
+    let createdOrder;
+    try {
+      const order = new Order(newOrderData);
+      createdOrder = await order.save();
+    } catch (dbError) {
+      console.error('[DATABASE ORDER CREATION FAILED AFTER PAYMENT]', dbError.message);
+
+      // Store recoverable payment record in FailedPayment collection
+      await FailedPayment.create({
+        paymentOrderId,
+        paymentSessionId,
+        transactionId: transactionId || verification.transactionId,
+        user: req.user._id,
+        userSnapshot: {
+          name: req.user.name,
+          email: req.user.email,
+          phone: req.user.phone
+        },
+        items,
+        deliveryAddress,
+        pricing: newOrderData.pricing,
+        paymentMethod: isFullPayment ? 'FULL' : 'ADVANCE',
+        errorDetails: dbError.message
+      }).catch(err => console.error('[FailedPayment Save Error]', err.message));
+
+      return res.status(500).json({
+        success: false,
+        recoverable: true,
+        paymentOrderId,
+        message: `Payment received, but we could not finish creating your order. Please contact support. Your payment reference is ${paymentOrderId}.`
       });
-
-      await order.save();
-
-      // AUTOMATIC NOTIFICATION DISPATCH (Brevo Email + SMS)
-      sendNotification({
-        type: 'PAYMENT_CONFIRMATION',
-        order,
-        orderId: order.orderId
-      }).catch(err => console.error('[Payment Notification Error]', err.message));
-
-      return res.json({ success: true, message: 'Advance payment signature verified successfully', order });
-    } else {
-      order.paymentInfo.advanceStatus = 'Failed';
-      await order.save();
-      return res.status(400).json({ success: false, message: 'Invalid payment signature. Advance verification failed.' });
     }
+
+    // 5. Clear User Cart
+    await Cart.findOneAndUpdate({ user: req.user._id }, { items: [], couponApplied: { code: '', discountAmount: 0 } }).catch(err => console.warn('Cart clear warning:', err.message));
+
+    // 6. Asynchronous Notification Dispatch (ONLY AFTER MONGODB SAVE SUCCEEDS)
+    sendNotification({
+      type: 'ORDER_CONFIRMATION',
+      order: createdOrder,
+      orderId: createdOrder.orderNumber
+    }).catch(err => console.error('[Notification Dispatch Warning]', err.message));
+
+    res.status(201).json({
+      success: true,
+      order: createdOrder
+    });
   } catch (error) {
-    console.error('[Payment Verification Error]', error.message);
-    res.status(500).json({ message: error.message });
+    console.error('[Confirm Payment Error]', error.message);
+    res.status(500).json({ message: error.message || 'Payment confirmation failed' });
   }
 };
 
-module.exports = { createPaymentOrder, verifyPayment };
+module.exports = {
+  createPaymentSession,
+  confirmPaymentAndCreateOrder
+};

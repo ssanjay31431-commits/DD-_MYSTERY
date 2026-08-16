@@ -37,6 +37,7 @@ const productSchema = new mongoose.Schema(
     sku: { type: String, default: '' },
     weight: { type: String, default: '500g' },
     deliveryCharge: { type: Number, default: 0 },
+    advanceAmount: { type: Number, default: 100 },
     rating: { type: Number, default: 4.9 },
     numReviews: { type: Number, default: 24 }
   },

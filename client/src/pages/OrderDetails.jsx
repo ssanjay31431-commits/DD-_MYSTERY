@@ -20,14 +20,11 @@ export const OrderDetails = () => {
           setOrder(data);
         } else {
           const localOrders = JSON.parse(localStorage.getItem('dd_orders') || '[]');
-          const found = localOrders.find((o) => o._id === id || o.orderId === id);
+          const found = localOrders.find((o) => o._id === id || o.orderId === id || o.orderNumber === id);
           setOrder(found || null);
         }
       } catch (err) {
-        console.warn('Fetch order notice, checking local orders:', err.message);
-        const localOrders = JSON.parse(localStorage.getItem('dd_orders') || '[]');
-        const found = localOrders.find((o) => o._id === id || o.orderId === id);
-        setOrder(found || null);
+        console.warn('Fetch order notice:', err.message);
       } finally {
         setLoading(false);
       }
@@ -42,16 +39,14 @@ export const OrderDetails = () => {
       addToast('Order cancelled successfully', 'info');
       setOrder({ ...order, orderStatus: 'Cancelled' });
     } catch (err) {
-      const localOrders = JSON.parse(localStorage.getItem('dd_orders') || '[]');
-      const updated = localOrders.map(o => (o._id === order._id || o.orderId === order.orderId) ? { ...o, orderStatus: 'Cancelled' } : o);
-      localStorage.setItem('dd_orders', JSON.stringify(updated));
-      setOrder({ ...order, orderStatus: 'Cancelled' });
-      addToast('Order cancelled successfully', 'info');
+      addToast(err.response?.data?.message || 'Cancellation failed', 'error');
     }
   };
 
   if (loading) return <div className="max-w-5xl mx-auto p-8"><CardSkeleton /></div>;
   if (!order) return <div className="text-center py-20 text-white font-bold">Order Not Found</div>;
+
+  const orderNum = order.orderNumber || order.orderId;
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8">
@@ -64,8 +59,8 @@ export const OrderDetails = () => {
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-6 border-b border-slate-800">
           <div>
-            <span className="text-xs font-bold text-slate-400 uppercase">Order ID</span>
-            <h1 className="text-2xl font-black text-white font-display">{order.orderId}</h1>
+            <span className="text-xs font-bold text-slate-400 uppercase">Order Reference</span>
+            <h1 className="text-2xl font-black text-white font-display">#{orderNum}</h1>
             <span className="text-xs text-slate-400">Placed on: {new Date(order.createdAt).toLocaleString()}</span>
           </div>
 
@@ -73,7 +68,7 @@ export const OrderDetails = () => {
             <span className="px-3 py-1 rounded-full text-xs font-extrabold uppercase bg-purple-500/20 text-purple-300 border border-purple-500/30">
               {order.orderStatus}
             </span>
-            {['Pending', 'Confirmed', 'Preparing'].includes(order.orderStatus) && (
+            {['CONFIRMED', 'Order Confirmed', 'PREPARING', 'Preparing'].includes(order.orderStatus) && (
               <button
                 onClick={handleCancelOrder}
                 className="px-3 py-1 rounded-xl bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 border border-rose-500/30 text-xs font-bold"
@@ -126,11 +121,16 @@ export const OrderDetails = () => {
             <h4 className="font-bold text-white text-sm flex items-center gap-2 mb-2">
               <MapPin className="w-4 h-4 text-pink-400" /> Delivery Address
             </h4>
-            <p className="text-xs text-slate-300">
-              {order.deliveryAddressSnapshot?.fullName || order.user?.name}<br />
-              {order.deliveryAddressSnapshot?.houseNo}, {order.deliveryAddressSnapshot?.street}, {order.deliveryAddressSnapshot?.area}<br />
+            <p className="text-xs text-slate-300 leading-relaxed">
+              <strong className="text-white">{order.deliveryAddressSnapshot?.fullName || order.user?.name}</strong><br />
+              {[
+                order.deliveryAddressSnapshot?.houseNo,
+                order.deliveryAddressSnapshot?.street,
+                order.deliveryAddressSnapshot?.area,
+                order.deliveryAddressSnapshot?.landmark ? `(Landmark: ${order.deliveryAddressSnapshot.landmark})` : ''
+              ].filter(Boolean).join(', ')}<br />
               {order.deliveryAddressSnapshot?.city}, {order.deliveryAddressSnapshot?.state} - {order.deliveryAddressSnapshot?.pincode}<br />
-              Mobile: {order.deliveryAddressSnapshot?.mobileNumber || order.user?.phone}
+              <span className="font-mono text-slate-400">Mobile: {order.deliveryAddressSnapshot?.mobileNumber || order.user?.phone}</span>
             </p>
           </div>
 
@@ -139,11 +139,11 @@ export const OrderDetails = () => {
               <CreditCard className="w-4 h-4 text-purple-400" /> Payment Details
             </h4>
             <div className="text-xs text-slate-300 space-y-1">
-              <p>Status: <span className="font-bold text-emerald-400">{order.paymentStatus || 'Confirmed'}</span></p>
-              <p>Method: {order.paymentMethod || 'Advance Payment + COD'}</p>
-              <p>Advance Paid Online: <span className="font-bold text-emerald-400">₹{order.advancePaid || 0}</span></p>
-              <p>Remaining Cash on Delivery: <span className="font-bold text-amber-300">₹{order.remainingCodAmount || 0}</span></p>
-              <p>Total Order Amount: <span className="font-bold text-white">₹{order.totalAmount}</span></p>
+              <p>Status: <span className="font-bold text-emerald-400">{order.paymentInfo?.status || order.paymentStatus || 'CONFIRMED'}</span></p>
+              <p>Method: {order.paymentInfo?.method === 'FULL' ? 'Full Online Payment' : 'Advance Payment'}</p>
+              <p>Paid Online: <span className="font-bold text-emerald-400">₹{order.pricing?.amountPaid !== undefined ? order.pricing.amountPaid : (order.amountPaid || order.advancePaid || 0)}</span></p>
+              <p>Remaining Balance: <span className="font-bold text-amber-300">₹{order.pricing?.remainingBalance !== undefined ? order.pricing.remainingBalance : (order.remainingBalance !== undefined ? order.remainingBalance : (order.remainingCodAmount || 0))}</span></p>
+              <p>Total Order Amount: <span className="font-bold text-white">₹{order.totalAmount || order.pricing?.totalAmount || 0}</span></p>
             </div>
           </div>
         </div>
