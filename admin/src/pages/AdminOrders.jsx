@@ -117,6 +117,7 @@ export const AdminOrders = () => {
             <thead className="bg-slate-900/90 text-slate-400 font-extrabold uppercase tracking-wider">
               <tr>
                 <th className="p-3">Order Number</th>
+                <th className="p-3">Date & Time</th>
                 <th className="p-3">Customer</th>
                 <th className="p-3">Total Value</th>
                 <th className="p-3">Advance Paid</th>
@@ -144,6 +145,9 @@ export const AdminOrders = () => {
                   return (
                     <tr key={ord._id || ordNum} className="hover:bg-slate-900/50 transition-colors">
                       <td className="p-3 font-mono font-bold text-amber-300">#{ordNum}</td>
+                      <td className="p-3 text-[12px] text-slate-300 font-mono">
+                        {ord.createdAt ? new Date(ord.createdAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : 'N/A'}
+                      </td>
                       <td className="p-3">
                         <span className="font-bold text-white block">{ord.user?.name || ord.deliveryAddressSnapshot?.fullName || 'Customer'}</span>
                         <span className="text-[10px] text-slate-400 font-mono block">{ord.user?.email || ord.deliveryAddressSnapshot?.email || 'N/A'}</span>
