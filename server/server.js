@@ -3,10 +3,42 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const dotenv = require('dotenv');
+const nodemailer = require('nodemailer');
 const connectDB = require('./config/db');
 const { notFound, errorHandler } = require('./middleware/errorMiddleware');
 
 dotenv.config();
+
+const verifyBrevoSmtp = async () => {
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS || !process.env.BREVO_SENDER_EMAIL) {
+    console.warn('[EMAIL SMTP] SMTP not configured yet. Skipping verification.');
+    return;
+  }
+
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT || 587),
+    secure: Number(process.env.SMTP_PORT || 587) === 465,
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS
+    }
+  });
+
+  try {
+    await transporter.verify();
+    console.log('[EMAIL SMTP] Connection verified');
+    console.log('[EMAIL CONFIG]', {
+      host: process.env.SMTP_HOST,
+      port: process.env.SMTP_PORT,
+      user: process.env.SMTP_USER,
+      sender: process.env.BREVO_SENDER_EMAIL
+    });
+  } catch (error) {
+    console.error('[EMAIL SMTP] Connection failed');
+    console.error(error.message);
+  }
+};
 
 // Connect MongoDB
 connectDB();
@@ -95,6 +127,8 @@ app.use(notFound);
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
+
+verifyBrevoSmtp();
 
 app.listen(PORT, () => {
   console.log(`[DD Mystery Box Server] Running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
