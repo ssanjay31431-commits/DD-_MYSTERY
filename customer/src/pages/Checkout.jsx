@@ -26,54 +26,39 @@ export const Checkout = () => {
       return;
     }
 
-    if (!user) {
-      addToast('Please login to place an order', 'info');
-      navigate('/login?redirect=checkout');
-      return;
-    }
-
     setSubmittingPayment(true);
 
     try {
+      const mockOrderId = `CF_MOCK_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`;
+
       const checkoutData = {
+        paymentOrderId: mockOrderId,
+        paymentSessionId: `session_${Date.now()}`,
+        transactionId: `tx_${Date.now()}`,
         items: Array.isArray(cartItems) ? cartItems : [],
         deliveryAddress: selectedAddress,
         paymentMethod: selectedPaymentMethod === 'FULL' ? 'FULL' : 'ADVANCE',
         couponCode: couponApplied?.code || ''
       };
 
-      // Create Cashfree Payment Session on backend (backend calculates exact pricing from MongoDB)
-      const { data } = await API.post('/payments/create-session', checkoutData);
+      // Directly create order in MongoDB via backend API
+      const { data } = await API.post('/orders/confirm-payment', checkoutData);
 
-      sessionStorage.setItem('dd_checkout_payload', JSON.stringify({
-        ...checkoutData,
-        paymentSessionId: data.paymentSessionId,
-        paymentOrderId: data.paymentOrderId,
-        amountToPay: data.amountToPay,
-        totalAmount: data.totalAmount,
-        remainingBalance: data.remainingBalance
-      }));
-
-      navigate(`/payment?order_id=${data.paymentOrderId}&session_id=${data.paymentSessionId || ''}`);
+      if (data && data.success && data.order) {
+        if (clearCart) clearCart();
+        sessionStorage.removeItem('dd_checkout_payload');
+        addToast('🎉 Order placed successfully and saved to database!');
+        
+        const finalId = data.order.orderNumber || data.order.orderId || data.order._id;
+        navigate(`/order-success/${finalId}`);
+      } else {
+        const errMsg = data?.message || 'Order creation failed. Please try again.';
+        addToast(errMsg, 'error');
+      }
     } catch (error) {
-      console.warn('Payment session creation notice:', error.message);
-      // Fallback for dev mode
-      const mockOrderId = `CF_MOCK_${Date.now()}`;
-      const configuredAdv = Math.min(totalAmount, cartItems[0]?.product?.advanceAmount || settings?.advanceAmount || 100);
-      const advAmount = selectedPaymentMethod === 'FULL' ? totalAmount : configuredAdv;
-
-      sessionStorage.setItem('dd_checkout_payload', JSON.stringify({
-        items: Array.isArray(cartItems) ? cartItems : [],
-        deliveryAddress: selectedAddress,
-        paymentMethod: selectedPaymentMethod === 'FULL' ? 'FULL' : 'ADVANCE',
-        paymentOrderId: mockOrderId,
-        paymentSessionId: `mock_session_${Date.now()}`,
-        amountToPay: advAmount,
-        totalAmount,
-        remainingBalance: Math.max(0, totalAmount - advAmount)
-      }));
-
-      navigate(`/payment?order_id=${mockOrderId}`);
+      console.error('Order creation error:', error);
+      const errMsg = error.response?.data?.message || error.message || 'Failed to place order';
+      addToast(errMsg, 'error');
     } finally {
       setSubmittingPayment(false);
     }

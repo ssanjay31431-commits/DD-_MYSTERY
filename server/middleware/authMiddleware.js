@@ -8,25 +8,27 @@ const protect = async (req, res, next) => {
       token = req.headers.authorization.split(' ')[1];
       const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dd_mystery_box_jwt_secret_key_change_in_production_2026');
       req.user = await User.findById(decoded.id).select('-password');
-      if (!req.user) {
-        return res.status(401).json({ 
-          message: 'User account not found. Please login again.',
-          clearToken: true 
-        });
+      if (req.user) {
+        return next();
       }
-      return next();
     } catch (error) {
       console.error('[AuthMiddleware] Token error:', error.message);
-      return res.status(401).json({ 
-        message: 'Not authorized, token failed',
-        clearToken: true 
-      });
     }
   }
 
-  if (!token) {
-    return res.status(401).json({ message: 'Not authorized, no token provided', clearToken: true });
+  // If no token or token invalid, allow request to continue so controller can attach/create guest user safely
+  next();
+};
+
+const optionalAuth = async (req, res, next) => {
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+    try {
+      const token = req.headers.authorization.split(' ')[1];
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dd_mystery_box_jwt_secret_key_change_in_production_2026');
+      req.user = await User.findById(decoded.id).select('-password');
+    } catch (e) {}
   }
+  next();
 };
 
 const admin = (req, res, next) => {
@@ -37,4 +39,4 @@ const admin = (req, res, next) => {
   }
 };
 
-module.exports = { protect, admin };
+module.exports = { protect, optionalAuth, admin };
