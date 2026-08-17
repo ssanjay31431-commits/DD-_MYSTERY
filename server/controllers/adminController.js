@@ -439,6 +439,29 @@ const testAdminEmail = async (req, res) => {
   }
 };
 
+// @desc Verify Brevo account access and sender configuration without sending mail
+// @route GET /api/admin/email/configuration
+const verifyBrevoEmailConfiguration = async (req, res) => {
+  try {
+    const { verifyBrevoConfiguration } = require('../services/brevoEmailService');
+    const result = await verifyBrevoConfiguration();
+
+    if (!result.success) {
+      return res.status(400).json({ success: false, provider: 'brevo', error: result.error });
+    }
+
+    return res.json({
+      success: true,
+      provider: 'brevo',
+      sender: result.sender,
+      accountEmail: result.accountEmail,
+      message: 'Brevo API key and sender are configured. Mail is accepted first; delivery is reported later by Brevo.'
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, provider: 'brevo', error: error.message });
+  }
+};
+
 // @desc Admin Test SMS Direct Delivery Endpoint
 // @route POST /api/admin/test-sms
 const testAdminSms = async (req, res) => {
@@ -482,8 +505,8 @@ module.exports = {
   sendAdminManualEmail,
   sendAdminManualSms,
   testAdminEmail,
+  verifyBrevoEmailConfiguration,
   testAdminSms,
   getFailedPayments,
   recoverPaymentOrder
 };
-

@@ -9,6 +9,7 @@ const {
   sendAdminManualEmail,
   sendAdminManualSms,
   testAdminEmail,
+  verifyBrevoEmailConfiguration,
   testAdminSms,
   getFailedPayments,
   recoverPaymentOrder
@@ -35,6 +36,7 @@ router.post('/notifications/send-email', sendAdminManualEmail);
 router.post('/notifications/send-sms', sendAdminManualSms);
 router.post('/email/send', sendAdminManualEmail);
 router.post('/test-email', testAdminEmail);
+router.get('/email/configuration', verifyBrevoEmailConfiguration);
 router.post('/test-sms', testAdminSms);
 
 module.exports = router;

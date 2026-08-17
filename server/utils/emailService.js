@@ -55,19 +55,24 @@ const sendNotification = async ({ type, recipientEmail, recipientPhone, orderId,
         switch (type) {
           case 'ORDER_CONFIRMATION':
           case 'ORDER_PLACED':
+          case 'CONFIRMED':
+          case 'Order Confirmed':
             emailResult = await brevoEmailService.sendOrderConfirmationEmail({ recipientEmail: email, recipientName: customerName, order: targetOrder });
             break;
           case 'PAYMENT_CONFIRMATION':
             emailResult = await brevoEmailService.sendPaymentConfirmationEmail({ recipientEmail: email, recipientName: customerName, order: targetOrder });
             break;
           case 'PREPARING':
+          case 'Preparing':
             emailResult = await brevoEmailService.sendPreparingEmail({ recipientEmail: email, recipientName: customerName, order: targetOrder });
             break;
           case 'PACKED':
+          case 'Packed':
             emailResult = await brevoEmailService.sendPackedEmail({ recipientEmail: email, recipientName: customerName, order: targetOrder });
             break;
           case 'SHIPPED':
           case 'SHIPMENT':
+          case 'Shipped':
             emailResult = await brevoEmailService.sendShipmentEmail({ recipientEmail: email, recipientName: customerName, order: targetOrder });
             break;
           case 'PICKUP':
@@ -77,15 +82,18 @@ const sendNotification = async ({ type, recipientEmail, recipientPhone, orderId,
             emailResult = await brevoEmailService.sendTransitEmail({ recipientEmail: email, recipientName: customerName, order: targetOrder });
             break;
           case 'OUT_FOR_DELIVERY':
+          case 'Out for Delivery':
             emailResult = await brevoEmailService.sendOutForDeliveryEmail({ recipientEmail: email, recipientName: customerName, order: targetOrder });
             break;
           case 'DELIVERED':
+          case 'Delivered':
             emailResult = await brevoEmailService.sendDeliveredEmail({ recipientEmail: email, recipientName: customerName, order: targetOrder });
             break;
           case 'FAILED_DELIVERY':
             emailResult = await brevoEmailService.sendFailedDeliveryEmail({ recipientEmail: email, recipientName: customerName, order: targetOrder, reason });
             break;
           case 'CANCELLED':
+          case 'Cancelled':
             emailResult = await brevoEmailService.sendCancellationEmail({ recipientEmail: email, recipientName: customerName, order: targetOrder, reason });
             break;
           default:
@@ -231,4 +239,3 @@ const sendNotification = async ({ type, recipientEmail, recipientPhone, orderId,
 };
 
 module.exports = { sendNotification };
-

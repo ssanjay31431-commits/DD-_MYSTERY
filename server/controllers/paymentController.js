@@ -256,12 +256,22 @@ const confirmPaymentAndCreateOrder = async (req, res) => {
       await Cart.findOneAndUpdate({ user: user._id }, { items: [], couponApplied: { code: '', discountAmount: 0 } }).catch(e => {});
     }
 
-    // 7. Asynchronous Notification Dispatch
-    sendNotification({
-      type: 'ORDER_CONFIRMATION',
-      order: createdOrder,
-      orderId: createdOrder.orderNumber
-    }).catch(err => console.error('[Notification Dispatch Warning]', err.message));
+    // 7. Dispatch before returning so the request is not lost if the runtime
+    // is stopped immediately after the order-confirmation response.
+    try {
+      await sendNotification({
+        type: 'ORDER_CONFIRMATION',
+        order: createdOrder,
+        orderId: createdOrder.orderNumber,
+        // The saved order has a user ObjectId, not a populated User document.
+        // Pass contacts explicitly so the confirmation cannot be skipped.
+        recipientEmail: user.email,
+        recipientPhone: user.phone
+      });
+    } catch (notificationError) {
+      // The order remains valid even if Brevo is temporarily unavailable.
+      console.error('[Notification Dispatch Warning]', notificationError.message);
+    }
 
     res.status(201).json({
       success: true,

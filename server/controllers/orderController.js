@@ -132,7 +132,11 @@ const createOrder = async (req, res) => {
       await sendNotification({
         type: 'ORDER_PLACED',
         order: createdOrder,
-        orderId: createdOrder.orderId
+        orderId: createdOrder.orderId,
+        // createdOrder only contains the user ObjectId, so pass the authenticated
+        // contact details explicitly instead of silently skipping customer email.
+        recipientEmail: req.user.email,
+        recipientPhone: req.user.phone
       });
       console.log(`[Order ${createdOrder.orderId}] Notifications sent successfully`);
     } catch (notificationError) {
