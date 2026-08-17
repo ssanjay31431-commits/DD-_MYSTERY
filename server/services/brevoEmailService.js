@@ -11,10 +11,11 @@ const getBrevoHeaders = () => ({
 
 const getSender = () => {
   const envSender = (process.env.BREVO_SENDER_EMAIL || process.env.FROM_EMAIL || '').trim();
-  // Exact verified Brevo sender domain from the working VibeForge setup
-  const verifiedSenderEmail = 'vibeforgemrs@11800301.brevosend.com';
 
-  const email = (envSender && envSender.includes('@') && !envSender.includes('gmail.com') && !envSender.includes('smtp-brevo.com'))
+  // The only verified sender registered on this Brevo account is vibeforgemrs@gmail.com
+  const verifiedSenderEmail = 'vibeforgemrs@gmail.com';
+
+  const email = (envSender && envSender.includes('@') && !envSender.includes('11800301.brevosend.com') && !envSender.includes('smtp-brevo.com'))
     ? envSender
     : verifiedSenderEmail;
 
