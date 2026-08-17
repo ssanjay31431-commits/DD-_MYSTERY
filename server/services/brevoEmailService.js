@@ -11,8 +11,51 @@ const getBrevoHeaders = () => ({
 
 const getSender = () => ({
   name: process.env.BREVO_SENDER_NAME || 'DD MYSTERY BOX',
-  email: process.env.BREVO_SENDER_EMAIL || process.env.SMTP_USER || 'support@ddmysterybox.com'
+  email: process.env.BREVO_SENDER_EMAIL || process.env.FROM_EMAIL || ''
 });
+
+// Mirrors the successful VibeForge dispatch record while keeping credentials
+// and raw provider objects out of application logs.
+const logBrevoDispatch = ({ stage, recipient, sender, subject, provider, response, error }) => {
+  const messageId = response?.messageId || response?.id || 'N/A';
+  console.log(`\n[BREVO EMAIL DISPATCH: ${stage}]`);
+  console.log(`Recipient: ${recipient}`);
+  console.log(`Sender: ${sender}`);
+  console.log(`Subject: ${subject}`);
+  console.log(`Provider: ${provider}`);
+  console.log(`Message ID: ${messageId}`);
+
+  if (stage === 'SUCCESS') {
+    console.log(`SMTP/API response: ${JSON.stringify({
+      accepted: response?.accepted || [],
+      response: response?.response || response?.status || 'ACCEPTED'
+    })}`);
+    console.log('Status: ACCEPTED');
+  } else {
+    console.error(`Error: ${error?.message || 'Brevo rejected the message'}`);
+  }
+};
+
+// Configuration-only check used by the protected admin endpoint. It never
+// changes credentials or sends a message.
+const verifyBrevoConfiguration = async () => {
+  const sender = getSender();
+  const hasApi = Boolean(process.env.BREVO_API_KEY?.trim());
+  const hasSmtp = Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+
+  if (!sender.email || !sender.email.includes('@')) {
+    return { success: false, error: 'BREVO_SENDER_EMAIL or FROM_EMAIL must be a valid verified sender address' };
+  }
+  if (!hasApi && !hasSmtp) {
+    return { success: false, error: 'Brevo API key and SMTP credentials are both missing' };
+  }
+
+  return {
+    success: true,
+    sender: sender.email,
+    transport: hasApi ? 'Brevo REST API with SMTP fallback' : 'Brevo SMTP'
+  };
+};
 
 const sendViaSmtp = async ({ recipientEmail, recipientName, subject, htmlContent }) => {
   const smtpHost = process.env.SMTP_HOST;
@@ -34,6 +77,10 @@ const sendViaSmtp = async ({ recipientEmail, recipientName, subject, htmlContent
     auth: {
       user: smtpUser,
       pass: smtpPass
+    },
+    // Same TLS behavior as the working VibeForge Brevo SMTP transporter.
+    tls: {
+      rejectUnauthorized: false
     }
   });
 
@@ -45,31 +92,25 @@ const sendViaSmtp = async ({ recipientEmail, recipientName, subject, htmlContent
       html: htmlContent
     });
 
-    console.log('\n[EMAIL]');
-    console.log(`To: ${recipientEmail}`);
-    console.log(`Sender: ${sender.email}`);
-    console.log('Provider: Brevo SMTP');
-    console.log(`HTTP: 250`);
-    console.log(`Message ID: ${response.messageId || 'N/A'}`);
-    console.log('Full SMTP response:', JSON.stringify(response, null, 2));
-    console.log('Status: accepted\n');
+    const accepted = Array.isArray(response.accepted) && response.accepted.length > 0;
+    const messageId = response.messageId || '';
+    if (!accepted && !messageId) {
+      const errorMsg = 'Brevo SMTP returned neither an accepted recipient nor a message ID';
+      logBrevoDispatch({ stage: 'FAILED', recipient: recipientEmail, sender: sender.email, subject, provider: 'Brevo SMTP', response, error: { message: errorMsg } });
+      return { success: false, error: errorMsg };
+    }
+
+    logBrevoDispatch({ stage: 'SUCCESS', recipient: recipientEmail, sender: sender.email, subject, provider: 'Brevo SMTP', response });
 
     return {
       success: true,
-      providerMessageId: response.messageId || `brevo_smtp_${Date.now()}`,
+      providerMessageId: messageId || `brevo_smtp_${Date.now()}`,
       providerResponse: response,
       httpStatus: 250
     };
   } catch (error) {
     const errorText = error?.response?.body || error?.message || 'SMTP send failed';
-    console.error('\n[EMAIL ERROR] Full SMTP error response:');
-    console.error(errorText);
-    console.error('\n[EMAIL ERROR] Summary:');
-    console.error(`To: ${recipientEmail}`);
-    console.error(`Sender: ${sender.email}`);
-    console.error('Provider: Brevo SMTP');
-    console.error(`HTTP: ${error?.response?.status || 'N/A'}`);
-    console.error(`Error: ${errorText}\n`);
+    logBrevoDispatch({ stage: 'FAILED', recipient: recipientEmail, sender: sender.email, subject, provider: 'Brevo SMTP', error: { message: errorText } });
 
     return {
       success: false,
@@ -261,7 +302,7 @@ const sendBrevoEmail = async ({ recipientEmail, recipientName, subject, htmlCont
 
   const sender = getSender();
   if (!sender.email || !sender.email.includes('@')) {
-    const errorMsg = `Invalid sender email address: "${sender.email}". Set BREVO_SENDER_EMAIL or SMTP_USER to a verified Brevo sender.`;
+    const errorMsg = `Invalid sender email address: "${sender.email}". Set BREVO_SENDER_EMAIL or FROM_EMAIL to a verified Brevo sender.`;
     console.error('[EMAIL ERROR] To:', recipientEmail, '| Provider: Brevo | Error:', errorMsg);
     return { success: false, error: errorMsg };
   }
@@ -284,47 +325,36 @@ const sendBrevoEmail = async ({ recipientEmail, recipientName, subject, htmlCont
         htmlContent: htmlContent
       };
 
-      const response = await axios.post(BREVO_API_URL, payload, { headers: getBrevoHeaders() });
+      const response = await axios.post(BREVO_API_URL, payload, {
+        headers: getBrevoHeaders(),
+        timeout: 15000
+      });
       const messageId = response.data?.messageId || response.data?.id;
 
-      console.log('\n[EMAIL]');
-      console.log(`To: ${recipientEmail}`);
-      console.log(`Sender: ${sender.email}`);
-      console.log(`Provider: Brevo`);
-      console.log(`HTTP: ${response.status}`);
-      console.log(`Message ID: ${messageId || 'N/A'}`);
-      console.log('Full Brevo response:', JSON.stringify(response.data, null, 2));
-      console.log(`Status: accepted\n`);
-
-      if (response.status === 201 || response.status === 200) {
+      if ((response.status === 201 || response.status === 200) && messageId) {
+        logBrevoDispatch({
+          stage: 'SUCCESS',
+          recipient: recipientEmail,
+          sender: sender.email,
+          subject,
+          provider: 'Brevo REST API',
+          response: { ...response.data, status: response.status }
+        });
         return {
           success: true,
-          providerMessageId: messageId || `brevo_${Date.now()}`,
+          providerMessageId: messageId,
           providerResponse: response.data,
           httpStatus: response.status
         };
       }
 
-      return {
-        success: false,
-        error: `Unexpected response status from Brevo: ${response.status}`,
-        providerResponse: response.data,
-        httpStatus: response.status
-      };
+      throw new Error(`Brevo REST API did not return an accepted message ID (HTTP ${response.status})`);
     } catch (error) {
       const httpStatus = error.response?.status || 'N/A';
       const providerResponse = error.response?.data || null;
       const errorMsg = providerResponse?.message || providerResponse?.code || error.message || 'Brevo API call failed';
 
-      console.error('\n[EMAIL ERROR] Full Brevo error response:');
-      try { console.error(JSON.stringify(providerResponse, null, 2)); } catch (e) { console.error(providerResponse); }
-
-      console.error('\n[EMAIL ERROR] Summary:');
-      console.error(`To: ${recipientEmail}`);
-      console.error(`Sender: ${sender.email}`);
-      console.error(`Provider: Brevo`);
-      console.error(`HTTP: ${httpStatus}`);
-      console.error(`Error: ${errorMsg}\n`);
+      logBrevoDispatch({ stage: 'FAILED', recipient: recipientEmail, sender: sender.email, subject, provider: 'Brevo REST API', error: { message: errorMsg } });
 
       if (hasSmtpConfig) {
         console.warn('[EMAIL WARN] Brevo API rejected the message. Falling back to Brevo SMTP with configured SMTP credentials.');
@@ -503,6 +533,7 @@ const sendCustomEmail = async ({ recipientEmail, recipientName, subject, customM
 
 module.exports = {
   sendBrevoEmail,
+  verifyBrevoConfiguration,
   sendOrderConfirmationEmail,
   sendPaymentConfirmationEmail,
   sendPreparingEmail,
