@@ -9,10 +9,20 @@ const getBrevoHeaders = () => ({
   'content-type': 'application/json'
 });
 
-const getSender = () => ({
-  name: process.env.BREVO_SENDER_NAME || 'DD MYSTERY BOX',
-  email: process.env.BREVO_SENDER_EMAIL || process.env.FROM_EMAIL || ''
-});
+const getSender = () => {
+  const envSender = (process.env.BREVO_SENDER_EMAIL || process.env.FROM_EMAIL || '').trim();
+  const smtpUser = (process.env.SMTP_USER || '').trim();
+
+  // Primary verified sender for Brevo account authentication
+  const email = (envSender && !envSender.includes('gmail.com') && !envSender.includes('11800301.brevosend.com'))
+    ? envSender
+    : (smtpUser || 'b40eed001@smtp-brevo.com');
+
+  return {
+    name: process.env.BREVO_SENDER_NAME || 'DD Mystery Box',
+    email
+  };
+};
 
 // Mirrors the successful VibeForge dispatch record while keeping credentials
 // and raw provider objects out of application logs.
@@ -86,8 +96,9 @@ const sendViaSmtp = async ({ recipientEmail, recipientName, subject, htmlContent
 
   try {
     const response = await transporter.sendMail({
-      from: `${sender.name} <${sender.email}>`,
+      from: `"${sender.name}" <${sender.email}>`,
       to: recipientEmail,
+      replyTo: `"${sender.name}" <${process.env.REPLY_TO_EMAIL || 'ddmysterybox@gmail.com'}>`,
       subject,
       html: htmlContent
     });
@@ -321,6 +332,7 @@ const sendBrevoEmail = async ({ recipientEmail, recipientName, subject, htmlCont
       const payload = {
         sender,
         to: [{ email: recipientEmail, name: recipientName || recipientEmail }],
+        replyTo: { email: process.env.REPLY_TO_EMAIL || 'ddmysterybox@gmail.com', name: sender.name },
         subject: subject,
         htmlContent: htmlContent
       };
