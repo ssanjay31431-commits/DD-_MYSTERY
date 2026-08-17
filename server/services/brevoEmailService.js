@@ -11,12 +11,12 @@ const getBrevoHeaders = () => ({
 
 const getSender = () => {
   const envSender = (process.env.BREVO_SENDER_EMAIL || process.env.FROM_EMAIL || '').trim();
-  const smtpUser = (process.env.SMTP_USER || '').trim();
+  // Exact verified Brevo sender domain from the working VibeForge setup
+  const verifiedSenderEmail = 'vibeforgemrs@11800301.brevosend.com';
 
-  // Primary verified sender for Brevo account authentication
-  const email = (envSender && !envSender.includes('gmail.com') && !envSender.includes('11800301.brevosend.com'))
+  const email = (envSender && envSender.includes('@') && !envSender.includes('gmail.com') && !envSender.includes('smtp-brevo.com'))
     ? envSender
-    : (smtpUser || 'b40eed001@smtp-brevo.com');
+    : verifiedSenderEmail;
 
   return {
     name: process.env.BREVO_SENDER_NAME || 'DD Mystery Box',
