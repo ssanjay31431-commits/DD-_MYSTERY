@@ -189,7 +189,7 @@ export const Checkout = () => {
         district: (address.city || district || city || '').trim(),
         state: (address.state || state || '').trim(),
         pincode: (address.pincode || pincode || '').trim(),
-        landmark: landmark || '',
+        landmark: (address.landmark || landmark || '').trim(),
         addressType: addressType || 'Home',
         latitude: location.latitude,
         longitude: location.longitude,
@@ -204,6 +204,7 @@ export const Checkout = () => {
       if (autoAddress.city) setCity(autoAddress.city);
       if (autoAddress.state) setState(autoAddress.state);
       if (autoAddress.pincode) setPincode(autoAddress.pincode);
+      if (autoAddress.landmark) setLandmark(autoAddress.landmark);
 
       setSelectedAddress(autoAddress);
       localStorage.setItem('dd_checkout_address', JSON.stringify(autoAddress));
@@ -463,6 +464,10 @@ export const Checkout = () => {
                     <input type="text" required value={area} onChange={(e) => setArea(e.target.value)} className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs" />
                   </div>
                   <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">Landmark (e.g. Near Temple / School)</label>
+                    <input type="text" value={landmark} onChange={(e) => setLandmark(e.target.value)} placeholder="Nearby landmark or spot" className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs" />
+                  </div>
+                  <div>
                     <label className="block text-xs font-semibold text-slate-300 mb-1">City *</label>
                     <input type="text" required value={city} onChange={(e) => setCity(e.target.value)} className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs" />
                   </div>
@@ -470,7 +475,7 @@ export const Checkout = () => {
                     <label className="block text-xs font-semibold text-slate-300 mb-1">State *</label>
                     <input type="text" required value={state} onChange={(e) => setState(e.target.value)} className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs" />
                   </div>
-                  <div>
+                  <div className="sm:col-span-2">
                     <label className="block text-xs font-semibold text-slate-300 mb-1">Pincode * (Auto-fill City & State)</label>
                     <div className="relative">
                       <input 

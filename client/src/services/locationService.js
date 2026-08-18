@@ -37,14 +37,63 @@ export const getReverseGeocode = async (latitude, longitude) => {
 // Parse address components from geocoded data
 const parseAddressFromGeocode = (geoData) => {
   const address = geoData.address || {};
+  const displayName = geoData.display_name || '';
+  const parts = displayName.split(',').map(s => s.trim()).filter(Boolean);
+
+  // 1. House / Flat / Door Number
+  let houseNo = address.house_number || address.house_name || address.building || address.flat || address.door_number || '';
+  if (!houseNo && parts.length > 0 && /^\d+[\w/-]*$/.test(parts[0])) {
+    houseNo = parts[0];
+  }
+
+  // 2. Street / Road
+  let street = address.road || address.street || address.pedestrian || address.path || address.footway || '';
+  if (!street && parts.length > 1) {
+    street = parts[1];
+  }
+
+  // 3. Area / Locality
+  let area = address.suburb || address.neighbourhood || address.residential || address.subdistrict || address.quarter || address.hamlet || address.village || '';
+  if (!area && parts.length > 2) {
+    area = parts[2];
+  }
+
+  // 4. City / Town
+  let city = address.city || address.town || address.village || address.municipality || address.city_district || address.county || address.district || '';
+  if (!city && parts.length > 3) {
+    city = parts[parts.length > 4 ? parts.length - 4 : 3];
+  }
+
+  // 5. State
+  let state = address.state || address.province || address.state_district || '';
+  if (!state && parts.length >= 2) {
+    state = parts[parts.length - 2];
+  }
+
+  // 6. Pincode
+  let pincode = address.postcode || '';
+  if (!pincode) {
+    const match = displayName.match(/\b\d{6}\b/);
+    if (match) pincode = match[0];
+  }
+
+  // 7. Landmark
+  let landmark = address.amenity || address.shop || address.landmark || address.commercial || address.office || address.historic || address.attraction || address.building || '';
+  if (!landmark) {
+    if (address.suburb) landmark = `Near ${address.suburb}`;
+    else if (address.road) landmark = `Near ${address.road}`;
+    else if (parts.length > 0) landmark = `Near ${parts[0]}`;
+  }
+
   return {
-    houseNo: address.house_number || address.house_name || '',
-    street: address.road || address.street || '',
-    area: address.suburb || address.neighbourhood || '',
-    city: address.city || address.town || address.village || '',
-    state: address.state || address.province || '',
-    pincode: address.postcode || '',
-    country: address.country || ''
+    houseNo,
+    street,
+    area,
+    city,
+    state,
+    pincode,
+    landmark,
+    country: address.country || 'India'
   };
 };
 

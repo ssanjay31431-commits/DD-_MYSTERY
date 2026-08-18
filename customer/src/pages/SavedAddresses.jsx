@@ -18,6 +18,7 @@ export const SavedAddresses = () => {
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
   const [pincode, setPincode] = useState('');
+  const [landmark, setLandmark] = useState('');
   const [addressType, setAddressType] = useState('Home');
 
   const fetchAddresses = async () => {
@@ -52,7 +53,7 @@ export const SavedAddresses = () => {
         district: city,
         state,
         pincode,
-        landmark: '',
+        landmark: landmark.trim(),
         addressType,
         isDefault: addresses.length === 0
       });
@@ -65,6 +66,7 @@ export const SavedAddresses = () => {
       setCity('');
       setState('');
       setPincode('');
+      setLandmark('');
       setShowAddForm(false);
       fetchAddresses();
     } catch (err) {
@@ -114,6 +116,7 @@ export const SavedAddresses = () => {
             <input type="text" required placeholder="House / Flat No" value={houseNo} onChange={(e) => setHouseNo(e.target.value)} className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs" />
             <input type="text" required placeholder="Street / Road" value={street} onChange={(e) => setStreet(e.target.value)} className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs" />
             <input type="text" required placeholder="Area / Locality" value={area} onChange={(e) => setArea(e.target.value)} className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs" />
+            <input type="text" placeholder="Landmark (Optional)" value={landmark} onChange={(e) => setLandmark(e.target.value)} className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs" />
             <input type="text" required placeholder="City" value={city} onChange={(e) => setCity(e.target.value)} className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs" />
             <input type="text" required placeholder="State" value={state} onChange={(e) => setState(e.target.value)} className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs" />
             <input type="text" required placeholder="Pincode" value={pincode} onChange={(e) => setPincode(e.target.value)} className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs" />
