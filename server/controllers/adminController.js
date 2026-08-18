@@ -234,22 +234,33 @@ const updateOrderStatus = async (req, res) => {
 
     const updatedOrder = await order.save();
 
-    // Map orderStatus to Notification Type
-    let notifType = 'ORDER_STATUS_UPDATE';
+    // Only trigger automatic email for specific statuses: Order Confirmation, Packed, Delivery (Out for Delivery / Delivered), and Cancelled.
     const statusUpper = (orderStatus || '').toUpperCase();
-    if (statusUpper.includes('PREPARING')) notifType = 'PREPARING';
-    else if (statusUpper.includes('PACKED')) notifType = 'PACKED';
-    else if (statusUpper.includes('SHIPPED')) notifType = 'SHIPPED';
-    else if (statusUpper.includes('OUT FOR DELIVERY')) notifType = 'OUT_FOR_DELIVERY';
-    else if (statusUpper.includes('DELIVERED')) notifType = 'DELIVERED';
-    else if (statusUpper.includes('CANCELLED')) notifType = 'CANCELLED';
+    const shouldSendAutoEmail = 
+      statusUpper.includes('PACKED') ||
+      statusUpper.includes('DELIVERED') ||
+      statusUpper.includes('OUT FOR DELIVERY') ||
+      statusUpper.includes('CONFIRMED') ||
+      statusUpper.includes('ORDER PLACED') ||
+      statusUpper.includes('CANCELLED');
 
-    sendNotification({
-      type: notifType,
-      order: updatedOrder,
-      orderId: updatedOrder.orderId,
-      customMessage: comment
-    }).catch(err => console.error('[Admin Update Notification Error]', err.message));
+    if (shouldSendAutoEmail) {
+      let notifType = 'ORDER_STATUS_UPDATE';
+      if (statusUpper.includes('PACKED')) notifType = 'PACKED';
+      else if (statusUpper.includes('OUT FOR DELIVERY')) notifType = 'OUT_FOR_DELIVERY';
+      else if (statusUpper.includes('DELIVERED')) notifType = 'DELIVERED';
+      else if (statusUpper.includes('CANCELLED')) notifType = 'CANCELLED';
+      else if (statusUpper.includes('CONFIRMED') || statusUpper.includes('ORDER PLACED')) notifType = 'ORDER_CONFIRMATION';
+
+      sendNotification({
+        type: notifType,
+        order: updatedOrder,
+        orderId: updatedOrder.orderId,
+        customMessage: comment
+      }).catch(err => console.error('[Admin Update Notification Error]', err.message));
+    } else {
+      console.log(`[Admin Update Status] Skipping automatic email for status: "${orderStatus}" per notification rules.`);
+    }
 
     res.json(updatedOrder);
   } catch (error) {

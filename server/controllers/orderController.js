@@ -200,15 +200,28 @@ const updateOrderStatus = async (req, res) => {
 
     const updatedOrder = await order.save();
 
-    // Trigger status update email automatically
+    // Trigger status update email automatically only for specified stages (Order Confirmation, Packed, Delivery, Cancelled)
     try {
-      console.log(`[Order ${order.orderId}] Sending status update notification...`);
-      await sendNotification({
-        type: orderStatus || 'STATUS_UPDATE',
-        order: updatedOrder,
-        orderId: order.orderId
-      });
-      console.log(`[Order ${order.orderId}] Status notification sent successfully`);
+      const statusUpper = (orderStatus || '').toUpperCase();
+      const shouldSendAutoEmail = 
+        statusUpper.includes('PACKED') ||
+        statusUpper.includes('DELIVERED') ||
+        statusUpper.includes('OUT FOR DELIVERY') ||
+        statusUpper.includes('CONFIRMED') ||
+        statusUpper.includes('ORDER PLACED') ||
+        statusUpper.includes('CANCELLED');
+
+      if (shouldSendAutoEmail) {
+        console.log(`[Order ${order.orderId}] Sending status update notification for "${orderStatus}"...`);
+        await sendNotification({
+          type: orderStatus || 'STATUS_UPDATE',
+          order: updatedOrder,
+          orderId: order.orderId
+        });
+        console.log(`[Order ${order.orderId}] Status notification sent successfully`);
+      } else {
+        console.log(`[Order ${order.orderId}] Skipping automatic status email for "${orderStatus}" per notification rules.`);
+      }
     } catch (notificationError) {
       console.error(`[Order ${order.orderId}] Status notification error:`, notificationError.message);
     }
