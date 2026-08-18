@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { MapPin, Plus, Check, ShieldCheck, ArrowRight, User, Phone, Home, Building2, Lock, Loader, Navigation } from 'lucide-react';
 import API from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -12,13 +12,39 @@ export const Checkout = () => {
   const { cartItems, subtotal, deliveryFee, couponApplied, totalAmount, clearCart } = useCart();
   const { addToast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [addresses, setAddresses] = useState([]);
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [settings, setSettings] = useState({ codAdvanceType: 'fixed', codAdvanceValue: 100 });
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('ADVANCE');
   const [submittingPayment, setSubmittingPayment] = useState(false);
+
+  // Buy Now item check
+  const locationState = location.state || {};
+  const storedBuyNowStr = sessionStorage.getItem('dd_buynow_item');
+  const isBuyNowFlow = Boolean(locationState.isBuyNow || storedBuyNowStr);
+  let buyNowItemObj = null;
+
+  if (storedBuyNowStr) {
+    try {
+      buyNowItemObj = JSON.parse(storedBuyNowStr);
+    } catch (e) {
+      console.error('Error parsing buyNowItem', e);
+    }
+  }
+
+  // Active items list for this checkout
+  const itemList = (isBuyNowFlow && buyNowItemObj)
+    ? [buyNowItemObj]
+    : (Array.isArray(cartItems) ? cartItems : []);
+
+  // Compute pricing specifically for active itemList
+  const computedSubtotal = itemList.reduce(
+    (acc, item) => acc + (item.unitPrice || item.product?.price || 0) * item.quantity,
+    0
+  );
+  const computedDeliveryFee = computedSubtotal > 0 ? (computedSubtotal >= 499 ? 0 : 49) : 0;
+  const computedTotal = Math.max(0, computedSubtotal + computedDeliveryFee - (couponApplied?.discountAmount || 0));
 
   const handleProceedToPayment = async () => {
     if (!selectedAddress) {
@@ -35,9 +61,9 @@ export const Checkout = () => {
         paymentOrderId: mockOrderId,
         paymentSessionId: `session_${Date.now()}`,
         transactionId: `tx_${Date.now()}`,
-        items: Array.isArray(cartItems) ? cartItems : [],
+        items: itemList,
         deliveryAddress: selectedAddress,
-        paymentMethod: selectedPaymentMethod === 'FULL' ? 'FULL' : 'ADVANCE',
+        paymentMethod: 'FULL',
         couponCode: couponApplied?.code || ''
       };
 
@@ -45,7 +71,11 @@ export const Checkout = () => {
       const { data } = await API.post('/orders/confirm-payment', checkoutData);
 
       if (data && data.success && data.order) {
-        if (clearCart) clearCart();
+        if (isBuyNowFlow) {
+          sessionStorage.removeItem('dd_buynow_item');
+        } else {
+          if (clearCart) clearCart();
+        }
         sessionStorage.removeItem('dd_checkout_payload');
         addToast('🎉 Order placed successfully and saved to database!');
         
@@ -64,12 +94,6 @@ export const Checkout = () => {
     }
   };
 
-  // Compute dynamic advance and remaining balance
-  const configuredAdvance = cartItems[0]?.product?.advanceAmount || settings?.advanceAmount || 100;
-  const advanceRequired = selectedPaymentMethod === 'FULL'
-    ? totalAmount
-    : Math.min(totalAmount, configuredAdvance);
-  const remainingBalance = Math.max(0, totalAmount - advanceRequired);
   const [loading, setLoading] = useState(true);
 
   // New Address Form state
@@ -317,7 +341,6 @@ export const Checkout = () => {
   };
 
   const addressList = Array.isArray(addresses) ? addresses : [];
-  const itemList = Array.isArray(cartItems) ? cartItems : [];
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -510,11 +533,11 @@ export const Checkout = () => {
             <div className="space-y-2 text-xs border-t border-slate-800 pt-4">
               <div className="flex justify-between text-slate-300">
                 <span>Subtotal</span>
-                <span className="font-bold text-white">₹{subtotal}</span>
+                <span className="font-bold text-white">₹{computedSubtotal}</span>
               </div>
               <div className="flex justify-between text-slate-300">
                 <span>Delivery Charge</span>
-                <span className="font-bold text-emerald-400">{deliveryFee === 0 ? 'FREE' : `₹${deliveryFee}`}</span>
+                <span className="font-bold text-emerald-400">{computedDeliveryFee === 0 ? 'FREE' : `₹${computedDeliveryFee}`}</span>
               </div>
               {couponApplied?.discountAmount > 0 && (
                 <div className="flex justify-between text-emerald-400">
@@ -524,72 +547,41 @@ export const Checkout = () => {
               )}
               <div className="flex justify-between text-base font-black text-white border-t border-slate-800 pt-3">
                 <span>Total Order Value</span>
-                <span className="text-white">₹{totalAmount}</span>
+                <span className="text-white">₹{computedTotal}</span>
               </div>
             </div>
 
-            {/* Select Payment Method Cards */}
+            {/* Select Payment Method Cards - Full Payment Only */}
             <div className="space-y-3 pt-2 border-t border-slate-800">
               <h4 className="text-xs font-extrabold uppercase tracking-wider text-pink-400 flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4" /> SELECT PAYMENT METHOD
+                <ShieldCheck className="w-4 h-4" /> PAYMENT METHOD
               </h4>
 
-              {/* OPTION 1: 💰 ADVANCE PAYMENT */}
-              <div
-                onClick={() => setSelectedPaymentMethod('ADVANCE')}
-                className={`p-4 rounded-2xl border cursor-pointer transition-all ${
-                  selectedPaymentMethod === 'ADVANCE'
-                    ? 'bg-amber-500/15 border-amber-500 text-white shadow-lg ring-1 ring-amber-500/50'
-                    : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:border-slate-700'
-                }`}
-              >
-                <div className="flex justify-between items-center mb-1">
-                  <span className="font-bold text-xs text-amber-300 flex items-center gap-1.5">
-                    💰 ADVANCE PAYMENT
-                  </span>
-                  {selectedPaymentMethod === 'ADVANCE' && <Check className="w-4 h-4 text-amber-400" />}
-                </div>
-                <p className="text-xs text-slate-300 leading-snug">
-                  Pay ₹{advanceRequired} online now.
-                </p>
-                <p className="text-xs text-slate-400 mt-1">
-                  Remaining Balance: <strong className="text-amber-300 font-bold">₹{remainingBalance}</strong>
-                </p>
-              </div>
-
-              {/* OPTION 2: 💳 FULL ONLINE PAYMENT */}
-              <div
-                onClick={() => setSelectedPaymentMethod('FULL')}
-                className={`p-4 rounded-2xl border cursor-pointer transition-all ${
-                  selectedPaymentMethod === 'FULL'
-                    ? 'bg-purple-600/20 border-pink-500 text-white shadow-lg ring-1 ring-pink-500/50'
-                    : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:border-slate-700'
-                }`}
-              >
+              <div className="p-4 rounded-2xl bg-purple-600/20 border border-pink-500 text-white shadow-lg ring-1 ring-pink-500/50">
                 <div className="flex justify-between items-center mb-1">
                   <span className="font-bold text-xs text-pink-400 flex items-center gap-1.5">
-                    💳 FULL ONLINE PAYMENT
+                    💳 FULL ONLINE PAYMENT ONLY
                   </span>
-                  {selectedPaymentMethod === 'FULL' && <Check className="w-4 h-4 text-pink-400" />}
+                  <Check className="w-4 h-4 text-pink-400" />
                 </div>
                 <p className="text-xs text-slate-300 leading-snug">
-                  Pay the complete ₹{totalAmount} online.
+                  Pay the complete ₹{computedTotal} online securely.
                 </p>
                 <p className="text-xs text-slate-400 mt-1">
-                  Remaining Balance: <strong className="text-emerald-400 font-bold">₹0</strong>
+                  Remaining Balance: <strong className="text-emerald-400 font-bold">₹0 (Fully Paid)</strong>
                 </p>
               </div>
             </div>
 
-            {/* Dynamic Breakdown Explanation Box */}
+            {/* Breakdown Explanation Box */}
             <div className="p-4 rounded-2xl bg-slate-950/90 border border-purple-500/30 space-y-1.5 text-xs">
-              <div className="flex justify-between text-amber-300 font-bold">
+              <div className="flex justify-between text-emerald-400 font-bold">
                 <span>Online Paid Amount:</span>
-                <span>₹{advanceRequired}</span>
+                <span>₹{computedTotal}</span>
               </div>
               <div className="flex justify-between text-slate-300">
-                <span>Remaining Balance:</span>
-                <span className="font-bold text-white">₹{remainingBalance}</span>
+                <span>Remaining COD Balance:</span>
+                <span className="font-bold text-white">₹0</span>
               </div>
             </div>
 
@@ -598,11 +590,7 @@ export const Checkout = () => {
               disabled={submittingPayment}
               className="w-full py-4 rounded-2xl bg-gradient-to-r from-pink-500 via-purple-600 to-amber-500 text-white font-black text-xs uppercase tracking-wider shadow-2xl shadow-pink-500/30 hover:scale-105 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              {selectedPaymentMethod === 'FULL' ? (
-                <>PAY ₹{totalAmount} NOW →</>
-              ) : (
-                <>PAY ₹{advanceRequired} ADVANCE NOW →</>
-              )}
+              PAY ₹{computedTotal} NOW →
             </button>
           </div>
         </div>

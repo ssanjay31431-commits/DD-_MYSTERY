@@ -63,13 +63,20 @@ export const ProductDetails = () => {
     const targetProduct = product || findFallbackProduct(id);
     const customizationDefault = {
       recipientName: 'Birthday Star',
-      birthdayDate: '2026-08-25',
+      birthdayDate: new Date().toISOString().split('T')[0],
       favoriteColor: targetProduct?.price === 499 ? 'Purple' : 'Pink',
       theme: targetProduct?.price === 499 ? 'Nostalgia' : 'Choco Party',
       personalMessage: `Happy Birthday! Enjoy your ${targetProduct?.name} surprise!`
     };
-    await addToCart(targetProduct, customizationDefault, quantity);
-    navigate('/checkout');
+    const buyNowItem = {
+      _id: `buynow_${Date.now()}`,
+      product: targetProduct,
+      customization: customizationDefault,
+      quantity: quantity,
+      unitPrice: targetProduct.price || 499
+    };
+    sessionStorage.setItem('dd_buynow_item', JSON.stringify(buyNowItem));
+    navigate('/checkout', { state: { isBuyNow: true } });
   };
 
   if (loading) {
@@ -151,7 +158,7 @@ export const ProductDetails = () => {
                 <span className="text-lg text-slate-400 line-through">₹{currentProduct.originalPrice}</span>
               )}
               <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-md border border-emerald-500/20">
-                Advance + COD Available
+                Full Online Payment
               </span>
             </div>
 

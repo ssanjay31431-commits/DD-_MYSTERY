@@ -1,14 +1,34 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { Sparkles, Check, ShoppingBag, Heart, Star, Eye } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Sparkles, Check, ShoppingBag, Heart, Star, Eye, Zap } from 'lucide-react';
 import { useWishlist } from '../../context/WishlistContext';
 
 export const ProductCard = ({ product }) => {
   const { toggleWishlist, isInWishlist } = useWishlist();
+  const navigate = useNavigate();
   const isWishlisted = isInWishlist(product._id);
 
   const contentsCount = product.contents?.length || (product.price === 499 ? 16 : 5);
   const contentsLabel = product.price === 499 ? `${contentsCount}+ Nostalgia Items` : `${contentsCount} Surprise Gifts`;
+
+  const handleBuyNow = (e) => {
+    e.preventDefault();
+    const buyNowItem = {
+      _id: `buynow_${Date.now()}`,
+      product: product,
+      customization: {
+        recipientName: 'Birthday Star',
+        birthdayDate: new Date().toISOString().split('T')[0],
+        favoriteColor: product.price === 499 ? 'Purple' : 'Pink',
+        theme: product.price === 499 ? 'Nostalgia' : 'Choco Party',
+        personalMessage: `Happy Birthday! Enjoy your ${product.name} surprise!`
+      },
+      quantity: 1,
+      unitPrice: product.price || 499
+    };
+    sessionStorage.setItem('dd_buynow_item', JSON.stringify(buyNowItem));
+    navigate('/checkout', { state: { isBuyNow: true } });
+  };
 
   return (
     <div className="group relative glass-panel glass-panel-hover rounded-3xl p-6 flex flex-col justify-between overflow-hidden border border-purple-500/20">
@@ -96,24 +116,32 @@ export const ProductCard = ({ product }) => {
             )}
           </div>
           <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md">
-            Advance + COD Eligible
+            Full Online Payment
           </span>
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
-          <Link
-            to={`/product/${product._id}`}
-            className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-extrabold text-xs uppercase tracking-wider shadow-lg shadow-pink-500/20 text-center flex items-center justify-center gap-1.5 transition-all hover:scale-[1.02]"
+        <div className="flex flex-col gap-2">
+          <button
+            onClick={handleBuyNow}
+            className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-pink-500 via-purple-600 to-amber-500 hover:from-pink-600 hover:to-amber-600 text-white font-black text-xs uppercase tracking-wider shadow-lg shadow-pink-500/25 flex items-center justify-center gap-1.5 transition-all hover:scale-[1.02]"
           >
-            <Eye className="w-4 h-4" /> View Details
-          </Link>
+            <Zap className="w-4 h-4 fill-white" /> Buy Now (₹{product.price})
+          </button>
+          <div className="grid grid-cols-2 gap-2">
+            <Link
+              to={`/product/${product._id}`}
+              className="w-full py-2 px-2 rounded-xl bg-slate-900 border border-purple-500/30 text-slate-200 hover:text-white hover:border-purple-500 font-bold text-xs text-center flex items-center justify-center gap-1 transition-all"
+            >
+              <Eye className="w-3.5 h-3.5" /> Details
+            </Link>
 
-          <Link
-            to={`/customize/${product._id}`}
-            className="w-full py-2.5 px-3 rounded-xl bg-slate-900 border border-purple-500/30 text-slate-200 hover:text-white hover:border-purple-500 font-bold text-xs text-center flex items-center justify-center transition-all"
-          >
-            Customize
-          </Link>
+            <Link
+              to={`/customize/${product._id}`}
+              className="w-full py-2 px-2 rounded-xl bg-slate-900 border border-purple-500/30 text-slate-200 hover:text-white hover:border-purple-500 font-bold text-xs text-center flex items-center justify-center gap-1 transition-all"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-pink-400" /> Customize
+            </Link>
+          </div>
         </div>
       </div>
     </div>

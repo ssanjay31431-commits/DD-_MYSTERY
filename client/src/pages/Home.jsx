@@ -93,8 +93,8 @@ export const Home = () => {
                   <span className="text-[11px] text-slate-400 font-medium">Customer Rating</span>
                 </div>
                 <div className="text-center lg:text-left">
-                  <span className="block text-xl font-black text-emerald-400 font-display">Advance + COD</span>
-                  <span className="text-[11px] text-slate-400 font-medium">Pay 20% Online</span>
+                  <span className="block text-xl font-black text-emerald-400 font-display">Full Payment</span>
+                  <span className="text-[11px] text-slate-400 font-medium">100% Safe & Instant</span>
                 </div>
               </div>
             </div>
@@ -179,38 +179,38 @@ export const Home = () => {
         )}
       </section>
 
-      {/* How Advance + COD Works Section */}
+      {/* How Ordering & Full Payment Works Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="glass-panel p-8 sm:p-12 rounded-3xl border border-purple-500/30 bg-gradient-to-r from-purple-950/40 via-[#18132a] to-pink-950/40">
           <div className="text-center max-w-2xl mx-auto mb-10">
             <span className="text-xs font-extrabold text-emerald-400 uppercase tracking-widest block mb-1">
-              Easy Payment Option
+              Secure & Fast Process
             </span>
             <h2 className="text-3xl font-black text-white font-display">
-              How Advance + Cash on Delivery Works
+              How Full Online Payment Works
             </h2>
             <p className="text-slate-400 text-sm mt-2">
-              Pay just a small initial advance online. Pay the remaining balance in cash when your box is delivered!
+              Simple 3-step checkout. Complete full online payment securely and get fast dispatch of your mystery surprise box!
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
             <div className="p-6 rounded-2xl bg-slate-900/80 border border-slate-800">
               <span className="w-8 h-8 rounded-full bg-pink-500/20 text-pink-400 font-black text-xs inline-flex items-center justify-center mb-3">1</span>
-              <h4 className="font-bold text-white text-sm mb-1">Select Your Box</h4>
-              <p className="text-xs text-slate-400">Pick ₹499 90s Kids Box or ₹199 Choco Box and view "What's Inside".</p>
+              <h4 className="font-bold text-white text-sm mb-1">Select & Customize Box</h4>
+              <p className="text-xs text-slate-400">Pick your favorite mystery box tier or customize birthday details in seconds.</p>
             </div>
 
             <div className="p-6 rounded-2xl bg-slate-900/80 border border-slate-800">
               <span className="w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 font-black text-xs inline-flex items-center justify-center mb-3">2</span>
-              <h4 className="font-bold text-white text-sm mb-1">Pay Advance (e.g. 20%)</h4>
-              <p className="text-xs text-slate-400">Pay only ₹99.80 (for ₹499 box) or ₹39.80 (for ₹199 box) via Razorpay online.</p>
+              <h4 className="font-bold text-white text-sm mb-1">Instant Full Online Payment</h4>
+              <p className="text-xs text-slate-400">Complete 100% full online payment for your item safely at checkout.</p>
             </div>
 
             <div className="p-6 rounded-2xl bg-slate-900/80 border border-slate-800">
               <span className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 font-black text-xs inline-flex items-center justify-center mb-3">3</span>
-              <h4 className="font-bold text-white text-sm mb-1">Remaining COD on Delivery</h4>
-              <p className="text-xs text-slate-400">Pay the remaining balance in cash to the delivery partner when your surprise arrives!</p>
+              <h4 className="font-bold text-white text-sm mb-1">Express Dispatch & Delivery</h4>
+              <p className="text-xs text-slate-400">Your surprise gift box is packed and delivered directly to your doorstep!</p>
             </div>
           </div>
         </div>

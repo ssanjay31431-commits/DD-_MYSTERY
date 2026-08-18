@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { Sparkles, Gift, Check, Palette, Heart, Calendar, User, MessageSquare, ShieldAlert, ShoppingBag } from 'lucide-react';
+import { Sparkles, Gift, Check, Palette, Heart, Calendar, User, MessageSquare, ShieldAlert, ShoppingBag, Zap } from 'lucide-react';
 import API from '../services/api';
 import { LiveBoxPreview } from '../components/customization/LiveBoxPreview';
 import { useCart } from '../context/CartContext';
@@ -85,6 +85,39 @@ export const CustomizeBox = () => {
 
     await addToCart(selectedProduct, customizationObj, quantity);
     navigate('/cart');
+  };
+
+  const handleBuyNow = (e) => {
+    e.preventDefault();
+    if (!recipientName) {
+      addToast("Please enter the birthday person's name", 'error');
+      return;
+    }
+
+    const customizationObj = {
+      recipientName,
+      birthdayDate,
+      age: Number(age),
+      gender,
+      favoriteColor,
+      theme,
+      personalMessage,
+      giftPreferences,
+      thingsToAvoid,
+      photoUrl,
+      quantity
+    };
+
+    const buyNowItem = {
+      _id: `buynow_${Date.now()}`,
+      product: selectedProduct,
+      customization: customizationObj,
+      quantity,
+      unitPrice: selectedProduct?.price || 499
+    };
+
+    sessionStorage.setItem('dd_buynow_item', JSON.stringify(buyNowItem));
+    navigate('/checkout', { state: { isBuyNow: true } });
   };
 
   const productList = Array.isArray(products) && products.length > 0 ? products : DEFAULT_PRODUCTS;
@@ -308,8 +341,8 @@ export const CustomizeBox = () => {
               </div>
             </div>
 
-            {/* Quantity & Submit */}
-            <div className="pt-6 border-t border-slate-800 flex items-center justify-between gap-4">
+            {/* Quantity & Action Buttons */}
+            <div className="pt-6 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <label className="text-xs font-bold text-slate-300">Quantity:</label>
                 <div className="flex items-center bg-slate-900 rounded-xl border border-slate-800">
@@ -331,12 +364,22 @@ export const CustomizeBox = () => {
                 </div>
               </div>
 
-              <button
-                type="submit"
-                className="px-8 py-4 rounded-2xl bg-gradient-to-r from-pink-500 via-purple-600 to-amber-500 text-white font-black text-sm uppercase tracking-wider shadow-2xl shadow-pink-500/30 hover:scale-105 transition-all flex items-center gap-2"
-              >
-                <ShoppingBag className="w-5 h-5" /> Add Customized Box to Cart (₹{(selectedProduct?.price || 499) * quantity})
-              </button>
+              <div className="flex flex-col sm:flex-row gap-2.5 w-full sm:w-auto">
+                <button
+                  type="submit"
+                  className="px-5 py-3.5 rounded-xl bg-slate-900 border border-purple-500/40 text-slate-200 hover:text-white hover:border-purple-500 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all"
+                >
+                  <ShoppingBag className="w-4 h-4" /> Add To Cart
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleBuyNow}
+                  className="px-6 py-3.5 rounded-xl bg-gradient-to-r from-pink-500 via-purple-600 to-amber-500 text-white font-black text-xs uppercase tracking-wider shadow-xl shadow-pink-500/30 hover:scale-105 transition-all flex items-center justify-center gap-2"
+                >
+                  <Zap className="w-4 h-4 fill-white" /> Buy Now (₹{(selectedProduct?.price || 499) * quantity})
+                </button>
+              </div>
             </div>
 
           </form>

@@ -201,24 +201,20 @@ export const CartPage = () => {
                 <span>Total Order Value</span>
                 <span className="text-white">₹{totalAmount}</span>
               </div>
-
-              <div className="p-4 rounded-2xl bg-slate-950/90 border border-purple-500/30 space-y-2 mt-4">
+              
+              {/* Full Online Payment Breakdown Box */}
+              <div className="p-4 rounded-2xl bg-slate-950/90 border border-purple-500/30 space-y-1.5 mt-4">
                 <span className="text-[11px] font-bold text-pink-400 uppercase tracking-wider block flex items-center gap-1">
-                  <ShieldCheck className="w-3.5 h-3.5" /> Flexible Online Payment
+                  <ShieldCheck className="w-3.5 h-3.5" /> Full Payment Only
                 </span>
                 
-                <div className="flex justify-between text-xs text-amber-300 font-bold">
-                  <span>Advance Payment (Online):</span>
-                  <span>₹{advanceRequired}</span>
-                </div>
-
-                <div className="flex justify-between text-xs text-slate-300">
-                  <span>Remaining Balance:</span>
-                  <span className="font-bold text-white">₹{remainingBalance}</span>
+                <div className="flex justify-between text-xs text-emerald-400 font-bold">
+                  <span>Total Amount Payable Online:</span>
+                  <span>₹{totalAmount}</span>
                 </div>
 
                 <p className="text-[10px] text-slate-400 italic pt-1">
-                  Pay ₹{advanceRequired} online now to confirm your order, or choose Full Online Payment at checkout.
+                  Complete ₹{totalAmount} full payment online at checkout to confirm your order.
                 </p>
               </div>
             </div>
