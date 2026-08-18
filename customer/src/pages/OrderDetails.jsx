@@ -73,7 +73,7 @@ export const OrderDetails = () => {
             <span className="px-3 py-1 rounded-full text-xs font-extrabold uppercase bg-purple-500/20 text-purple-300 border border-purple-500/30">
               {order.orderStatus}
             </span>
-            {['Pending', 'Confirmed', 'Preparing'].includes(order.orderStatus) && (
+            {['PENDING', 'ORDER PLACED', 'CONFIRMED', 'ORDER CONFIRMED', 'PREPARING'].includes((order.orderStatus || '').toUpperCase()) && (
               <button
                 onClick={handleCancelOrder}
                 className="px-3 py-1 rounded-xl bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 border border-rose-500/30 text-xs font-bold"

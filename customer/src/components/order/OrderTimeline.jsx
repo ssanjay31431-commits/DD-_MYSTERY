@@ -14,21 +14,39 @@ export const OrderTimeline = ({ currentStatus, trackingHistory = [] }) => {
   ];
 
   const getStepIndex = (status) => {
-    switch (status) {
-      case 'Order Placed': return 0;
-      case 'Advance Payment Confirmed': return 1;
-      case 'Order Confirmed': case 'Confirmed': return 2;
-      case 'Preparing': return 3;
-      case 'Packed': return 4;
-      case 'Shipped': return 5;
-      case 'Out for Delivery': return 6;
-      case 'Delivered': return 7;
-      default: return 0;
+    if (!status) return 0;
+    const s = String(status).trim().toUpperCase().replace(/_/g, ' ');
+    switch (s) {
+      case 'ORDER PLACED':
+      case 'PLACED':
+      case 'PENDING':
+        return 0;
+      case 'ADVANCE PAYMENT CONFIRMED':
+      case 'ADVANCE PAID':
+        return 1;
+      case 'ORDER CONFIRMED':
+      case 'CONFIRMED':
+      case 'PAYMENT CONFIRMED':
+        return 2;
+      case 'PREPARING':
+      case 'PREPARING BOX':
+        return 3;
+      case 'PACKED':
+        return 4;
+      case 'SHIPPED':
+        return 5;
+      case 'OUT FOR DELIVERY':
+        return 6;
+      case 'DELIVERED':
+        return 7;
+      default:
+        return 0;
     }
   };
 
   const currentIndex = getStepIndex(currentStatus);
-  const isCancelled = currentStatus === 'Cancelled';
+  const normalizedStatus = (currentStatus || '').trim().toUpperCase();
+  const isCancelled = normalizedStatus === 'CANCELLED' || normalizedStatus === 'CANCELED';
 
   if (isCancelled) {
     return (

@@ -42,8 +42,11 @@ export const Profile = () => {
   };
 
   const totalOrders = orders.length;
-  const pendingOrders = orders.filter((o) => ['Pending', 'Confirmed', 'Preparing', 'Packed', 'Shipped', 'Out for Delivery'].includes(o.orderStatus)).length;
-  const deliveredOrders = orders.filter((o) => o.orderStatus === 'Delivered').length;
+  const pendingOrders = orders.filter((o) => {
+    const st = (o.orderStatus || '').toUpperCase();
+    return st !== 'DELIVERED' && st !== 'CANCELLED';
+  }).length;
+  const deliveredOrders = orders.filter((o) => (o.orderStatus || '').toUpperCase() === 'DELIVERED').length;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8">

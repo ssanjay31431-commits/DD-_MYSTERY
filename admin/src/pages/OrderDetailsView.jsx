@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Mail, CheckCircle2, Clock, Truck, ShieldCheck, Send, RefreshCw, User, MapPin, CreditCard, Package } from 'lucide-react';
+import { ArrowLeft, Mail, CheckCircle2, Clock, Truck, ShieldCheck, RefreshCw, User, MapPin, CreditCard, Package } from 'lucide-react';
 import API from '../services/api';
 import { AdminSidebar } from '../components/AdminSidebar';
 import { useToast } from '../context/ToastContext';
@@ -15,16 +15,12 @@ export const OrderDetailsView = () => {
   const [loading, setLoading] = useState(true);
   const [updatingStatus, setUpdatingStatus] = useState(false);
 
-  // Send Email & SMS State
+  // Send Email State
   const [showEmailModal, setShowEmailModal] = useState(false);
-  const [showSmsModal, setShowSmsModal] = useState(false);
   const [templateType, setTemplateType] = useState('ORDER_CONFIRMATION');
-  const [smsTemplateType, setSmsTemplateType] = useState('ORDER_CONFIRMATION');
   const [customSubject, setCustomSubject] = useState('');
   const [customMessage, setCustomMessage] = useState('');
-  const [smsMessage, setSmsMessage] = useState('');
   const [sendingEmail, setSendingEmail] = useState(false);
-  const [sendingSms, setSendingSms] = useState(false);
 
   const fetchOrder = async () => {
     try {
@@ -82,35 +78,6 @@ export const OrderDetailsView = () => {
       addToast(`❌ Email failed: ${errorDetail}`, 'error');
     } finally {
       setSendingEmail(false);
-    }
-  };
-
-  const handleSendSms = async (e) => {
-    e.preventDefault();
-    setSendingSms(true);
-
-    try {
-      const phoneRecipient = order.deliveryAddressSnapshot?.mobileNumber || order.user?.phone;
-      const { data } = await API.post('/admin/notifications/send-sms', {
-        orderId: order.orderNumber || order.orderId,
-        recipientPhone: phoneRecipient,
-        templateType: smsTemplateType,
-        message: smsMessage
-      });
-
-      if (data?.success) {
-        addToast(`✅ SMS sent successfully to ${phoneRecipient}`);
-        setShowSmsModal(false);
-        setSmsMessage('');
-      } else {
-        const errorDetail = data?.error || data?.message || 'SMS delivery failed';
-        addToast(`❌ SMS failed: ${errorDetail}`, 'error');
-      }
-    } catch (err) {
-      const errorDetail = err.response?.data?.error || err.response?.data?.message || 'Failed to send SMS';
-      addToast(`❌ SMS failed: ${errorDetail}`, 'error');
-    } finally {
-      setSendingSms(false);
     }
   };
 
@@ -181,12 +148,6 @@ export const OrderDetailsView = () => {
               className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs uppercase flex items-center gap-2 shadow-lg shadow-purple-500/20"
             >
               <Mail className="w-4 h-4" /> Send Email
-            </button>
-            <button
-              onClick={() => setShowSmsModal(true)}
-              className="px-4 py-2.5 rounded-xl bg-pink-600 hover:bg-pink-700 text-white font-bold text-xs uppercase flex items-center gap-2 shadow-lg shadow-pink-500/20"
-            >
-              <Send className="w-4 h-4" /> Send SMS
             </button>
           </div>
         </div>
@@ -395,64 +356,6 @@ export const OrderDetailsView = () => {
               className="w-full py-3.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs uppercase flex items-center justify-center gap-2 shadow-lg"
             >
               <Mail className="w-4 h-4" /> {sendingEmail ? 'Dispatching Brevo Email...' : 'Send Brevo Email Now'}
-            </button>
-          </form>
-        </Modal>
-
-        {/* SMS Dispatch Modal */}
-        <Modal isOpen={showSmsModal} onClose={() => setShowSmsModal(false)} title="Send SMS Notification to Customer">
-          <form onSubmit={handleSendSms} className="space-y-4 text-xs text-slate-300">
-            <div>
-              <label className="block mb-1 font-bold text-white">Recipient Phone Number</label>
-              <input
-                type="text"
-                disabled
-                value={recipientPhone}
-                className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 font-mono opacity-80 cursor-not-allowed"
-              />
-            </div>
-
-            <div>
-              <label className="block mb-1 font-bold text-white">Select SMS Template</label>
-              <select
-                value={smsTemplateType}
-                onChange={(e) => setSmsTemplateType(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white font-bold"
-              >
-                <option value="ORDER_CONFIRMATION">🎁 Order Confirmation SMS</option>
-                <option value="PAYMENT_CONFIRMATION">💳 Payment Confirmation SMS</option>
-                <option value="SHIPMENT">🚚 Shipment Tracking SMS</option>
-                <option value="OUT_FOR_DELIVERY">🛵 Out for Delivery Reminder SMS</option>
-                <option value="CUSTOM_SMS">✏️ Custom SMS Message</option>
-              </select>
-            </div>
-
-            {smsTemplateType === 'CUSTOM_SMS' && (
-              <div>
-                <div className="flex justify-between items-center mb-1">
-                  <label className="font-bold text-white">Custom SMS Text</label>
-                  <span className={`text-[11px] font-mono font-bold ${smsMessage.length > 160 ? 'text-rose-400' : 'text-pink-400'}`}>
-                    Character Counter: {smsMessage.length} / 160
-                  </span>
-                </div>
-                <textarea
-                  rows="4"
-                  maxLength="160"
-                  required
-                  value={smsMessage}
-                  onChange={(e) => setSmsMessage(e.target.value)}
-                  placeholder="Type concise SMS message here (max 160 characters)..."
-                  className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white"
-                />
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={sendingSms}
-              className="w-full py-3.5 rounded-xl bg-pink-600 hover:bg-pink-700 text-white font-bold text-xs uppercase flex items-center justify-center gap-2 shadow-lg"
-            >
-              <Send className="w-4 h-4" /> {sendingSms ? 'Dispatching SMS...' : 'Send SMS Now'}
             </button>
           </form>
         </Modal>
