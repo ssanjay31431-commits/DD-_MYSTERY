@@ -12,7 +12,8 @@ const {
   verifyBrevoEmailConfiguration,
   testAdminSms,
   getFailedPayments,
-  recoverPaymentOrder
+  recoverPaymentOrder,
+  clearAllData
 } = require('../controllers/adminController');
 const { getSettings, updateSettings } = require('../controllers/settingsController');
 const { protect, admin } = require('../middleware/authMiddleware');
@@ -25,6 +26,7 @@ router.put('/orders/:id/status', updateOrderStatus);
 router.get('/customers', getAdminCustomers);
 router.get('/settings', getSettings);
 router.put('/settings', updateSettings);
+router.delete('/clear-all-data', clearAllData);
 
 // Failed Payment Recovery Routes
 router.get('/failed-payments', getFailedPayments);

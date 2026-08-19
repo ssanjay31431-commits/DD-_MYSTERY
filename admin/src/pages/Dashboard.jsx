@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ShoppingBag, Users, DollarSign, CreditCard, Clock, CheckCircle2, AlertTriangle, Calendar, RefreshCw, ShieldAlert } from 'lucide-react';
+import { ShoppingBag, Users, DollarSign, CreditCard, Clock, CheckCircle2, AlertTriangle, Calendar, RefreshCw, ShieldAlert, Trash2 } from 'lucide-react';
 import API from '../services/api';
 import { AdminSidebar } from '../components/AdminSidebar';
 
@@ -21,6 +21,9 @@ export const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [dateFilter, setDateFilter] = useState('7Days');
   const [recoveringId, setRecoveringId] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deletingAll, setDeletingAll] = useState(false);
 
   const fetchStats = async (showLoading = true) => {
     if (showLoading) setLoading(true);
@@ -59,6 +62,31 @@ export const Dashboard = () => {
       alert(err.response?.data?.message || 'Failed to recover payment order');
     } finally {
       setRecoveringId(null);
+    }
+  };
+
+  const handleClearAllData = async () => {
+    if (deleteConfirmText.trim().toUpperCase() !== 'DELETE') {
+      alert('Please type DELETE to confirm data purge');
+      return;
+    }
+
+    setDeletingAll(true);
+    try {
+      const { data } = await API.delete('/admin/clear-all-data');
+      if (data && data.success) {
+        alert('🚨 All store test orders, payments, screenshots & histories deleted successfully!');
+        setShowDeleteModal(false);
+        setDeleteConfirmText('');
+        fetchStats(true);
+      } else {
+        alert(data?.message || 'Failed to clear data');
+      }
+    } catch (err) {
+      console.error('Clear data error:', err);
+      alert(err.response?.data?.message || 'Error clearing store data');
+    } finally {
+      setDeletingAll(false);
     }
   };
 
@@ -256,7 +284,82 @@ export const Dashboard = () => {
           </div>
         </div>
 
+        {/* DANGER ZONE: ALL DATA DELETE BUTTON */}
+        <div className="p-6 rounded-3xl bg-rose-950/40 border border-rose-500/40 space-y-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-2xl bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-white font-display uppercase tracking-wider">
+                  🚨 DANGER ZONE: RESET & DELETE ALL DATA
+                </h3>
+                <p className="text-xs text-rose-300">
+                  Permanently delete all test orders, payment screenshots, customer histories, and notification logs from database.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowDeleteModal(true)}
+              className="px-5 py-3 rounded-2xl bg-gradient-to-r from-rose-600 to-red-700 hover:from-rose-700 hover:to-red-800 text-white font-black text-xs uppercase tracking-wider shadow-lg shadow-rose-600/30 flex items-center gap-2 shrink-0 hover:scale-105 transition-all"
+            >
+              <Trash2 className="w-4 h-4" /> DELETE ALL STORE DATA
+            </button>
+          </div>
+        </div>
+
       </main>
+
+      {/* DELETE ALL DATA CONFIRMATION MODAL */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="max-w-md w-full glass-panel p-6 sm:p-8 rounded-3xl border border-rose-500/50 space-y-6 text-center shadow-2xl">
+            <div className="w-16 h-16 rounded-2xl bg-rose-500/20 border border-rose-500 text-rose-400 flex items-center justify-center mx-auto shadow-xl shadow-rose-500/20">
+              <Trash2 className="w-8 h-8" />
+            </div>
+            
+            <div className="space-y-2">
+              <h3 className="text-xl font-black text-white font-display">
+                Confirm Complete Data Purge
+              </h3>
+              <p className="text-xs text-rose-300 leading-relaxed">
+                This action will permanently delete <strong>ALL orders, payment records, screenshots, notification logs, carts, and customer test data</strong> from the DD Mystery Box database.
+              </p>
+              <p className="text-[11px] text-slate-400">
+                To proceed, type <strong className="text-white font-mono">DELETE</strong> in the box below:
+              </p>
+            </div>
+
+            <input
+              type="text"
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              placeholder="Type DELETE"
+              className="w-full px-4 py-3 rounded-xl bg-slate-900 border border-rose-500/40 text-rose-300 font-mono text-center font-bold tracking-widest text-sm focus:outline-none focus:border-rose-400"
+            />
+
+            <div className="flex justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => { setShowDeleteModal(false); setDeleteConfirmText(''); }}
+                className="px-5 py-2.5 rounded-xl bg-slate-800 text-slate-300 font-bold text-xs hover:bg-slate-700"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleClearAllData}
+                disabled={deletingAll || deleteConfirmText.trim().toUpperCase() !== 'DELETE'}
+                className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs uppercase tracking-wider shadow-lg disabled:opacity-40"
+              >
+                {deletingAll ? 'Deleting Data...' : 'YES, DELETE ALL DATA'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

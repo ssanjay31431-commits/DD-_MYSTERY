@@ -36,12 +36,12 @@ const seedData = async () => {
     // 2. Create Default Users
     const adminUser = await User.create({
       name: process.env.ADMIN_NAME || 'DD Mystery Admin',
-      email: (process.env.ADMIN_EMAIL || 'admin@ddmysterybox.com').toLowerCase(),
-      phone: '+91 9876543210',
-      password: process.env.ADMIN_PASSWORD || 'Admin@123456',
+      email: (process.env.ADMIN_EMAIL || 'ddmarket130@gmail.com').toLowerCase(),
+      phone: '+91 79042 79655',
+      password: process.env.ADMIN_PASSWORD || 'ddmarket468',
       role: 'admin',
       profileImage: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
-      authProviders: [{ provider: 'email', providerId: 'admin@ddmysterybox.com' }]
+      authProviders: [{ provider: 'email', providerId: 'ddmarket130@gmail.com' }]
     });
 
     const customerUser = await User.create({

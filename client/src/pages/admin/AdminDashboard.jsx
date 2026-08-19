@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { DollarSign, ShoppingBag, Users, Clock, CheckCircle2, TrendingUp, Award, Eye, Shield } from 'lucide-react';
+import { DollarSign, ShoppingBag, Users, Clock, CheckCircle2, TrendingUp, Award, Eye, Shield, Trash2 } from 'lucide-react';
 import API from '../../services/api';
 import { AdminSidebar } from '../../components/admin/AdminSidebar';
 import { CardSkeleton } from '../../components/common/SkeletonLoader';
@@ -21,57 +21,52 @@ const EMPTY_STATS = {
 export const AdminDashboard = () => {
   const [stats, setStats] = useState(EMPTY_STATS);
   const [loading, setLoading] = useState(true);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deletingAll, setDeletingAll] = useState(false);
 
-  const computeStatsFromLocalOrders = () => {
-    const localOrders = JSON.parse(localStorage.getItem('dd_orders') || '[]');
-    if (!Array.isArray(localOrders) || localOrders.length === 0) {
-      return EMPTY_STATS;
+  const fetchStats = async () => {
+    setLoading(true);
+    try {
+      const { data } = await API.get('/admin/dashboard');
+      if (data && typeof data === 'object' && data.totalRevenue !== undefined && !data.message) {
+        setStats(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch dashboard stats:', err);
+    } finally {
+      setLoading(false);
     }
-
-    const totalRev = localOrders.reduce((acc, o) => acc + (o.totalAmount || 0), 0);
-    const todayStr = new Date().toISOString().split('T')[0];
-    const todayRev = localOrders
-      .filter((o) => o.createdAt && o.createdAt.startsWith(todayStr))
-      .reduce((acc, o) => acc + (o.totalAmount || 0), 0);
-    const todayOrdersCount = localOrders.filter((o) => o.createdAt && o.createdAt.startsWith(todayStr)).length;
-
-    const pendingCount = localOrders.filter((o) => o.orderStatus !== 'Delivered' && o.orderStatus !== 'Cancelled').length;
-    const deliveredCount = localOrders.filter((o) => o.orderStatus === 'Delivered').length;
-
-    const uniqueCusts = new Set(localOrders.map((o) => o.user?.email || o.deliveryAddressSnapshot?.email || 'guest')).size;
-    const avgOrderVal = Math.round(totalRev / (localOrders.length || 1));
-
-    return {
-      totalRevenue: totalRev,
-      todayRevenue: todayRev,
-      totalOrders: localOrders.length,
-      todayOrders: todayOrdersCount,
-      pendingOrders: pendingCount,
-      deliveredOrders: deliveredCount,
-      totalCustomers: uniqueCusts,
-      averageOrderValue: avgOrderVal,
-      popularThemes: [],
-      recentOrders: localOrders
-    };
   };
 
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const { data } = await API.get('/admin/dashboard');
-        if (data && typeof data === 'object' && data.totalRevenue !== undefined && !data.message) {
-          setStats(data);
-        } else {
-          setStats(computeStatsFromLocalOrders());
-        }
-      } catch (err) {
-        setStats(computeStatsFromLocalOrders());
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchStats();
   }, []);
+
+  const handleClearAllData = async () => {
+    if (deleteConfirmText.trim().toUpperCase() !== 'DELETE') {
+      alert('Please type DELETE to confirm data purge');
+      return;
+    }
+
+    setDeletingAll(true);
+    try {
+      const { data } = await API.delete('/admin/clear-all-data');
+      if (data && data.success) {
+        alert('🚨 All store test orders, payments, screenshots & histories deleted successfully!');
+        setShowDeleteModal(false);
+        setDeleteConfirmText('');
+        fetchStats();
+      } else {
+        alert(data?.message || 'Failed to clear data');
+      }
+    } catch (err) {
+      console.error('Clear data error:', err);
+      alert(err.response?.data?.message || 'Error clearing store data');
+    } finally {
+      setDeletingAll(false);
+    }
+  };
 
   const currentStats = stats || EMPTY_STATS;
   const popularThemes = Array.isArray(currentStats.popularThemes) ? currentStats.popularThemes : [];
@@ -137,7 +132,7 @@ export const AdminDashboard = () => {
               <div className="glass-panel p-5 rounded-2xl border border-indigo-500/20">
                 <span className="text-xs text-slate-400 font-bold block mb-1">Avg Order Value</span>
                 <span className="text-2xl font-black text-indigo-300 font-display">₹{currentStats.averageOrderValue || 0}</span>
-                <span className="text-[10px] text-slate-400 block mt-1">Per birthday box order</span>
+                <span className="text-[10px] text-slate-400 block mt-1">Per mystery box order</span>
               </div>
 
               <div className="glass-panel p-5 rounded-2xl border border-pink-500/20">
@@ -150,7 +145,7 @@ export const AdminDashboard = () => {
             {/* Popular Themes Analytics Bar */}
             {popularThemes.length > 0 && (
               <div className="glass-panel p-6 rounded-3xl border border-purple-500/20">
-                <h3 className="text-sm font-bold text-white font-display mb-4">Most Popular Birthday Themes</h3>
+                <h3 className="text-sm font-bold text-white font-display mb-4">Most Popular Mystery Themes</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
                   {popularThemes.map((theme, idx) => (
                     <div key={idx} className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 text-center">
@@ -165,7 +160,7 @@ export const AdminDashboard = () => {
             {/* Recent Orders List */}
             <div className="glass-panel p-6 rounded-3xl border border-purple-500/20 space-y-4">
               <div className="flex justify-between items-center">
-                <h3 className="text-sm font-bold text-white font-display">Recent Birthday Box Orders</h3>
+                <h3 className="text-sm font-bold text-white font-display">Recent Mystery Box Orders</h3>
                 <Link to="/admin/orders" className="text-xs font-bold text-pink-400 hover:underline">View All Orders →</Link>
               </div>
 
@@ -191,7 +186,7 @@ export const AdminDashboard = () => {
                     ) : (
                       recentOrders.map((ord) => (
                         <tr key={ord._id} className="hover:bg-slate-900/50 transition-colors">
-                          <td className="p-3 font-mono font-bold text-amber-300">{ord.orderId}</td>
+                          <td className="p-3 font-mono font-bold text-amber-300">{ord.orderId || ord.orderNumber}</td>
                           <td className="p-3 font-bold text-white">{ord.user?.name || ord.deliveryAddressSnapshot?.fullName || 'Customer'}</td>
                           <td className="p-3 font-bold text-pink-400">₹{ord.totalAmount}</td>
                           <td className="p-3">
@@ -210,9 +205,84 @@ export const AdminDashboard = () => {
                 </table>
               </div>
             </div>
+
+            {/* DANGER ZONE: ALL DATA DELETE BUTTON */}
+            <div className="p-6 rounded-3xl bg-rose-950/40 border border-rose-500/40 space-y-4">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-2xl bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                    <Trash2 className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-white font-display uppercase tracking-wider">
+                      🚨 DANGER ZONE: RESET & DELETE ALL DATA
+                    </h3>
+                    <p className="text-xs text-rose-300">
+                      Permanently delete all test orders, payment screenshots, customer histories, and notification logs from database.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteModal(true)}
+                  className="px-5 py-3 rounded-2xl bg-gradient-to-r from-rose-600 to-red-700 hover:from-rose-700 hover:to-red-800 text-white font-black text-xs uppercase tracking-wider shadow-lg shadow-rose-600/30 flex items-center gap-2 shrink-0 hover:scale-105 transition-all"
+                >
+                  <Trash2 className="w-4 h-4" /> DELETE ALL STORE DATA
+                </button>
+              </div>
+            </div>
           </>
         )}
       </main>
+
+      {/* DELETE ALL DATA CONFIRMATION MODAL */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="max-w-md w-full glass-panel p-6 sm:p-8 rounded-3xl border border-rose-500/50 space-y-6 text-center shadow-2xl">
+            <div className="w-16 h-16 rounded-2xl bg-rose-500/20 border border-rose-500 text-rose-400 flex items-center justify-center mx-auto shadow-xl shadow-rose-500/20">
+              <Trash2 className="w-8 h-8" />
+            </div>
+            
+            <div className="space-y-2">
+              <h3 className="text-xl font-black text-white font-display">
+                Confirm Complete Data Purge
+              </h3>
+              <p className="text-xs text-rose-300 leading-relaxed">
+                This action will permanently delete <strong>ALL orders, payment records, screenshots, notification logs, carts, and customer test data</strong> from the DD Mystery Box database.
+              </p>
+              <p className="text-[11px] text-slate-400">
+                To proceed, type <strong className="text-white font-mono">DELETE</strong> in the box below:
+              </p>
+            </div>
+
+            <input
+              type="text"
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              placeholder="Type DELETE"
+              className="w-full px-4 py-3 rounded-xl bg-slate-900 border border-rose-500/40 text-rose-300 font-mono text-center font-bold tracking-widest text-sm focus:outline-none focus:border-rose-400"
+            />
+
+            <div className="flex justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => { setShowDeleteModal(false); setDeleteConfirmText(''); }}
+                className="px-5 py-2.5 rounded-xl bg-slate-800 text-slate-300 font-bold text-xs hover:bg-slate-700"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleClearAllData}
+                disabled={deletingAll || deleteConfirmText.trim().toUpperCase() !== 'DELETE'}
+                className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs uppercase tracking-wider shadow-lg disabled:opacity-40"
+              >
+                {deletingAll ? 'Deleting Data...' : 'YES, DELETE ALL DATA'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

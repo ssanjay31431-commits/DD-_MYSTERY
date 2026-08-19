@@ -54,7 +54,7 @@ export const AdminAuthProvider = ({ children }) => {
         const adminObj = {
           _id: 'admin_seeded_1',
           name: 'DD Mystery Admin',
-          email: email || 'admin@ddmysterybox.com',
+          email: email || 'ddmarket130@gmail.com',
           role: 'admin',
           token: `mock_admin_jwt_token_${Date.now()}`
         };

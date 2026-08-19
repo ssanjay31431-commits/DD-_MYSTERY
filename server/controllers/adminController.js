@@ -507,6 +507,43 @@ const testAdminSms = async (req, res) => {
   }
 };
 
+// @desc Delete / Purge All Orders, Payments, Screenshots, Notifications, and Customer Data from Store
+// @route DELETE /api/admin/clear-all-data
+const clearAllData = async (req, res) => {
+  try {
+    const Payment = require('../models/Payment');
+    const Cart = require('../models/Cart');
+    const Address = require('../models/Address');
+    const Review = require('../models/Review');
+    const Wishlist = require('../models/Wishlist');
+    const UserNotification = require('../models/UserNotification');
+
+    // 1. Delete all order, payment, and tracking records
+    await Order.deleteMany({});
+    await Payment.deleteMany({});
+    await NotificationLog.deleteMany({});
+    await FailedPayment.deleteMany({});
+
+    // 2. Delete customer shopping data
+    await Cart.deleteMany({});
+    await Address.deleteMany({});
+    await Review.deleteMany({});
+    await Wishlist.deleteMany({});
+    await UserNotification.deleteMany({});
+
+    // 3. Delete customer users (retain admin user)
+    await User.deleteMany({ role: { $ne: 'admin' } });
+
+    res.json({
+      success: true,
+      message: '🚨 All store test orders, payments, notifications, customer data, and histories have been completely deleted successfully!'
+    });
+  } catch (error) {
+    console.error('[Clear All Data Error]', error);
+    res.status(500).json({ message: error.message || 'Failed to clear store data' });
+  }
+};
+
 module.exports = {
   getDashboardStats,
   getAllAdminOrders,
@@ -519,5 +556,6 @@ module.exports = {
   verifyBrevoEmailConfiguration,
   testAdminSms,
   getFailedPayments,
-  recoverPaymentOrder
+  recoverPaymentOrder,
+  clearAllData
 };
