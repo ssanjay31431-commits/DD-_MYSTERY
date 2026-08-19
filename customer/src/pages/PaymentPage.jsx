@@ -219,11 +219,12 @@ export const PaymentPage = () => {
             </div>
 
             {/* DYNAMIC QR CODE DISPLAY */}
-            <div className="p-6 rounded-3xl bg-white text-slate-950 max-w-xs mx-auto space-y-4 shadow-2xl shadow-purple-500/20 border-4 border-pink-500/50">
-              <div className="flex justify-center p-2 bg-white rounded-2xl">
+            <div className="p-4 sm:p-6 rounded-3xl bg-white text-slate-950 w-full max-w-[280px] sm:max-w-xs mx-auto space-y-3 sm:space-y-4 shadow-2xl shadow-purple-500/20 border-4 border-pink-500/50">
+              <div className="flex justify-center p-2 bg-white rounded-2xl overflow-hidden">
                 <QRCodeSVG
                   value={upiUri}
-                  size={200}
+                  size={190}
+                  className="w-full max-w-[170px] sm:max-w-[190px] h-auto mx-auto"
                   level="H"
                   includeMargin={true}
                 />
