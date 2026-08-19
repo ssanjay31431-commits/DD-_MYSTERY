@@ -90,34 +90,105 @@ const getPaymentDetailsForOrder = async (req, res) => {
   }
 };
 
-// @desc Customer Uploads Payment Screenshot
+// @desc Customer Uploads Payment Screenshot (And Creates Order in MongoDB on submission)
 // @route POST /api/payments/upload-screenshot
 const uploadPaymentScreenshot = async (req, res) => {
   try {
-    const { orderId: paramOrderId, screenshotUrl } = req.body;
-
-    if (!paramOrderId) {
-      return res.status(400).json({ message: 'Order ID is required' });
-    }
+    const { orderId: paramOrderId, screenshotUrl, pendingCheckout } = req.body;
 
     if (!screenshotUrl) {
       return res.status(400).json({ message: 'Payment screenshot image is required' });
     }
 
     let order;
-    if (paramOrderId.match(/^[0-9a-fA-F]{24}$/)) {
-      order = await Order.findById(paramOrderId);
-    } else {
-      order = await Order.findOne({ $or: [{ orderId: paramOrderId }, { orderNumber: paramOrderId }] });
+    let customOrderId;
+
+    // Flow A: Create order in MongoDB ONLY NOW when screenshot is submitted
+    if (pendingCheckout && pendingCheckout.items && pendingCheckout.deliveryAddress) {
+      const { items, deliveryAddress, subtotal, deliveryFee = 0, couponDiscount = 0, couponCode = '' } = pendingCheckout;
+
+      const calculatedSubtotal = items.reduce((acc, item) => {
+        const price = item.unitPrice || item.product?.price || item.price || 0;
+        return acc + price * (item.quantity || 1);
+      }, 0);
+
+      const totalAmount = Math.max(0, calculatedSubtotal + deliveryFee - couponDiscount);
+      customOrderId = await generateOrderId();
+
+      const expectedDelivery = new Date();
+      expectedDelivery.setDate(expectedDelivery.getDate() + 4);
+
+      const orderItems = items.map((item) => ({
+        product: item.product?._id || item.product,
+        productSnapshot: {
+          name: item.product?.name || item.name || 'DD Mystery Box',
+          image: item.product?.image || item.image || '',
+          price: item.unitPrice || item.price || 0,
+          description: item.product?.description || '',
+          contents: item.product?.contents || []
+        },
+        customizationSnapshot: item.customization || {},
+        quantity: item.quantity || 1,
+        unitPrice: item.unitPrice || item.price || 0
+      }));
+
+      order = new Order({
+        orderNumber: customOrderId,
+        orderId: customOrderId,
+        user: req.user._id,
+        items: orderItems,
+        deliveryAddressSnapshot: deliveryAddress,
+        pricing: {
+          subtotal: calculatedSubtotal,
+          deliveryFee,
+          couponDiscount,
+          totalAmount,
+          advanceAmount: 0,
+          amountPaid: 0,
+          remainingBalance: totalAmount
+        },
+        subtotal: calculatedSubtotal,
+        deliveryFee,
+        couponDiscount,
+        couponCode,
+        totalAmount,
+        advanceAmount: 0,
+        advancePaid: 0,
+        amountPaid: 0,
+        remainingBalance: totalAmount,
+        remainingCodAmount: 0,
+        paymentInfo: {
+          method: 'Manual UPI',
+          provider: 'MANUAL_UPI',
+          status: 'PAYMENT_VERIFICATION',
+          paymentOrderId: customOrderId
+        },
+        orderStatus: 'PAYMENT_VERIFICATION',
+        trackingHistory: [
+          {
+            status: 'PAYMENT_VERIFICATION',
+            comment: 'Payment screenshot submitted by customer. Verification in progress.',
+            timestamp: new Date()
+          }
+        ],
+        expectedDeliveryDate: expectedDelivery,
+        luckyRewardUnlocked: totalAmount >= 199
+      });
+
+      await order.save();
+
+      // Clear customer's cart
+      await Cart.findOneAndUpdate({ user: req.user._id }, { items: [], couponApplied: { code: '', discountAmount: 0 } }).catch(e => {});
+    } else if (paramOrderId) {
+      if (paramOrderId.match(/^[0-9a-fA-F]{24}$/)) {
+        order = await Order.findById(paramOrderId);
+      } else {
+        order = await Order.findOne({ $or: [{ orderId: paramOrderId }, { orderNumber: paramOrderId }] });
+      }
     }
 
     if (!order) {
-      return res.status(404).json({ message: 'Order not found' });
-    }
-
-    // Ownership check
-    if (order.user.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Not authorized to submit screenshot for this order' });
+      return res.status(404).json({ message: 'Order details missing or order not found' });
     }
 
     let settings = await AdminSettings.findOne();
@@ -144,13 +215,15 @@ const uploadPaymentScreenshot = async (req, res) => {
     payment.submittedAt = new Date();
     await payment.save();
 
-    // Update order status to PAYMENT_VERIFICATION
+    // Ensure order status is PAYMENT_VERIFICATION
     order.orderStatus = 'PAYMENT_VERIFICATION';
-    order.trackingHistory.push({
-      status: 'PAYMENT_VERIFICATION',
-      comment: 'Payment screenshot submitted by customer. Verification in progress.',
-      timestamp: new Date()
-    });
+    if (!order.trackingHistory.some(t => t.status === 'PAYMENT_VERIFICATION')) {
+      order.trackingHistory.push({
+        status: 'PAYMENT_VERIFICATION',
+        comment: 'Payment screenshot submitted by customer. Verification in progress.',
+        timestamp: new Date()
+      });
+    }
     await order.save();
 
     // Log admin notification so it appears on Admin Dashboard
@@ -176,6 +249,9 @@ const uploadPaymentScreenshot = async (req, res) => {
     res.json({
       success: true,
       message: 'Payment screenshot submitted successfully. Verification is in progress.',
+      orderId: displayOrderId,
+      orderMongoId: order._id,
+      amount: amountToPay,
       paymentStatus: payment.status,
       orderStatus: order.orderStatus,
       payment

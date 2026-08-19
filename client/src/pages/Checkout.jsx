@@ -62,51 +62,21 @@ export const Checkout = () => {
         deliveryFee: computedDeliveryFee,
         couponDiscount: couponApplied?.discountAmount || 0,
         couponCode: couponApplied?.code || '',
-        paymentMethod: 'Manual UPI',
-        paymentInfo: {
-          method: 'Manual UPI'
-        },
-        pricing: {
-          subtotal: computedSubtotal,
-          deliveryFee: computedDeliveryFee,
-          couponDiscount: couponApplied?.discountAmount || 0,
-          totalAmount: computedTotal,
-          advanceAmount: 0,
-          amountPaid: 0,
-          remainingBalance: computedTotal
-        }
+        totalAmount: computedTotal
       };
 
-      // Create order in MongoDB via backend API
-      let res;
-      try {
-        res = await API.post('/orders/confirm-payment', checkoutData);
-      } catch (err) {
-        res = await API.post('/orders', checkoutData);
+      // Store pending checkout in sessionStorage so order is created ONLY AFTER screenshot upload
+      sessionStorage.setItem('dd_pending_checkout', JSON.stringify(checkoutData));
+
+      if (isBuyNowFlow) {
+        sessionStorage.removeItem('dd_buynow_item');
       }
 
-      const data = res.data;
-      const orderObj = data?.order || data;
-
-      if (orderObj && (orderObj._id || orderObj.orderId || orderObj.orderNumber)) {
-        if (isBuyNowFlow) {
-          sessionStorage.removeItem('dd_buynow_item');
-        } else {
-          if (clearCart) clearCart();
-        }
-        sessionStorage.removeItem('dd_checkout_payload');
-        addToast('🎉 Order created! Please complete payment via GPay QR.');
-        
-        const finalId = orderObj.orderNumber || orderObj.orderId || orderObj._id;
-        navigate(`/payment?order_id=${finalId}`);
-      } else {
-        const errMsg = data?.message || 'Order creation failed. Please try again.';
-        addToast(errMsg, 'error');
-      }
+      addToast('Please scan GPay QR code & submit payment screenshot to place order.');
+      navigate('/payment');
     } catch (error) {
-      console.error('Order creation error:', error);
-      const errMsg = error.response?.data?.message || error.message || 'Failed to place order';
-      addToast(errMsg, 'error');
+      console.error('Checkout error:', error);
+      addToast('Failed to proceed to payment page', 'error');
     } finally {
       setSubmittingPayment(false);
     }

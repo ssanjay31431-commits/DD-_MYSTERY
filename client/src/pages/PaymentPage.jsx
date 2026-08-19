@@ -18,6 +18,38 @@ export const PaymentPage = () => {
   const [previewUrl, setPreviewUrl] = useState('');
   const [uploading, setUploading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [pendingCheckout, setPendingCheckout] = useState(null);
+
+  useEffect(() => {
+    // Check if there is a pending checkout in sessionStorage (order not saved in MongoDB yet)
+    const storedPendingStr = sessionStorage.getItem('dd_pending_checkout');
+    if (storedPendingStr) {
+      try {
+        const parsed = JSON.parse(storedPendingStr);
+        if (parsed && parsed.items && parsed.deliveryAddress) {
+          setPendingCheckout(parsed);
+          setLoading(false);
+          return;
+        }
+      } catch (e) {
+        console.error('Error parsing pending checkout', e);
+      }
+    }
+
+    if (!orderIdParam) {
+      setLoading(false);
+      return;
+    }
+
+    fetchPaymentDetails();
+
+    // Auto-polling for real-time status update every 4 seconds
+    const interval = setInterval(() => {
+      fetchPaymentDetails();
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [orderIdParam]);
 
   const fetchPaymentDetails = async () => {
     if (!orderIdParam) return;
@@ -36,29 +68,12 @@ export const PaymentPage = () => {
     }
   };
 
-  useEffect(() => {
-    if (!orderIdParam) {
-      navigate('/my-orders');
-      return;
-    }
-
-    fetchPaymentDetails();
-
-    // Auto-polling for real-time status update every 4 seconds
-    const interval = setInterval(() => {
-      fetchPaymentDetails();
-    }, 4000);
-
-    return () => clearInterval(interval);
-  }, [orderIdParam]);
-
   const handleCopyUpi = () => {
-    if (paymentDetails?.upiId) {
-      navigator.clipboard.writeText(paymentDetails.upiId);
-      setCopied(true);
-      addToast('UPI ID copied to clipboard!');
-      setTimeout(() => setCopied(false), 2000);
-    }
+    const targetUpi = paymentDetails?.upiId || 'david468468@airtel';
+    navigator.clipboard.writeText(targetUpi);
+    setCopied(true);
+    addToast('UPI ID copied to clipboard!');
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleFileChange = (e) => {
@@ -92,14 +107,36 @@ export const PaymentPage = () => {
     setUploading(true);
 
     try {
-      const { data } = await API.post('/payments/upload-screenshot', {
-        orderId: paymentDetails?.orderId || orderIdParam,
+      const payload = {
         screenshotUrl: previewUrl
-      });
+      };
+
+      if (pendingCheckout) {
+        payload.pendingCheckout = pendingCheckout;
+      } else {
+        payload.orderId = paymentDetails?.orderId || orderIdParam;
+      }
+
+      const { data } = await API.post('/payments/upload-screenshot', payload);
 
       if (data && data.success) {
+        sessionStorage.removeItem('dd_pending_checkout');
+        setPendingCheckout(null);
+        
         addToast('🎉 Payment screenshot submitted! Our team will verify it shortly.');
-        fetchPaymentDetails();
+        
+        setPaymentDetails({
+          orderId: data.orderId,
+          orderMongoId: data.orderMongoId,
+          amount: data.amount,
+          paymentStatus: 'PAYMENT_VERIFICATION',
+          orderStatus: 'PAYMENT_VERIFICATION',
+          screenshotUrl: previewUrl
+        });
+
+        if (data.orderId) {
+          navigate(`/payment?order_id=${data.orderId}`, { replace: true });
+        }
       } else {
         addToast(data?.message || 'Screenshot upload failed', 'error');
       }
@@ -122,12 +159,13 @@ export const PaymentPage = () => {
     );
   }
 
-  const orderIdDisplay = paymentDetails?.orderId || orderIdParam;
-  const amountToPay = paymentDetails?.amount || 499;
+  const amountToPay = pendingCheckout?.totalAmount || paymentDetails?.amount || 499;
   const upiId = paymentDetails?.upiId || 'david468468@airtel';
   const upiName = paymentDetails?.upiName || 'Sagariya David S';
+  const orderIdDisplay = paymentDetails?.orderId || (pendingCheckout ? 'NEW_ORDER' : orderIdParam || 'DM1001');
   const upiUri = paymentDetails?.upiUri || `upi://pay?pa=${upiId}&pn=${encodeURIComponent(upiName)}&am=${amountToPay}&cu=INR&tn=${orderIdDisplay}`;
-  const status = paymentDetails?.paymentStatus || paymentDetails?.orderStatus || 'PENDING_PAYMENT';
+  
+  const status = paymentDetails?.paymentStatus || paymentDetails?.orderStatus || (pendingCheckout ? 'PENDING_PAYMENT' : 'PENDING_PAYMENT');
 
   const isVerified = status === 'PAYMENT_COMPLETED' || status === 'ORDER_CONFIRMED' || status === 'CONFIRMED';
   const isPendingVerification = status === 'SCREENSHOT_SUBMITTED' || status === 'PAYMENT_VERIFICATION';
@@ -180,7 +218,7 @@ export const PaymentPage = () => {
               </p>
             </div>
 
-            {/* Display submitted screenshot preview if present */}
+            {/* Display submitted screenshot preview */}
             {previewUrl && (
               <div className="max-w-xs mx-auto p-3 bg-slate-900/90 rounded-2xl border border-slate-800 space-y-2">
                 <span className="text-xs text-slate-400 font-semibold block">Uploaded Payment Screenshot</span>
@@ -209,7 +247,7 @@ export const PaymentPage = () => {
             {/* Order & Amount Box */}
             <div className="grid grid-cols-2 gap-4 max-w-md mx-auto p-4 rounded-2xl bg-slate-950/90 border border-purple-500/30 text-left">
               <div>
-                <span className="text-[11px] font-semibold text-slate-400 block uppercase">Order ID</span>
+                <span className="text-[11px] font-semibold text-slate-400 block uppercase">Payment Reference</span>
                 <span className="text-xs sm:text-sm font-black font-mono text-pink-400 truncate block">{orderIdDisplay}</span>
               </div>
               <div className="text-right">

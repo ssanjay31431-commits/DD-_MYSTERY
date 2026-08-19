@@ -76,7 +76,7 @@ const getDashboardStats = async (req, res) => {
   }
 };
 
-// @desc Admin Get All Orders with filtering directly from MongoDB
+// @desc Admin Get All Orders with filtering directly from MongoDB (Excludes unsubmitted PENDING_PAYMENT by default)
 // @route GET /api/admin/orders
 const getAllAdminOrders = async (req, res) => {
   try {
@@ -85,6 +85,8 @@ const getAllAdminOrders = async (req, res) => {
 
     if (status && status !== 'All') {
       filter.orderStatus = { $regex: new RegExp(`^${status}$`, 'i') };
+    } else {
+      filter.orderStatus = { $ne: 'PENDING_PAYMENT' };
     }
 
     if (search) {

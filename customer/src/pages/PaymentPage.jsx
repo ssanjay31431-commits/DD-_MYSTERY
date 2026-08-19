@@ -18,6 +18,38 @@ export const PaymentPage = () => {
   const [previewUrl, setPreviewUrl] = useState('');
   const [uploading, setUploading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [pendingCheckout, setPendingCheckout] = useState(null);
+
+  useEffect(() => {
+    // Check if there is a pending checkout in sessionStorage (order not saved in MongoDB yet)
+    const storedPendingStr = sessionStorage.getItem('dd_pending_checkout');
+    if (storedPendingStr) {
+      try {
+        const parsed = JSON.parse(storedPendingStr);
+        if (parsed && parsed.items && parsed.deliveryAddress) {
+          setPendingCheckout(parsed);
+          setLoading(false);
+          return;
+        }
+      } catch (e) {
+        console.error('Error parsing pending checkout', e);
+      }
+    }
+
+    if (!orderIdParam) {
+      setLoading(false);
+      return;
+    }
+
+    fetchPaymentDetails();
+
+    // Auto-polling for real-time status update every 4 seconds
+    const interval = setInterval(() => {
+      fetchPaymentDetails();
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [orderIdParam]);
 
   const fetchPaymentDetails = async () => {
     if (!orderIdParam) return;
@@ -36,29 +68,12 @@ export const PaymentPage = () => {
     }
   };
 
-  useEffect(() => {
-    if (!orderIdParam) {
-      navigate('/my-orders');
-      return;
-    }
-
-    fetchPaymentDetails();
-
-    // Auto-polling for real-time status update every 4 seconds
-    const interval = setInterval(() => {
-      fetchPaymentDetails();
-    }, 4000);
-
-    return () => clearInterval(interval);
-  }, [orderIdParam]);
-
   const handleCopyUpi = () => {
-    if (paymentDetails?.upiId) {
-      navigator.clipboard.writeText(paymentDetails.upiId);
-      setCopied(true);
-      addToast('UPI ID copied to clipboard!');
-      setTimeout(() => setCopied(false), 2000);
-    }
+    const targetUpi = paymentDetails?.upiId || 'david468468@airtel';
+    navigator.clipboard.writeText(targetUpi);
+    setCopied(true);
+    addToast('UPI ID copied to clipboard!');
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleFileChange = (e) => {
@@ -92,14 +107,36 @@ export const PaymentPage = () => {
     setUploading(true);
 
     try {
-      const { data } = await API.post('/payments/upload-screenshot', {
-        orderId: paymentDetails?.orderId || orderIdParam,
+      const payload = {
         screenshotUrl: previewUrl
-      });
+      };
+
+      if (pendingCheckout) {
+        payload.pendingCheckout = pendingCheckout;
+      } else {
+        payload.orderId = paymentDetails?.orderId || orderIdParam;
+      }
+
+      const { data } = await API.post('/payments/upload-screenshot', payload);
 
       if (data && data.success) {
+        sessionStorage.removeItem('dd_pending_checkout');
+        setPendingCheckout(null);
+        
         addToast('🎉 Payment screenshot submitted! Our team will verify it shortly.');
-        fetchPaymentDetails();
+        
+        setPaymentDetails({
+          orderId: data.orderId,
+          orderMongoId: data.orderMongoId,
+          amount: data.amount,
+          paymentStatus: 'PAYMENT_VERIFICATION',
+          orderStatus: 'PAYMENT_VERIFICATION',
+          screenshotUrl: previewUrl
+        });
+
+        if (data.orderId) {
+          navigate(`/payment?order_id=${data.orderId}`, { replace: true });
+        }
       } else {
         addToast(data?.message || 'Screenshot upload failed', 'error');
       }
@@ -122,19 +159,20 @@ export const PaymentPage = () => {
     );
   }
 
-  const orderIdDisplay = paymentDetails?.orderId || orderIdParam;
-  const amountToPay = paymentDetails?.amount || 499;
+  const amountToPay = pendingCheckout?.totalAmount || paymentDetails?.amount || 499;
   const upiId = paymentDetails?.upiId || 'david468468@airtel';
   const upiName = paymentDetails?.upiName || 'Sagariya David S';
+  const orderIdDisplay = paymentDetails?.orderId || (pendingCheckout ? 'NEW_ORDER' : orderIdParam || 'DM1001');
   const upiUri = paymentDetails?.upiUri || `upi://pay?pa=${upiId}&pn=${encodeURIComponent(upiName)}&am=${amountToPay}&cu=INR&tn=${orderIdDisplay}`;
-  const status = paymentDetails?.paymentStatus || paymentDetails?.orderStatus || 'PENDING_PAYMENT';
+  
+  const status = paymentDetails?.paymentStatus || paymentDetails?.orderStatus || (pendingCheckout ? 'PENDING_PAYMENT' : 'PENDING_PAYMENT');
 
   const isVerified = status === 'PAYMENT_COMPLETED' || status === 'ORDER_CONFIRMED' || status === 'CONFIRMED';
   const isPendingVerification = status === 'SCREENSHOT_SUBMITTED' || status === 'PAYMENT_VERIFICATION';
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-12">
-      <div className="glass-panel p-6 sm:p-10 rounded-3xl border border-purple-500/30 space-y-8 text-center">
+    <div className="max-w-3xl mx-auto px-4 py-8 sm:py-12">
+      <div className="glass-panel p-5 sm:p-10 rounded-3xl border border-purple-500/30 space-y-6 sm:space-y-8 text-center">
         
         {/* Header section based on status */}
         {isVerified ? (
@@ -142,22 +180,22 @@ export const PaymentPage = () => {
             <div className="w-16 h-16 rounded-full bg-emerald-500/20 border border-emerald-500 flex items-center justify-center text-emerald-400 mx-auto shadow-xl shadow-emerald-500/20">
               <CheckCircle2 className="w-10 h-10" />
             </div>
-            <h1 className="text-3xl font-black text-white font-display">
+            <h1 className="text-2xl sm:text-3xl font-black text-white font-display">
               ✅ Confirmed Your Order
             </h1>
             <p className="text-sm text-emerald-400 font-semibold max-w-md mx-auto">
               Your payment of ₹{amountToPay} has been verified successfully. Your DD Mystery Box order is now confirmed!
             </p>
-            <div className="pt-4 flex justify-center gap-4">
+            <div className="pt-4 flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
               <button
                 onClick={() => navigate(`/order/${paymentDetails?.orderMongoId || orderIdDisplay}`)}
-                className="px-6 py-3 rounded-2xl bg-gradient-to-r from-pink-500 to-purple-600 text-white font-black text-xs uppercase tracking-wider shadow-lg shadow-pink-500/20 flex items-center gap-2"
+                className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-gradient-to-r from-pink-500 to-purple-600 text-white font-black text-xs uppercase tracking-wider shadow-lg shadow-pink-500/20 flex items-center justify-center gap-2"
               >
                 View Order Details <ArrowRight className="w-4 h-4" />
               </button>
               <button
                 onClick={() => navigate('/my-orders')}
-                className="px-6 py-3 rounded-2xl bg-slate-800 text-slate-300 font-bold text-xs uppercase hover:bg-slate-700"
+                className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-slate-800 text-slate-300 font-bold text-xs uppercase hover:bg-slate-700"
               >
                 My Orders
               </button>
@@ -172,15 +210,15 @@ export const PaymentPage = () => {
               <span className="px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-black uppercase tracking-widest">
                 Verification in Progress
               </span>
-              <h1 className="text-3xl font-black text-white font-display mt-2">
+              <h1 className="text-2xl sm:text-3xl font-black text-white font-display mt-2">
                 ⏳ Payment Verification is Going On...
               </h1>
-              <p className="text-sm text-slate-300 max-w-md mx-auto mt-2">
+              <p className="text-xs sm:text-sm text-slate-300 max-w-md mx-auto mt-2">
                 "Your payment screenshot has been submitted. Our team is verifying your payment."
               </p>
             </div>
 
-            {/* Display submitted screenshot preview if present */}
+            {/* Display submitted screenshot preview */}
             {previewUrl && (
               <div className="max-w-xs mx-auto p-3 bg-slate-900/90 rounded-2xl border border-slate-800 space-y-2">
                 <span className="text-xs text-slate-400 font-semibold block">Uploaded Payment Screenshot</span>
@@ -198,7 +236,7 @@ export const PaymentPage = () => {
               <span className="px-3 py-1 rounded-full bg-pink-500/10 border border-pink-500/30 text-pink-400 text-xs font-black uppercase tracking-widest flex items-center justify-center gap-1.5 w-fit mx-auto">
                 <QrCode className="w-4 h-4" /> Manual UPI Payment
               </span>
-              <h1 className="text-3xl font-black text-white font-display mt-2">
+              <h1 className="text-2xl sm:text-3xl font-black text-white font-display mt-2">
                 💳 Complete Your Payment
               </h1>
               <p className="text-xs text-slate-400 mt-1">
@@ -209,12 +247,12 @@ export const PaymentPage = () => {
             {/* Order & Amount Box */}
             <div className="grid grid-cols-2 gap-4 max-w-md mx-auto p-4 rounded-2xl bg-slate-950/90 border border-purple-500/30 text-left">
               <div>
-                <span className="text-[11px] font-semibold text-slate-400 block uppercase">Order ID</span>
-                <span className="text-sm font-black font-mono text-pink-400">{orderIdDisplay}</span>
+                <span className="text-[11px] font-semibold text-slate-400 block uppercase">Payment Reference</span>
+                <span className="text-xs sm:text-sm font-black font-mono text-pink-400 truncate block">{orderIdDisplay}</span>
               </div>
               <div className="text-right">
                 <span className="text-[11px] font-semibold text-slate-400 block uppercase">Amount to Pay</span>
-                <span className="text-xl font-black text-emerald-400 font-display">₹{amountToPay}</span>
+                <span className="text-lg sm:text-xl font-black text-emerald-400 font-display">₹{amountToPay}</span>
               </div>
             </div>
 
@@ -231,7 +269,7 @@ export const PaymentPage = () => {
               </div>
               <div className="text-center pt-1 border-t border-slate-200">
                 <span className="text-[11px] font-black text-purple-900 uppercase tracking-wider block">Scan with GPay / UPI App</span>
-                <span className="text-[10px] text-slate-600 font-semibold block">Payee: {upiName}</span>
+                <span className="text-[10px] text-slate-600 font-semibold block truncate">Payee: {upiName}</span>
               </div>
             </div>
 
@@ -250,11 +288,11 @@ export const PaymentPage = () => {
             <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 max-w-md mx-auto flex items-center justify-between gap-3 text-left">
               <div className="truncate">
                 <span className="text-[10px] text-slate-400 uppercase font-bold block">Official Admin UPI ID</span>
-                <span className="text-sm font-mono font-bold text-amber-300 truncate">{upiId}</span>
+                <span className="text-xs sm:text-sm font-mono font-bold text-amber-300 truncate block">{upiId}</span>
               </div>
               <button
                 onClick={handleCopyUpi}
-                className="px-3 py-2 rounded-xl bg-purple-600/30 hover:bg-purple-600/50 text-purple-300 font-bold text-xs flex items-center gap-1.5 shrink-0 transition-all border border-purple-500/30"
+                className="px-3 py-2.5 rounded-xl bg-purple-600/30 hover:bg-purple-600/50 text-purple-300 font-bold text-xs flex items-center gap-1.5 shrink-0 transition-all border border-purple-500/30"
               >
                 <Copy className="w-3.5 h-3.5" />
                 {copied ? 'Copied!' : 'Copy'}
@@ -264,10 +302,10 @@ export const PaymentPage = () => {
             {/* UPLOAD PAYMENT SCREENSHOT SECTION */}
             <div className="pt-6 border-t border-slate-800 space-y-4 max-w-md mx-auto text-left">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-extrabold uppercase tracking-wider text-pink-400 flex items-center gap-2">
+                <h3 className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-pink-400 flex items-center gap-2">
                   <ImageIcon className="w-4 h-4" /> Upload Payment Screenshot
                 </h3>
-                <span className="text-[10px] text-slate-400">Required for verification</span>
+                <span className="text-[10px] text-slate-400">Required</span>
               </div>
 
               {/* Upload Drop Zone / Input */}
@@ -281,10 +319,10 @@ export const PaymentPage = () => {
                 />
                 <label
                   htmlFor="screenshot-input"
-                  className="w-full p-6 border-2 border-dashed border-purple-500/40 hover:border-pink-500 rounded-2xl bg-slate-900/60 hover:bg-slate-900 flex flex-col items-center justify-center cursor-pointer transition-all gap-2 text-center"
+                  className="w-full p-5 sm:p-6 border-2 border-dashed border-purple-500/40 hover:border-pink-500 rounded-2xl bg-slate-900/60 hover:bg-slate-900 flex flex-col items-center justify-center cursor-pointer transition-all gap-2 text-center"
                 >
                   <Upload className="w-8 h-8 text-pink-400" />
-                  <span className="text-xs font-bold text-slate-200">
+                  <span className="text-xs font-bold text-slate-200 truncate max-w-[240px]">
                     {selectedFile ? selectedFile.name : 'Click to select payment screenshot'}
                   </span>
                   <span className="text-[10px] text-slate-400">
