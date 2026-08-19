@@ -12,6 +12,8 @@ import { AdminPaymentVerification } from './pages/AdminPaymentVerification';
 import { AdminCustomers } from './pages/AdminCustomers';
 import { AdminSettings } from './pages/AdminSettings';
 import { AdminNotificationLogs } from './pages/AdminNotificationLogs';
+import { AdminInventory } from './pages/AdminInventory';
+import { AdminCoupons } from './pages/AdminCoupons';
 
 const AdminProtectedRoute = ({ children }) => {
   const { admin, loading } = useAdminAuth();
@@ -98,6 +100,24 @@ export default function App() {
               element={
                 <AdminProtectedRoute>
                   <AdminCustomers />
+                </AdminProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/admin/inventory"
+              element={
+                <AdminProtectedRoute>
+                  <AdminInventory />
+                </AdminProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/admin/coupons"
+              element={
+                <AdminProtectedRoute>
+                  <AdminCoupons />
                 </AdminProtectedRoute>
               }
             />

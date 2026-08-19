@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { ShoppingBag, Users, DollarSign, CreditCard, Clock, CheckCircle2, AlertTriangle, Calendar, RefreshCw, ShieldAlert, Trash2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ShoppingBag, Users, DollarSign, CreditCard, Clock, CheckCircle2, AlertTriangle, Calendar, RefreshCw, ShieldAlert, Trash2, Bell } from 'lucide-react';
 import API from '../services/api';
 import { AdminSidebar } from '../components/AdminSidebar';
 
@@ -114,6 +115,16 @@ export const Dashboard = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            <Link
+              to="/admin/notifications"
+              className="p-2 rounded-xl bg-purple-600/20 hover:bg-purple-600/40 border border-purple-500/30 text-pink-400 hover:text-pink-300 relative transition-all flex items-center justify-center"
+              title="View Notification Logs"
+            >
+              <Bell className="w-4 h-4" />
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-pink-500 animate-ping"></span>
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-pink-500"></span>
+            </Link>
+
             <Calendar className="w-4 h-4 text-amber-400" />
             <select
               value={dateFilter}

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { DollarSign, ShoppingBag, Users, Clock, CheckCircle2, TrendingUp, Award, Eye, Shield, Trash2 } from 'lucide-react';
+import { DollarSign, ShoppingBag, Users, Clock, CheckCircle2, TrendingUp, Award, Eye, Shield, Trash2, Bell } from 'lucide-react';
 import API from '../../services/api';
 import { AdminSidebar } from '../../components/admin/AdminSidebar';
 import { CardSkeleton } from '../../components/common/SkeletonLoader';
@@ -84,8 +84,19 @@ export const AdminDashboard = () => {
             <h1 className="text-2xl font-black text-white font-display">Dashboard Overview</h1>
             <p className="text-xs text-slate-400">DD MYSTERY BOX Commercial Operations & Analytics</p>
           </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span> Live Analytics Active
+          <div className="flex items-center gap-3">
+            <Link
+              to="/admin/notifications"
+              className="p-2 rounded-xl bg-purple-600/20 hover:bg-purple-600/40 border border-purple-500/30 text-pink-400 hover:text-pink-300 relative transition-all flex items-center justify-center"
+              title="View Notification Logs"
+            >
+              <Bell className="w-4 h-4" />
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-pink-500 animate-ping"></span>
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-pink-500"></span>
+            </Link>
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span> Live Analytics Active
+            </div>
           </div>
         </div>
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, ShoppingBag, Users, Package, Palette, Warehouse, Tag, Star, Award, Settings, Shield, Bell, LogOut, CreditCard, Menu, X } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Users, Package, Palette, Warehouse, Tag, Star, Award, Settings, Shield, LogOut, CreditCard, Menu, X } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
 
 export const AdminSidebar = () => {
@@ -18,7 +18,6 @@ export const AdminSidebar = () => {
     { name: 'Coupons', path: '/admin/coupons', icon: Tag },
     { name: 'Reviews', path: '/admin/reviews', icon: Star },
     { name: 'Lucky Rewards', path: '/admin/rewards', icon: Award },
-    { name: 'Notifications', path: '/admin/notifications', icon: Bell },
     { name: 'Payment & Settings', path: '/admin/settings', icon: Settings }
   ];
 
