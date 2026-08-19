@@ -16,33 +16,36 @@ const getDashboardStats = async (req, res) => {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
-    const totalOrders = await Order.countDocuments();
-    const todayOrders = await Order.countDocuments({ createdAt: { $gte: todayStart } });
-    const pendingOrders = await Order.countDocuments({ orderStatus: { $nin: ['Delivered', 'DELIVERED', 'Cancelled', 'CANCELLED'] } });
+    // Only count orders where screenshot has been submitted / order progressed past PENDING_PAYMENT
+    const validOrderMatch = { orderStatus: { $nin: ['Cancelled', 'CANCELLED', 'PENDING_PAYMENT'] } };
+
+    const totalOrders = await Order.countDocuments(validOrderMatch);
+    const todayOrders = await Order.countDocuments({ createdAt: { $gte: todayStart }, ...validOrderMatch });
+    const pendingOrders = await Order.countDocuments({ orderStatus: { $nin: ['Delivered', 'DELIVERED', 'Cancelled', 'CANCELLED', 'PENDING_PAYMENT'] } });
     const deliveredOrders = await Order.countDocuments({ orderStatus: { $in: ['Delivered', 'DELIVERED'] } });
     const totalCustomers = await User.countDocuments({ role: 'customer' });
 
-    // Revenue Aggregations directly from MongoDB
+    // Revenue Aggregations directly from MongoDB (Only count orders with submitted payment screenshots)
     const totalRevenueData = await Order.aggregate([
-      { $match: { orderStatus: { $nin: ['Cancelled', 'CANCELLED'] } } },
+      { $match: validOrderMatch },
       { $group: { _id: null, total: { $sum: '$totalAmount' } } }
     ]);
     const totalRevenue = totalRevenueData[0]?.total || 0;
 
     const advanceCollectedData = await Order.aggregate([
-      { $match: { orderStatus: { $nin: ['Cancelled', 'CANCELLED'] } } },
+      { $match: validOrderMatch },
       { $group: { _id: null, total: { $sum: { $ifNull: ['$amountPaid', '$advancePaid'] } } } }
     ]);
     const advanceCollected = advanceCollectedData[0]?.total || 0;
 
     const remainingBalanceData = await Order.aggregate([
-      { $match: { orderStatus: { $nin: ['Cancelled', 'CANCELLED', 'Delivered', 'DELIVERED'] } } },
+      { $match: { orderStatus: { $nin: ['Cancelled', 'CANCELLED', 'Delivered', 'DELIVERED', 'PENDING_PAYMENT'] } } },
       { $group: { _id: null, total: { $sum: { $ifNull: ['$remainingBalance', '$remainingCodAmount'] } } } }
     ]);
     const remainingBalanceCollection = remainingBalanceData[0]?.total || 0;
 
     const todayRevenueData = await Order.aggregate([
-      { $match: { createdAt: { $gte: todayStart }, orderStatus: { $nin: ['Cancelled', 'CANCELLED'] } } },
+      { $match: { createdAt: { $gte: todayStart }, ...validOrderMatch } },
       { $group: { _id: null, total: { $sum: '$totalAmount' } } }
     ]);
     const todayRevenue = todayRevenueData[0]?.total || 0;
