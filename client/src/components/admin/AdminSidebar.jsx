@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, ShoppingBag, Users, Package, Palette, Warehouse, Tag, Star, Award, Settings, Shield, ArrowLeft } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Users, Package, Palette, Warehouse, Tag, Star, Award, Settings, Shield, ArrowLeft, Bell, CreditCard } from 'lucide-react';
 
 export const AdminSidebar = () => {
   const location = useLocation();
@@ -8,6 +8,7 @@ export const AdminSidebar = () => {
   const menu = [
     { name: 'Dashboard', path: '/admin', icon: LayoutDashboard },
     { name: 'Orders', path: '/admin/orders', icon: ShoppingBag },
+    { name: 'Payment Verification', path: '/admin/payments', icon: CreditCard },
     { name: 'Customers', path: '/admin/customers', icon: Users },
     { name: 'Boxes (Products)', path: '/admin/products', icon: Package },
     { name: 'Themes', path: '/admin/themes', icon: Palette },
@@ -15,7 +16,8 @@ export const AdminSidebar = () => {
     { name: 'Coupons', path: '/admin/coupons', icon: Tag },
     { name: 'Reviews', path: '/admin/reviews', icon: Star },
     { name: 'Lucky Rewards', path: '/admin/rewards', icon: Award },
-    { name: 'COD & Settings', path: '/admin/settings', icon: Settings }
+    { name: 'Notification Logs', path: '/admin/notifications', icon: Bell },
+    { name: 'Payment & Settings', path: '/admin/settings', icon: Settings }
   ];
 
   return (

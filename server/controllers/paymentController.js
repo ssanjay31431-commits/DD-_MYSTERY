@@ -153,7 +153,7 @@ const uploadPaymentScreenshot = async (req, res) => {
     });
     await order.save();
 
-    // Log admin notification
+    // Log admin notification so it appears on Admin Dashboard
     try {
       await NotificationLog.create({
         orderId: displayOrderId,
@@ -186,11 +186,17 @@ const uploadPaymentScreenshot = async (req, res) => {
   }
 };
 
-// @desc Admin Get All Verification Pending Payments
+// @desc Admin Get Verification Pending Payments (Only orders where screenshot has been uploaded or verification requested)
 // @route GET /api/payments/admin/pending
 const adminGetPendingPayments = async (req, res) => {
   try {
-    const payments = await Payment.find()
+    // Only return payment items where a screenshot has been submitted or payment is pending verification
+    const payments = await Payment.find({
+      $or: [
+        { screenshotUrl: { $ne: '' } },
+        { status: { $in: ['SCREENSHOT_SUBMITTED', 'PAYMENT_VERIFICATION', 'PAYMENT_COMPLETED'] } }
+      ]
+    })
       .populate('customer', 'name email phone')
       .populate({
         path: 'order',
@@ -198,28 +204,7 @@ const adminGetPendingPayments = async (req, res) => {
       })
       .sort({ updatedAt: -1 });
 
-    // Also gather orders that might not have a Payment record yet but are in system
-    const ordersWithPayments = payments.map(p => p.order?._id?.toString()).filter(Boolean);
-    const orphanOrders = await Order.find({ _id: { $nin: ordersWithPayments } })
-      .populate('user', 'name email phone')
-      .sort({ createdAt: -1 });
-
-    const formattedOrphans = orphanOrders.map(ord => ({
-      _id: `temp_${ord._id}`,
-      order: ord,
-      orderId: ord.orderNumber || ord.orderId,
-      customer: ord.user,
-      amount: ord.totalAmount || 499,
-      upiId: 'david468468@airtel',
-      upiName: 'Sagariya David S',
-      paymentReference: ord.orderNumber || ord.orderId,
-      screenshotUrl: '',
-      status: ord.orderStatus || 'PENDING_PAYMENT',
-      createdAt: ord.createdAt,
-      updatedAt: ord.updatedAt
-    }));
-
-    res.json([...payments, ...formattedOrphans]);
+    res.json(payments);
   } catch (error) {
     console.error('[Admin Pending Payments Error]', error);
     res.status(500).json({ message: error.message || 'Failed to fetch pending payments' });
@@ -264,7 +249,7 @@ const adminVerifyPayment = async (req, res) => {
     payment.verifiedBy = req.user._id;
     await payment.save();
 
-    // Mark order status as PAYMENT_COMPLETED then ORDER_CONFIRMED
+    // Mark order status as ORDER_CONFIRMED
     order.orderStatus = 'ORDER_CONFIRMED';
     order.paymentInfo = {
       ...order.paymentInfo,
@@ -310,12 +295,105 @@ const adminVerifyPayment = async (req, res) => {
   }
 };
 
-// Legacy compatibility fallbacks if required
-const createPaymentSession = async (req, res) => {
-  res.json({ message: 'Cashfree session replaced with Dynamic UPI QR Manual Payment.' });
-};
+// Handle Checkout Order Creation (Seamless flow from /checkout)
 const confirmPaymentAndCreateOrder = async (req, res) => {
-  res.json({ message: 'Please use manual payment verification endpoints.' });
+  try {
+    const { items, deliveryAddress, subtotal, deliveryFee = 0, couponDiscount = 0, couponCode = '' } = req.body;
+
+    if (!items || items.length === 0) {
+      return res.status(400).json({ message: 'No items in order' });
+    }
+
+    const calculatedSubtotal = items.reduce((acc, item) => {
+      const price = item.unitPrice || item.product?.price || item.price || 0;
+      return acc + price * (item.quantity || 1);
+    }, 0);
+
+    const totalAmount = Math.max(0, calculatedSubtotal + deliveryFee - couponDiscount);
+    const customOrderId = await generateOrderId();
+
+    const settings = await AdminSettings.findOne() || {};
+    const upiId = settings.upiId || 'david468468@airtel';
+    const upiName = settings.upiName || 'Sagariya David S';
+
+    const expectedDelivery = new Date();
+    expectedDelivery.setDate(expectedDelivery.getDate() + 4);
+
+    const orderItems = items.map((item) => ({
+      product: item.product?._id || item.product,
+      productSnapshot: {
+        name: item.product?.name || item.name || 'DD Mystery Box',
+        image: item.product?.image || item.image || '',
+        price: item.unitPrice || item.price || 0,
+        description: item.product?.description || '',
+        contents: item.product?.contents || []
+      },
+      customizationSnapshot: item.customization || {},
+      quantity: item.quantity || 1,
+      unitPrice: item.unitPrice || item.price || 0
+    }));
+
+    const order = new Order({
+      orderNumber: customOrderId,
+      orderId: customOrderId,
+      user: req.user._id,
+      items: orderItems,
+      deliveryAddressSnapshot: deliveryAddress,
+      subtotal: calculatedSubtotal,
+      deliveryFee,
+      couponDiscount,
+      couponCode,
+      totalAmount,
+      advanceAmount: totalAmount,
+      advancePaid: 0,
+      amountPaid: 0,
+      remainingBalance: totalAmount,
+      remainingCodAmount: 0,
+      paymentInfo: {
+        method: 'Manual UPI',
+        provider: 'MANUAL_UPI',
+        status: 'PENDING',
+        paymentOrderId: customOrderId
+      },
+      orderStatus: 'PENDING_PAYMENT',
+      trackingHistory: [
+        {
+          status: 'PENDING_PAYMENT',
+          comment: 'Order registered. Please scan GPay QR and upload payment screenshot to complete order.'
+        }
+      ],
+      expectedDeliveryDate: expectedDelivery,
+      luckyRewardUnlocked: totalAmount >= 199
+    });
+
+    const createdOrder = await order.save();
+
+    await Payment.create({
+      order: createdOrder._id,
+      orderId: customOrderId,
+      customer: req.user._id,
+      amount: totalAmount,
+      upiId,
+      upiName,
+      paymentReference: customOrderId,
+      status: 'PENDING_PAYMENT'
+    }).catch(err => console.error('Payment init warning:', err.message));
+
+    // Clear cart after placing order
+    await Cart.findOneAndUpdate({ user: req.user._id }, { items: [], couponApplied: { code: '', discountAmount: 0 } }).catch(e => {});
+
+    res.status(201).json({
+      success: true,
+      order: createdOrder
+    });
+  } catch (error) {
+    console.error('[Confirm Payment & Create Order Error]', error);
+    res.status(500).json({ message: error.message || 'Order creation failed' });
+  }
+};
+
+const createPaymentSession = async (req, res) => {
+  return confirmPaymentAndCreateOrder(req, res);
 };
 
 module.exports = {

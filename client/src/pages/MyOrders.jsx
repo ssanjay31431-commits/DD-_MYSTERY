@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Package, Clock, Calendar, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Package, Clock, Calendar, ArrowRight, ShieldCheck, CreditCard, CheckCircle2 } from 'lucide-react';
 import API from '../services/api';
 import { EmptyState } from '../components/common/EmptyState';
 import { CardSkeleton } from '../components/common/SkeletonLoader';
@@ -45,6 +45,46 @@ export const MyOrders = () => {
     );
   }
 
+  const renderStatusBadge = (status) => {
+    switch (status) {
+      case 'PENDING_PAYMENT':
+        return (
+          <span className="px-3 py-1 rounded-full text-xs font-black uppercase border bg-amber-500/20 text-amber-300 border-amber-500/40 flex items-center gap-1.5">
+            <CreditCard className="w-3.5 h-3.5" /> 💳 Complete Your Payment
+          </span>
+        );
+      case 'SCREENSHOT_SUBMITTED':
+      case 'PAYMENT_VERIFICATION':
+        return (
+          <span className="px-3 py-1 rounded-full text-xs font-black uppercase border bg-blue-500/20 text-blue-300 border-blue-500/40 flex items-center gap-1.5">
+            <Clock className="w-3.5 h-3.5 animate-spin" /> ⏳ Payment Verification is Going On...
+          </span>
+        );
+      case 'PAYMENT_COMPLETED':
+      case 'ORDER_CONFIRMED':
+      case 'CONFIRMED':
+      case 'Order Confirmed':
+        return (
+          <span className="px-3 py-1 rounded-full text-xs font-black uppercase border bg-emerald-500/20 text-emerald-300 border-emerald-500/40 flex items-center gap-1.5">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> ✅ Confirmed Your Order
+          </span>
+        );
+      case 'Cancelled':
+      case 'CANCELLED':
+        return (
+          <span className="px-3 py-1 rounded-full text-xs font-extrabold uppercase border bg-rose-500/20 text-rose-300 border-rose-500/30">
+            Cancelled
+          </span>
+        );
+      default:
+        return (
+          <span className="px-3 py-1 rounded-full text-xs font-extrabold uppercase border bg-purple-500/20 text-purple-300 border-purple-500/30">
+            {status}
+          </span>
+        );
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-6">
       <div className="flex items-center gap-3 mb-6">
@@ -59,27 +99,19 @@ export const MyOrders = () => {
 
       <div className="space-y-4">
         {orderList.map((order) => {
-          const ordNumber = order.orderNumber || order.orderId;
-          const paid = order.pricing?.amountPaid !== undefined ? order.pricing.amountPaid : (order.amountPaid || order.advancePaid || 0);
-          const rem = order.pricing?.remainingBalance !== undefined ? order.pricing.remainingBalance : (order.remainingBalance !== undefined ? order.remainingBalance : (order.remainingCodAmount || 0));
+          const ordNumber = order.orderNumber || order.orderId || order._id;
+          const status = order.orderStatus || 'PENDING_PAYMENT';
+          const isPending = status === 'PENDING_PAYMENT' || status === 'SCREENSHOT_SUBMITTED' || status === 'PAYMENT_VERIFICATION';
 
           return (
             <div key={order._id || ordNumber} className="glass-panel p-6 rounded-3xl border border-purple-500/20 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
               
               <div className="space-y-2">
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                   <span className="font-mono text-sm font-bold text-amber-300 px-2.5 py-0.5 rounded bg-slate-900 border border-slate-800">
                     #{ordNumber}
                   </span>
-                  <span className={`px-3 py-0.5 rounded-full text-xs font-extrabold uppercase border ${
-                    order.orderStatus === 'Delivered' || order.orderStatus === 'DELIVERED'
-                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                      : order.orderStatus === 'Cancelled' || order.orderStatus === 'CANCELLED'
-                      ? 'bg-rose-500/20 text-rose-300 border-rose-500/30'
-                      : 'bg-purple-500/20 text-purple-300 border-purple-500/30'
-                  }`}>
-                    {order.orderStatus}
-                  </span>
+                  {renderStatusBadge(status)}
                 </div>
 
                 <div className="text-xs text-slate-300 space-y-0.5">
@@ -88,9 +120,6 @@ export const MyOrders = () => {
                   </p>
                   <p className="text-slate-400">
                     Placed on: {new Date(order.createdAt).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}
-                  </p>
-                  <p className="text-[11px] text-slate-400">
-                    Paid Online: <strong className="text-emerald-400">₹{paid}</strong> | Remaining Balance: <strong className="text-amber-300">₹{rem}</strong>
                   </p>
                 </div>
               </div>
@@ -102,6 +131,14 @@ export const MyOrders = () => {
                 </div>
 
                 <div className="flex items-center gap-2">
+                  {isPending && (
+                    <Link
+                      to={`/payment?order_id=${ordNumber}`}
+                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-bold text-xs uppercase shadow-md shadow-pink-500/20 flex items-center gap-1"
+                    >
+                      <CreditCard className="w-3.5 h-3.5" /> Pay / Upload
+                    </Link>
+                  )}
                   <Link
                     to={`/track/${ordNumber}`}
                     className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs uppercase"

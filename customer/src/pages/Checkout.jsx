@@ -66,9 +66,17 @@ export const Checkout = () => {
       };
 
       // Create order in MongoDB via backend API
-      const { data } = await API.post('/orders', checkoutData);
+      let res;
+      try {
+        res = await API.post('/orders/confirm-payment', checkoutData);
+      } catch (err) {
+        res = await API.post('/orders', checkoutData);
+      }
 
-      if (data && (data._id || data.orderId || data.orderNumber)) {
+      const data = res.data;
+      const orderObj = data?.order || data;
+
+      if (orderObj && (orderObj._id || orderObj.orderId || orderObj.orderNumber)) {
         if (isBuyNowFlow) {
           sessionStorage.removeItem('dd_buynow_item');
         } else {
@@ -77,7 +85,7 @@ export const Checkout = () => {
         sessionStorage.removeItem('dd_checkout_payload');
         addToast('🎉 Order created! Please complete payment via GPay QR.');
         
-        const finalId = data.orderNumber || data.orderId || data._id;
+        const finalId = orderObj.orderNumber || orderObj.orderId || orderObj._id;
         navigate(`/payment?order_id=${finalId}`);
       } else {
         const errMsg = data?.message || 'Order creation failed. Please try again.';

@@ -55,32 +55,38 @@ export const Checkout = () => {
     setSubmittingPayment(true);
 
     try {
-      const mockOrderId = `CF_MOCK_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`;
-
       const checkoutData = {
-        paymentOrderId: mockOrderId,
-        paymentSessionId: `session_${Date.now()}`,
-        transactionId: `tx_${Date.now()}`,
         items: itemList,
         deliveryAddress: selectedAddress,
-        paymentMethod: 'FULL',
-        couponCode: couponApplied?.code || ''
+        subtotal: computedSubtotal,
+        deliveryFee: computedDeliveryFee,
+        couponDiscount: couponApplied?.discountAmount || 0,
+        couponCode: couponApplied?.code || '',
+        paymentMethod: 'manual_upi'
       };
 
-      // Directly create order in MongoDB via backend API
-      const { data } = await API.post('/orders/confirm-payment', checkoutData);
+      // Create order in MongoDB via backend API
+      let res;
+      try {
+        res = await API.post('/orders/confirm-payment', checkoutData);
+      } catch (err) {
+        res = await API.post('/orders', checkoutData);
+      }
 
-      if (data && data.success && data.order) {
+      const data = res.data;
+      const orderObj = data?.order || data;
+
+      if (orderObj && (orderObj._id || orderObj.orderId || orderObj.orderNumber)) {
         if (isBuyNowFlow) {
           sessionStorage.removeItem('dd_buynow_item');
         } else {
           if (clearCart) clearCart();
         }
         sessionStorage.removeItem('dd_checkout_payload');
-        addToast('🎉 Order placed successfully and saved to database!');
+        addToast('🎉 Order created! Please complete payment via GPay QR.');
         
-        const finalId = data.order.orderNumber || data.order.orderId || data.order._id;
-        navigate(`/order-success/${finalId}`);
+        const finalId = orderObj.orderNumber || orderObj.orderId || orderObj._id;
+        navigate(`/payment?order_id=${finalId}`);
       } else {
         const errMsg = data?.message || 'Order creation failed. Please try again.';
         addToast(errMsg, 'error');
@@ -96,6 +102,7 @@ export const Checkout = () => {
 
   const [loading, setLoading] = useState(true);
 
+  // New Address Form state
   const [fullName, setFullName] = useState(user?.name || '');
   const [mobileNumber, setMobileNumber] = useState(user?.phone || '');
   const [houseNo, setHouseNo] = useState('');
@@ -108,6 +115,7 @@ export const Checkout = () => {
   const [landmark, setLandmark] = useState('');
   const [addressType, setAddressType] = useState('Home');
 
+  // Location tracking state
   const [liveLocation, setLiveLocation] = useState(null);
   const [locationLoading, setLocationLoading] = useState(false);
   const [watchLocationId, setWatchLocationId] = useState(null);
@@ -163,6 +171,7 @@ export const Checkout = () => {
     fetchData();
   }, [user]);
 
+  // Cleanup watch location on unmount
   useEffect(() => {
     return () => {
       if (watchLocationId !== null) {
@@ -171,6 +180,7 @@ export const Checkout = () => {
     };
   }, [watchLocationId]);
 
+  // Handle getting current location & auto-fill
   const handleGetCurrentLocation = async () => {
     setLocationLoading(true);
     try {
@@ -230,6 +240,7 @@ export const Checkout = () => {
     }
   };
 
+  // Handle watch live location
   const handleWatchLocation = () => {
     if (watchLocationId !== null) {
       clearWatchLocation(watchLocationId);
@@ -250,6 +261,7 @@ export const Checkout = () => {
     addToast('Live location tracking started');
   };
 
+  // Handle pincode change for auto-fill
   const handlePincodeChange = async (value) => {
     setPincode(value);
     
@@ -330,7 +342,7 @@ export const Checkout = () => {
       setShowAddForm(false);
       localStorage.setItem('dd_checkout_address', JSON.stringify(addrData));
       if (!user || !token) {
-        addToast('Address saved for delivery!', 'info');
+        addToast('Address saved for delivery! Please login to proceed.', 'info');
       }
     }
   };
@@ -346,7 +358,10 @@ export const Checkout = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
+        {/* Left Column: Customer & Delivery Address */}
         <div className="lg:col-span-8 space-y-6">
+          
+          {/* Customer Info Card */}
           <div className="glass-panel p-6 rounded-3xl border border-purple-500/20">
             <h3 className="text-sm font-extrabold uppercase tracking-wider text-pink-400 mb-4 flex items-center gap-2">
               <User className="w-4 h-4" /> Customer Contact Information
@@ -367,6 +382,7 @@ export const Checkout = () => {
             </div>
           </div>
 
+          {/* Delivery Address Form / Selection */}
           <div className="glass-panel p-6 rounded-3xl border border-purple-500/20">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-extrabold uppercase tracking-wider text-purple-400 flex items-center gap-2">
@@ -380,6 +396,7 @@ export const Checkout = () => {
               </button>
             </div>
 
+            {/* Saved Addresses List */}
             {!showAddForm && addressList.length > 0 && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {addressList.map((addr) => (
@@ -407,8 +424,11 @@ export const Checkout = () => {
               </div>
             )}
 
+            {/* Add Address Form */}
             {showAddForm && (
               <form onSubmit={handleSaveAddress} className="space-y-4 pt-2">
+                
+                {/* Location Detection Buttons */}
                 <div className="flex gap-2 mb-4">
                   <button
                     type="button"
@@ -433,6 +453,7 @@ export const Checkout = () => {
                   </button>
                 </div>
 
+                {/* Live Location Display */}
                 {liveLocation && (
                   <div className="p-3 rounded-xl bg-blue-950/50 border border-blue-500/30 text-xs">
                     <p className="text-blue-400 font-bold mb-1">📍 Live Location</p>
@@ -499,8 +520,10 @@ export const Checkout = () => {
               </form>
             )}
           </div>
+
         </div>
 
+        {/* Right Column: Order Summary & Select Payment Options */}
         <div className="lg:col-span-4 space-y-6">
           <div className="glass-panel p-6 rounded-3xl border border-purple-500/30 space-y-6">
             <h3 className="text-lg font-bold text-white font-display border-b border-slate-800 pb-3">

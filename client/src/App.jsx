@@ -37,6 +37,7 @@ import { PrivacyPolicy, TermsAndConditions, RefundPolicy } from './pages/Policie
 // Admin Pages
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { AdminOrders } from './pages/admin/AdminOrders';
+import { AdminPaymentVerification } from './pages/admin/AdminPaymentVerification';
 import { AdminProducts } from './pages/admin/AdminProducts';
 import { AdminThemes } from './pages/admin/AdminThemes';
 import { AdminInventory } from './pages/admin/AdminInventory';
@@ -98,6 +99,7 @@ export default function App() {
                 {/* Protected Admin Routes */}
                 <Route path="/admin" element={<ProtectedRoute adminOnly><AdminDashboard /></ProtectedRoute>} />
                 <Route path="/admin/orders" element={<ProtectedRoute adminOnly><AdminOrders /></ProtectedRoute>} />
+                <Route path="/admin/payments" element={<ProtectedRoute adminOnly><AdminPaymentVerification /></ProtectedRoute>} />
                 <Route path="/admin/products" element={<ProtectedRoute adminOnly><AdminProducts /></ProtectedRoute>} />
                 <Route path="/admin/themes" element={<ProtectedRoute adminOnly><AdminThemes /></ProtectedRoute>} />
                 <Route path="/admin/inventory" element={<ProtectedRoute adminOnly><AdminInventory /></ProtectedRoute>} />
