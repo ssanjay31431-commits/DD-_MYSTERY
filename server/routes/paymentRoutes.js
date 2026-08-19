@@ -5,6 +5,7 @@ const {
   uploadPaymentScreenshot,
   adminGetPendingPayments,
   adminVerifyPayment,
+  adminRejectPayment,
   createPaymentSession,
   confirmPaymentAndCreateOrder
 } = require('../controllers/paymentController');
@@ -19,6 +20,7 @@ router.post('/upload-screenshot', uploadPaymentScreenshot);
 // Admin endpoints
 router.get('/admin/pending', admin, adminGetPendingPayments);
 router.put('/admin/verify/:id', admin, adminVerifyPayment);
+router.put('/admin/reject/:id', admin, adminRejectPayment);
 
 // Compatibility aliases
 router.post('/create-session', createPaymentSession);

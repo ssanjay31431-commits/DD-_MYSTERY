@@ -378,6 +378,77 @@ const adminVerifyPayment = async (req, res) => {
   }
 };
 
+// @desc Admin Rejects Payment for an Order ("Payment Rejected")
+// @route PUT /api/payments/admin/reject/:id
+const adminRejectPayment = async (req, res) => {
+  try {
+    const targetId = req.params.id;
+    const { reason } = req.body || {};
+    let payment = await Payment.findById(targetId);
+    let order;
+
+    if (payment) {
+      order = await Order.findById(payment.order).populate('user', 'name email phone');
+    } else {
+      order = await Order.findOne({ $or: [{ _id: targetId.replace('temp_', '') }, { orderId: targetId }, { orderNumber: targetId }] }).populate('user', 'name email phone');
+      if (order) {
+        payment = await Payment.findOne({ order: order._id });
+      }
+    }
+
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found for rejection' });
+    }
+
+    const displayOrderId = order.orderNumber || order.orderId || targetId;
+
+    // Mark payment status as REJECTED
+    if (payment) {
+      payment.status = 'REJECTED';
+      payment.verifiedAt = new Date();
+      payment.verifiedBy = req.user._id;
+      await payment.save();
+    }
+
+    // Mark order status as CANCELLED
+    order.orderStatus = 'CANCELLED';
+    if (order.paymentInfo) {
+      order.paymentInfo.status = 'REJECTED';
+    }
+    order.trackingHistory.push({
+      status: 'CANCELLED',
+      comment: `Payment verification rejected by admin. Reason: ${reason || 'Your payment details or screenshot could not be verified.'}`,
+      timestamp: new Date()
+    });
+
+    const updatedOrder = await order.save();
+
+    // Dispatch cancellation/rejection notification email to customer
+    try {
+      await sendNotification({
+        type: 'CANCELLED',
+        order: updatedOrder,
+        orderId: displayOrderId,
+        recipientEmail: order.user?.email,
+        recipientPhone: order.user?.phone,
+        reason: reason || 'Your payment for this order was not proper / could not be verified by the administrator.'
+      });
+    } catch (e) {
+      console.error('[Notification Warning on Reject]', e.message);
+    }
+
+    res.json({
+      success: true,
+      message: `Payment rejected and order ${displayOrderId} cancelled successfully. Rejection email sent to customer.`,
+      order: updatedOrder,
+      payment
+    });
+  } catch (error) {
+    console.error('[Admin Reject Payment Error]', error);
+    res.status(500).json({ message: error.message || 'Payment rejection failed' });
+  }
+};
+
 // Handle Checkout Order Creation (Seamless flow from /checkout)
 const confirmPaymentAndCreateOrder = async (req, res) => {
   try {
@@ -493,6 +564,7 @@ module.exports = {
   uploadPaymentScreenshot,
   adminGetPendingPayments,
   adminVerifyPayment,
+  adminRejectPayment,
   createPaymentSession,
   confirmPaymentAndCreateOrder
 };

@@ -7,6 +7,7 @@ export const AdminPaymentVerification = () => {
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [verifyingId, setVerifyingId] = useState(null);
+  const [rejectingId, setRejectingId] = useState(null);
   const [selectedScreenshot, setSelectedScreenshot] = useState(null);
   const { addToast } = useToast();
 
@@ -48,6 +49,34 @@ export const AdminPaymentVerification = () => {
       addToast(err.response?.data?.message || 'Failed to verify payment', 'error');
     } finally {
       setVerifyingId(null);
+    }
+  };
+
+  const handleRejectPayment = async (paymentItem) => {
+    const targetId = paymentItem._id;
+    const orderId = paymentItem.orderId || paymentItem.order?.orderNumber || paymentItem.order?.orderId;
+
+    if (!window.confirm(`Are you sure you want to reject payment for order #${orderId}? This will cancel the order and send a rejection email to the customer.`)) {
+      return;
+    }
+
+    setRejectingId(targetId);
+
+    try {
+      const { data } = await API.put(`/payments/admin/reject/${targetId}`, {
+        reason: 'Payment screenshot/reference details were invalid or incomplete.'
+      });
+      if (data && data.success) {
+        addToast(`❌ Payment rejected for #${orderId}! Order cancelled and customer notified via email.`, 'info');
+        setPayments(prev => prev.filter(p => p._id !== targetId));
+      } else {
+        addToast(data?.message || 'Payment rejection failed', 'error');
+      }
+    } catch (err) {
+      console.error('[Reject Payment Error]', err);
+      addToast(err.response?.data?.message || 'Failed to reject payment', 'error');
+    } finally {
+      setRejectingId(null);
     }
   };
 
@@ -185,14 +214,25 @@ export const AdminPaymentVerification = () => {
                         <span className="text-[10px] text-slate-400 block">Order Status: CONFIRMED</span>
                       </div>
                     ) : (
-                      <button
-                        onClick={() => handleVerifyPayment(item)}
-                        disabled={verifyingId === item._id}
-                        className="w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/20 hover:scale-[1.02] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                      >
-                        <CheckCircle2 className="w-4 h-4" />
-                        {verifyingId === item._id ? 'Approving Payment...' : 'Payment Completed'}
-                      </button>
+                      <div className="space-y-2.5 w-full">
+                        <button
+                          onClick={() => handleVerifyPayment(item)}
+                          disabled={verifyingId === item._id || rejectingId === item._id}
+                          className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/20 hover:scale-[1.02] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                        >
+                          <CheckCircle2 className="w-4 h-4" />
+                          {verifyingId === item._id ? 'Approving Payment...' : 'Payment Completed'}
+                        </button>
+
+                        <button
+                          onClick={() => handleRejectPayment(item)}
+                          disabled={verifyingId === item._id || rejectingId === item._id}
+                          className="w-full py-3 rounded-2xl bg-rose-600/20 hover:bg-rose-600 border border-rose-500/40 text-rose-300 hover:text-white font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                        >
+                          <X className="w-4 h-4" />
+                          {rejectingId === item._id ? 'Rejecting Payment...' : 'Reject Payment'}
+                        </button>
+                      </div>
                     )}
                   </div>
 
