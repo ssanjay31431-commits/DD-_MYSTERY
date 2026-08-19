@@ -4,8 +4,8 @@ import { Shield, Lock, Mail, ArrowRight } from 'lucide-react';
 import { useAdminAuth } from '../context/AdminAuthContext';
 
 export const AdminLogin = () => {
-  const [email, setEmail] = useState('ddmarket130@gmail.com');
-  const [password, setPassword] = useState('ddmarket468');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   const { loginAdmin } = useAdminAuth();
@@ -53,6 +53,7 @@ export const AdminLogin = () => {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                placeholder="admin@example.com"
                 className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs font-mono focus:border-amber-400 focus:outline-none"
               />
             </div>
@@ -67,6 +68,7 @@ export const AdminLogin = () => {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••••••"
                 className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs font-mono focus:border-amber-400 focus:outline-none"
               />
             </div>
@@ -80,12 +82,6 @@ export const AdminLogin = () => {
             {loading ? 'Authenticating Admin...' : 'LOGIN TO ADMIN CONTROL'} <ArrowRight className="w-4 h-4" />
           </button>
         </form>
-
-        <div className="p-3 rounded-2xl bg-purple-950/40 border border-purple-500/20 text-left text-[11px] text-slate-300">
-          <span className="font-bold text-amber-300 block mb-1">🔑 Default Admin Credentials:</span>
-          <p className="font-mono text-[10px]">Email: ddmarket130@gmail.com</p>
-          <p className="font-mono text-[10px]">Password: ddmarket468</p>
-        </div>
 
       </div>
     </div>
