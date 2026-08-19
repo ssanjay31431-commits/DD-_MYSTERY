@@ -74,9 +74,22 @@ const orderSchema = new mongoose.Schema(
     remainingCodAmount: { type: Number, default: 0 }, // For backward compatibility with old records
 
     paymentInfo: {
-      method: { type: String, enum: ['ADVANCE', 'FULL'], required: true },
-      provider: { type: String, default: 'CASHFREE' },
-      status: { type: String, enum: ['PAID', 'PARTIALLY_PAID', 'PENDING', 'FAILED'], default: 'PAID' },
+      method: {
+        type: String,
+        enum: [
+          'Manual UPI',
+          'MANUAL_UPI',
+          'ADVANCE',
+          'FULL',
+          'Full Online Payment',
+          'Cash on Delivery',
+          'Advance (₹100) + Cash on Delivery'
+        ],
+        required: true,
+        default: 'Manual UPI'
+      },
+      provider: { type: String, default: 'MANUAL_UPI' },
+      status: { type: String, enum: ['PAID', 'PARTIALLY_PAID', 'PENDING', 'FAILED', 'PAYMENT_COMPLETED'], default: 'PENDING' },
       paymentOrderId: { type: String, unique: true, sparse: true },
       paymentSessionId: { type: String, default: '' },
       transactionId: { type: String, default: '' }

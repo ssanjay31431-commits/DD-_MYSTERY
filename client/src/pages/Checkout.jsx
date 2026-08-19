@@ -62,7 +62,19 @@ export const Checkout = () => {
         deliveryFee: computedDeliveryFee,
         couponDiscount: couponApplied?.discountAmount || 0,
         couponCode: couponApplied?.code || '',
-        paymentMethod: 'manual_upi'
+        paymentMethod: 'Manual UPI',
+        paymentInfo: {
+          method: 'Manual UPI'
+        },
+        pricing: {
+          subtotal: computedSubtotal,
+          deliveryFee: computedDeliveryFee,
+          couponDiscount: couponApplied?.discountAmount || 0,
+          totalAmount: computedTotal,
+          advanceAmount: 0,
+          amountPaid: 0,
+          remainingBalance: computedTotal
+        }
       };
 
       // Create order in MongoDB via backend API

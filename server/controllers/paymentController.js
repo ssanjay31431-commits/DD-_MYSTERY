@@ -253,10 +253,15 @@ const adminVerifyPayment = async (req, res) => {
     order.orderStatus = 'ORDER_CONFIRMED';
     order.paymentInfo = {
       ...order.paymentInfo,
-      status: 'PAID',
+      method: 'Manual UPI',
+      status: 'PAYMENT_COMPLETED',
       provider: 'MANUAL_UPI',
       transactionId: `UPI_VERIFIED_${Date.now()}`
     };
+    if (order.pricing) {
+      order.pricing.amountPaid = order.totalAmount;
+      order.pricing.remainingBalance = 0;
+    }
     order.amountPaid = order.totalAmount;
     order.advancePaid = order.totalAmount;
     order.remainingBalance = 0;
@@ -339,12 +344,21 @@ const confirmPaymentAndCreateOrder = async (req, res) => {
       user: req.user._id,
       items: orderItems,
       deliveryAddressSnapshot: deliveryAddress,
+      pricing: {
+        subtotal: calculatedSubtotal,
+        deliveryFee,
+        couponDiscount,
+        totalAmount,
+        advanceAmount: 0,
+        amountPaid: 0,
+        remainingBalance: totalAmount
+      },
       subtotal: calculatedSubtotal,
       deliveryFee,
       couponDiscount,
       couponCode,
       totalAmount,
-      advanceAmount: totalAmount,
+      advanceAmount: 0,
       advancePaid: 0,
       amountPaid: 0,
       remainingBalance: totalAmount,
