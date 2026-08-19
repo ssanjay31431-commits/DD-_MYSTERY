@@ -141,7 +141,8 @@ export const SavedAddresses = () => {
                   </span>
                 </div>
                 <p className="text-xs text-slate-300">
-                  {addr.houseNo}, {addr.street}, {addr.area}, {addr.city}, {addr.state} - {addr.pincode}
+                  {[addr.houseNo, addr.street, addr.area, addr.landmark ? `(Landmark: ${addr.landmark})` : ''].filter(Boolean).join(', ')}<br />
+                  {addr.city}, {addr.state} - {addr.pincode}
                 </p>
                 <p className="text-[11px] text-slate-400 mt-1">Phone: {addr.mobileNumber}</p>
               </div>

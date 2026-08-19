@@ -126,11 +126,16 @@ export const OrderDetails = () => {
             <h4 className="font-bold text-white text-sm flex items-center gap-2 mb-2">
               <MapPin className="w-4 h-4 text-pink-400" /> Delivery Address
             </h4>
-            <p className="text-xs text-slate-300">
-              {order.deliveryAddressSnapshot?.fullName || order.user?.name}<br />
-              {order.deliveryAddressSnapshot?.houseNo}, {order.deliveryAddressSnapshot?.street}, {order.deliveryAddressSnapshot?.area}<br />
+            <p className="text-xs text-slate-300 leading-relaxed">
+              <strong className="text-white">{order.deliveryAddressSnapshot?.fullName || order.user?.name}</strong><br />
+              {[
+                order.deliveryAddressSnapshot?.houseNo,
+                order.deliveryAddressSnapshot?.street,
+                order.deliveryAddressSnapshot?.area,
+                order.deliveryAddressSnapshot?.landmark ? `(Landmark: ${order.deliveryAddressSnapshot.landmark})` : ''
+              ].filter(Boolean).join(', ')}<br />
               {order.deliveryAddressSnapshot?.city}, {order.deliveryAddressSnapshot?.state} - {order.deliveryAddressSnapshot?.pincode}<br />
-              Mobile: {order.deliveryAddressSnapshot?.mobileNumber || order.user?.phone}
+              <span className="font-mono text-slate-400">Mobile: {order.deliveryAddressSnapshot?.mobileNumber || order.user?.phone}</span>
             </p>
           </div>
 

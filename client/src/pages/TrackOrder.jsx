@@ -107,9 +107,14 @@ export const TrackOrder = () => {
               <h4 className="font-bold text-white text-sm flex items-center gap-2 mb-2">
                 <MapPin className="w-4 h-4 text-pink-400" /> Delivery Address
               </h4>
-              <p className="text-xs text-slate-300">
-                {trackingData.deliveryAddressSnapshot?.fullName}<br />
-                {trackingData.deliveryAddressSnapshot?.houseNo}, {trackingData.deliveryAddressSnapshot?.street}, {trackingData.deliveryAddressSnapshot?.area}<br />
+              <p className="text-xs text-slate-300 leading-relaxed">
+                <strong className="text-white">{trackingData.deliveryAddressSnapshot?.fullName}</strong><br />
+                {[
+                  trackingData.deliveryAddressSnapshot?.houseNo,
+                  trackingData.deliveryAddressSnapshot?.street,
+                  trackingData.deliveryAddressSnapshot?.area,
+                  trackingData.deliveryAddressSnapshot?.landmark ? `(Landmark: ${trackingData.deliveryAddressSnapshot.landmark})` : ''
+                ].filter(Boolean).join(', ')}<br />
                 {trackingData.deliveryAddressSnapshot?.city}, {trackingData.deliveryAddressSnapshot?.state} - {trackingData.deliveryAddressSnapshot?.pincode}
               </p>
             </div>
