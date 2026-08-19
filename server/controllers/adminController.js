@@ -49,7 +49,11 @@ const getDashboardStats = async (req, res) => {
 
     const averageOrderValue = totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0;
 
-    const recentOrders = await Order.find().sort({ createdAt: -1 }).limit(10).populate('user', 'name email phone');
+    // Return recent orders that have submitted payment screenshots / progressed past PENDING_PAYMENT
+    const recentOrders = await Order.find({ orderStatus: { $ne: 'PENDING_PAYMENT' } })
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .populate('user', 'name email phone');
     const unresolvedFailedPayments = await FailedPayment.find({ status: 'UNRESOLVED' }).sort({ createdAt: -1 });
 
     res.json({

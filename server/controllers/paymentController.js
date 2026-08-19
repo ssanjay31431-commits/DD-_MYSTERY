@@ -187,15 +187,14 @@ const uploadPaymentScreenshot = async (req, res) => {
 };
 
 // @desc Admin Get Verification Pending Payments (Only orders where screenshot has been uploaded or verification requested)
+// @desc Admin Get Verification Pending Payments (Only orders where payment screenshot has been uploaded by customer)
 // @route GET /api/payments/admin/pending
 const adminGetPendingPayments = async (req, res) => {
   try {
-    // Only return payment items where a screenshot has been submitted or payment is pending verification
+    // Only return payment items where a screenshot has actually been submitted by the customer
     const payments = await Payment.find({
-      $or: [
-        { screenshotUrl: { $ne: '' } },
-        { status: { $in: ['SCREENSHOT_SUBMITTED', 'PAYMENT_VERIFICATION', 'PAYMENT_COMPLETED'] } }
-      ]
+      screenshotUrl: { $exists: true, $ne: '', $regex: /.+/ },
+      status: { $in: ['SCREENSHOT_SUBMITTED', 'PAYMENT_VERIFICATION', 'PAYMENT_COMPLETED'] }
     })
       .populate('customer', 'name email phone')
       .populate({
