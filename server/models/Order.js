@@ -84,6 +84,11 @@ const orderSchema = new mongoose.Schema(
     orderStatus: {
       type: String,
       enum: [
+        'PENDING_PAYMENT',
+        'SCREENSHOT_SUBMITTED',
+        'PAYMENT_VERIFICATION',
+        'PAYMENT_COMPLETED',
+        'ORDER_CONFIRMED',
         'ORDER PLACED',
         'PAYMENT VERIFIED',
         'CONFIRMED',
@@ -101,7 +106,7 @@ const orderSchema = new mongoose.Schema(
         'Cancelled',
         'CANCELLED'
       ],
-      default: 'CONFIRMED'
+      default: 'PENDING_PAYMENT'
     },
     shipment: {
       status: { type: String, default: 'NOT_CREATED' },

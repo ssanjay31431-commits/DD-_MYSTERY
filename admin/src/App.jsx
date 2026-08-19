@@ -8,6 +8,7 @@ import { AdminProducts } from './pages/AdminProducts';
 import { ProductForm } from './pages/ProductForm';
 import { AdminOrders } from './pages/AdminOrders';
 import { OrderDetailsView } from './pages/OrderDetailsView';
+import { AdminPaymentVerification } from './pages/AdminPaymentVerification';
 import { AdminCustomers } from './pages/AdminCustomers';
 import { AdminSettings } from './pages/AdminSettings';
 import { AdminNotificationLogs } from './pages/AdminNotificationLogs';
@@ -79,6 +80,15 @@ export default function App() {
               element={
                 <AdminProtectedRoute>
                   <OrderDetailsView />
+                </AdminProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/admin/payments"
+              element={
+                <AdminProtectedRoute>
+                  <AdminPaymentVerification />
                 </AdminProtectedRoute>
               }
             />

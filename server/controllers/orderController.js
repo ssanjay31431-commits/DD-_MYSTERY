@@ -3,14 +3,15 @@ const Cart = require('../models/Cart');
 const Product = require('../models/Product');
 const AdminSettings = require('../models/AdminSettings');
 const NotificationLog = require('../models/NotificationLog');
+const Payment = require('../models/Payment');
 const { generateOrderId } = require('../utils/orderIdGenerator');
 const { sendNotification } = require('../utils/emailService');
 
-// @desc Create new order from cart / direct item with Advance + COD calculation
+// @desc Create new order from cart / direct item with Manual UPI Payment System
 // @route POST /api/orders
 const createOrder = async (req, res) => {
   try {
-    const { items, deliveryAddress, subtotal, deliveryFee = 0, couponDiscount = 0, couponCode = '', paymentMethod = 'cod_advance' } = req.body;
+    const { items, deliveryAddress, subtotal, deliveryFee = 0, couponDiscount = 0, couponCode = '', paymentMethod = 'manual_upi' } = req.body;
 
     if (!items || items.length === 0) {
       return res.status(400).json({ message: 'No items in order' });
@@ -27,30 +28,12 @@ const createOrder = async (req, res) => {
     }, 0);
 
     const totalAmount = Math.max(0, calculatedSubtotal + deliveryFee - couponDiscount);
-
-    // 2. Compute Advance Required & Remaining COD based on Payment Method selected
-    let advanceRequired = 0;
-    let remainingCodAmount = 0;
-    let methodTitle = '';
-    let initialOrderStatus = 'Order Placed';
-
-    if (paymentMethod === 'full_online') {
-      advanceRequired = totalAmount;
-      remainingCodAmount = 0;
-      methodTitle = 'Full Online Payment';
-    } else if (paymentMethod === 'full_cod') {
-      advanceRequired = 0;
-      remainingCodAmount = totalAmount;
-      methodTitle = 'Cash on Delivery';
-      initialOrderStatus = 'Order Confirmed';
-    } else {
-      // Advance Payment 100RS + Cash on Delivery
-      advanceRequired = Math.min(totalAmount, 100);
-      remainingCodAmount = Math.max(0, Math.round((totalAmount - advanceRequired) * 100) / 100);
-      methodTitle = 'Advance (₹100) + Cash on Delivery';
-    }
-
     const customOrderId = await generateOrderId();
+
+    // Fetch Admin Settings for UPI details
+    const settings = await AdminSettings.findOne() || {};
+    const upiId = settings.upiId || 'david468468@airtel';
+    const upiName = settings.upiName || 'Sagariya David S';
 
     // Calculate expected delivery date (4 days from now)
     const expectedDelivery = new Date();
@@ -71,6 +54,7 @@ const createOrder = async (req, res) => {
     }));
 
     const order = new Order({
+      orderNumber: customOrderId,
       orderId: customOrderId,
       user: req.user._id,
       items: orderItems,
@@ -80,21 +64,22 @@ const createOrder = async (req, res) => {
       couponDiscount,
       couponCode,
       totalAmount,
-      advanceRequired,
+      advanceAmount: totalAmount,
       advancePaid: 0,
-      remainingCodAmount,
+      amountPaid: 0,
+      remainingBalance: totalAmount,
+      remainingCodAmount: 0,
       paymentInfo: {
-        method: methodTitle,
-        advanceStatus: paymentMethod === 'full_cod' ? 'Paid' : 'Pending',
-        codStatus: 'Pending'
+        method: 'Manual UPI',
+        provider: 'MANUAL_UPI',
+        status: 'PENDING',
+        paymentOrderId: customOrderId
       },
-      orderStatus: initialOrderStatus,
+      orderStatus: 'PENDING_PAYMENT',
       trackingHistory: [
         {
-          status: initialOrderStatus,
-          comment: paymentMethod === 'full_cod'
-            ? 'Your order has been registered via Cash on Delivery!'
-            : `Your order has been registered! Please complete the ${methodTitle} to confirm.`
+          status: 'PENDING_PAYMENT',
+          comment: 'Order registered. Please scan GPay QR and upload payment screenshot to complete order.'
         }
       ],
       expectedDeliveryDate: expectedDelivery,
@@ -102,6 +87,22 @@ const createOrder = async (req, res) => {
     });
 
     const createdOrder = await order.save();
+
+    // Create linked Payment document in DB
+    try {
+      await Payment.create({
+        order: createdOrder._id,
+        orderId: customOrderId,
+        customer: req.user._id,
+        amount: totalAmount,
+        upiId,
+        upiName,
+        paymentReference: customOrderId,
+        status: 'PENDING_PAYMENT'
+      });
+    } catch (payErr) {
+      console.error('[Payment Record Init Warning]', payErr.message);
+    }
 
     // Create an admin-visible notification log so admin dashboard shows a new order alert
     try {

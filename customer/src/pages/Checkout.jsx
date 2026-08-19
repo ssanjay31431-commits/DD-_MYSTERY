@@ -55,32 +55,30 @@ export const Checkout = () => {
     setSubmittingPayment(true);
 
     try {
-      const mockOrderId = `CF_MOCK_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`;
-
       const checkoutData = {
-        paymentOrderId: mockOrderId,
-        paymentSessionId: `session_${Date.now()}`,
-        transactionId: `tx_${Date.now()}`,
         items: itemList,
         deliveryAddress: selectedAddress,
-        paymentMethod: 'FULL',
-        couponCode: couponApplied?.code || ''
+        subtotal: computedSubtotal,
+        deliveryFee: computedDeliveryFee,
+        couponDiscount: couponApplied?.discountAmount || 0,
+        couponCode: couponApplied?.code || '',
+        paymentMethod: 'manual_upi'
       };
 
-      // Directly create order in MongoDB via backend API
-      const { data } = await API.post('/orders/confirm-payment', checkoutData);
+      // Create order in MongoDB via backend API
+      const { data } = await API.post('/orders', checkoutData);
 
-      if (data && data.success && data.order) {
+      if (data && (data._id || data.orderId || data.orderNumber)) {
         if (isBuyNowFlow) {
           sessionStorage.removeItem('dd_buynow_item');
         } else {
           if (clearCart) clearCart();
         }
         sessionStorage.removeItem('dd_checkout_payload');
-        addToast('🎉 Order placed successfully and saved to database!');
+        addToast('🎉 Order created! Please complete payment via GPay QR.');
         
-        const finalId = data.order.orderNumber || data.order.orderId || data.order._id;
-        navigate(`/order-success/${finalId}`);
+        const finalId = data.orderNumber || data.orderId || data._id;
+        navigate(`/payment?order_id=${finalId}`);
       } else {
         const errMsg = data?.message || 'Order creation failed. Please try again.';
         addToast(errMsg, 'error');
