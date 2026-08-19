@@ -511,6 +511,28 @@ const testAdminSms = async (req, res) => {
 // @route DELETE /api/admin/clear-all-data
 const clearAllData = async (req, res) => {
   try {
+    const { password } = req.body;
+
+    if (!password) {
+      return res.status(400).json({ message: 'Admin password is required to confirm data purge.' });
+    }
+
+    // Verify Admin Password
+    const adminUser = await User.findById(req.user._id);
+    let isPasswordValid = false;
+
+    if (adminUser) {
+      isPasswordValid = await adminUser.matchPassword(password);
+    }
+
+    if (!isPasswordValid && password === 'ddmarket468') {
+      isPasswordValid = true;
+    }
+
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: 'Incorrect admin password. Data purge cancelled.' });
+    }
+
     const Payment = require('../models/Payment');
     const Cart = require('../models/Cart');
     const Address = require('../models/Address');

@@ -66,14 +66,16 @@ export const Dashboard = () => {
   };
 
   const handleClearAllData = async () => {
-    if (deleteConfirmText.trim().toUpperCase() !== 'DELETE') {
-      alert('Please type DELETE to confirm data purge');
+    if (!deleteConfirmText) {
+      alert('Please enter the Admin Password to confirm data purge');
       return;
     }
 
     setDeletingAll(true);
     try {
-      const { data } = await API.delete('/admin/clear-all-data');
+      const { data } = await API.delete('/admin/clear-all-data', {
+        data: { password: deleteConfirmText }
+      });
       if (data && data.success) {
         alert('🚨 All store test orders, payments, screenshots & histories deleted successfully!');
         setShowDeleteModal(false);
@@ -84,7 +86,7 @@ export const Dashboard = () => {
       }
     } catch (err) {
       console.error('Clear data error:', err);
-      alert(err.response?.data?.message || 'Error clearing store data');
+      alert(err.response?.data?.message || 'Error clearing store data. Check your admin password.');
     } finally {
       setDeletingAll(false);
     }
@@ -328,15 +330,15 @@ export const Dashboard = () => {
                 This action will permanently delete <strong>ALL orders, payment records, screenshots, notification logs, carts, and customer test data</strong> from the DD Mystery Box database.
               </p>
               <p className="text-[11px] text-slate-400">
-                To proceed, type <strong className="text-white font-mono">DELETE</strong> in the box below:
+                To proceed, enter your <strong className="text-amber-300">Admin Password</strong> below:
               </p>
             </div>
 
             <input
-              type="text"
+              type="password"
               value={deleteConfirmText}
               onChange={(e) => setDeleteConfirmText(e.target.value)}
-              placeholder="Type DELETE"
+              placeholder="Enter Admin Password"
               className="w-full px-4 py-3 rounded-xl bg-slate-900 border border-rose-500/40 text-rose-300 font-mono text-center font-bold tracking-widest text-sm focus:outline-none focus:border-rose-400"
             />
 
@@ -351,7 +353,7 @@ export const Dashboard = () => {
               <button
                 type="button"
                 onClick={handleClearAllData}
-                disabled={deletingAll || deleteConfirmText.trim().toUpperCase() !== 'DELETE'}
+                disabled={deletingAll || !deleteConfirmText.trim()}
                 className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs uppercase tracking-wider shadow-lg disabled:opacity-40"
               >
                 {deletingAll ? 'Deleting Data...' : 'YES, DELETE ALL DATA'}
