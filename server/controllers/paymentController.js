@@ -215,8 +215,11 @@ const uploadPaymentScreenshot = async (req, res) => {
     payment.submittedAt = new Date();
     await payment.save();
 
-    // Ensure order status is PAYMENT_VERIFICATION
+    // Ensure order status and paymentInfo status are PAYMENT_VERIFICATION
     order.orderStatus = 'PAYMENT_VERIFICATION';
+    if (order.paymentInfo) {
+      order.paymentInfo.status = 'PAYMENT_VERIFICATION';
+    }
     if (!order.trackingHistory.some(t => t.status === 'PAYMENT_VERIFICATION')) {
       order.trackingHistory.push({
         status: 'PAYMENT_VERIFICATION',

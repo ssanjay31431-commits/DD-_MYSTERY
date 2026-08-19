@@ -89,7 +89,22 @@ const orderSchema = new mongoose.Schema(
         default: 'Manual UPI'
       },
       provider: { type: String, default: 'MANUAL_UPI' },
-      status: { type: String, enum: ['PAID', 'PARTIALLY_PAID', 'PENDING', 'FAILED', 'PAYMENT_COMPLETED'], default: 'PENDING' },
+      status: {
+        type: String,
+        enum: [
+          'PAID',
+          'PARTIALLY_PAID',
+          'PENDING',
+          'PENDING_PAYMENT',
+          'SCREENSHOT_SUBMITTED',
+          'PAYMENT_VERIFICATION',
+          'PAYMENT_COMPLETED',
+          'FAILED',
+          'REJECTED',
+          'Completed'
+        ],
+        default: 'PENDING'
+      },
       paymentOrderId: { type: String, unique: true, sparse: true },
       paymentSessionId: { type: String, default: '' },
       transactionId: { type: String, default: '' }

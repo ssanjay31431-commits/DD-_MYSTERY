@@ -6,7 +6,7 @@ const notificationLogSchema = new mongoose.Schema(
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     customerName: { type: String, default: 'Customer' },
     recipient: { type: String, required: true }, // Email or Phone number
-    channel: { type: String, enum: ['Email', 'SMS'], required: true },
+    channel: { type: String, enum: ['Email', 'SMS', 'Dashboard', 'System'], required: true },
     type: { type: String, required: true }, // Notification stage / template name
     event: { type: String, default: '' }, // e.g. ORDER_CONFIRMED
     status: { type: String, enum: ['Sent', 'Delivered', 'Failed', 'Pending'], default: 'Pending' },
