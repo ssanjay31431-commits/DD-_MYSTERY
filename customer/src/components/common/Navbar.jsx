@@ -35,17 +35,22 @@ export const Navbar = () => {
         
         {/* Brand Logo */}
         <Link to="/" className="flex items-center gap-3 group">
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-pink-500 via-purple-600 to-amber-400 p-0.5 shadow-lg shadow-pink-500/30 group-hover:scale-105 transition-transform">
-            <div className="w-full h-full bg-[#0f0c1b] rounded-[14px] flex items-center justify-center">
-              <Gift className="w-6 h-6 text-pink-400 group-hover:rotate-12 transition-transform" />
-            </div>
+          <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-pink-500 via-purple-600 to-amber-400 p-0.5 shadow-lg shadow-pink-500/30 group-hover:scale-105 transition-transform overflow-hidden">
+            <img
+              src="/logo.png"
+              alt="DD Mystery Box Logo"
+              className="w-full h-full object-contain rounded-full bg-[#0f0c1b]"
+              onError={(e) => {
+                e.target.style.display = 'none';
+              }}
+            />
           </div>
           <div>
             <span className="font-display font-black text-xl text-white tracking-tight flex items-center gap-1.5">
               DD MYSTERY BOX <Sparkles className="w-4 h-4 text-amber-400" />
             </span>
             <span className="text-[10px] font-bold text-pink-400 uppercase tracking-widest block -mt-1">
-              "Your Birthday. Your Theme. Your Surprise!"
+              "Surprise Boxes for Every Moment"
             </span>
           </div>
         </Link>

@@ -54,10 +54,10 @@ export const Footer = () => {
               </span>
             </Link>
             <p className="text-sm italic text-pink-400 font-semibold">
-              "Your Birthday. Your Theme. Your Surprise!"
+              "Not Just a Gift. A Mystery Waiting to Be Yours!"
             </p>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Crafting unforgettable personalized birthday mystery boxes filled with gift collectibles, chocolates, custom theme graphics, and memory keepsakes.
+              Crafting unforgettable surprise mystery boxes for birthdays, anniversaries, celebrations, nostalgia, thank-you moments, and every special occasion.
             </p>
 
             {/* Social & Contact Icons */}
