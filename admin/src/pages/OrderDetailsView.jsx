@@ -83,18 +83,18 @@ export const OrderDetailsView = () => {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen bg-[#0c0a17]">
+      <div className="flex flex-col lg:flex-row min-h-screen bg-[#0c0a17] w-full max-w-full overflow-x-clip">
         <AdminSidebar />
-        <main className="flex-1 p-8 text-center text-slate-400">Loading Order Details...</main>
+        <main className="flex-1 w-full max-w-full min-w-0 p-8 text-center text-slate-400">Loading Order Details...</main>
       </div>
     );
   }
 
   if (!order) {
     return (
-      <div className="flex min-h-screen bg-[#0c0a17]">
+      <div className="flex flex-col lg:flex-row min-h-screen bg-[#0c0a17] w-full max-w-full overflow-x-clip">
         <AdminSidebar />
-        <main className="flex-1 p-8 text-center text-rose-400">Order Not Found</main>
+        <main className="flex-1 w-full max-w-full min-w-0 p-8 text-center text-rose-400">Order Not Found</main>
       </div>
     );
   }

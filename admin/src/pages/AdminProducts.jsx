@@ -50,19 +50,19 @@ export const AdminProducts = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#0c0a17]">
+    <div className="flex flex-col lg:flex-row min-h-screen bg-[#0c0a17] w-full max-w-full overflow-x-clip">
       <AdminSidebar />
 
-      <main className="flex-1 p-8 space-y-6 overflow-y-auto">
-        <div className="flex justify-between items-center pb-4 border-b border-purple-500/20">
+      <main className="flex-1 w-full max-w-full min-w-0 p-4 sm:p-8 space-y-6 overflow-y-auto">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-purple-500/20">
           <div>
-            <h1 className="text-2xl font-black text-white font-display">Mystery Box Product Catalog</h1>
+            <h1 className="text-xl sm:text-2xl font-black text-white font-display">Mystery Box Product Catalog</h1>
             <p className="text-xs text-slate-400">Create, edit, change prices, status, and manage individual box item photos.</p>
           </div>
 
           <Link
             to="/admin/products/new"
-            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-bold text-xs uppercase flex items-center gap-1.5 shadow-lg shadow-pink-500/20"
+            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-bold text-xs uppercase flex items-center gap-1.5 shadow-lg shadow-pink-500/20 shrink-0"
           >
             <Plus className="w-4 h-4" /> Create New Box Tier
           </Link>
@@ -74,7 +74,7 @@ export const AdminProducts = () => {
             Fetching product box catalog from MongoDB...
           </div>
         ) : products.length === 0 ? (
-          <div className="p-12 glass-panel rounded-3xl border border-purple-500/20 text-center space-y-4 max-w-lg mx-auto">
+          <div className="p-8 sm:p-12 glass-panel rounded-3xl border border-purple-500/20 text-center space-y-4 max-w-lg mx-auto">
             <Package className="w-12 h-12 text-purple-400 mx-auto" />
             <h3 className="text-lg font-bold text-white font-display">No Product Box Tiers Found</h3>
             <p className="text-xs text-slate-400">
@@ -90,7 +90,7 @@ export const AdminProducts = () => {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {products.map((prod) => (
               <div key={prod._id} className="glass-panel p-5 rounded-3xl border border-purple-500/20 flex flex-col justify-between space-y-4">
                 <div>

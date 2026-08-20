@@ -73,25 +73,25 @@ export const AdminCustomers = () => {
   });
 
   return (
-    <div className="flex min-h-screen bg-[#0c0a17]">
+    <div className="flex flex-col lg:flex-row min-h-screen bg-[#0c0a17] w-full max-w-full overflow-x-clip">
       <AdminSidebar />
 
-      <main className="flex-1 p-8 space-y-6 overflow-y-auto">
+      <main className="flex-1 w-full max-w-full min-w-0 p-4 sm:p-8 space-y-6 overflow-y-auto">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-purple-500/20">
           <div>
-            <h1 className="text-2xl font-black text-white font-display">Customer Directory</h1>
+            <h1 className="text-xl sm:text-2xl font-black text-white font-display">Customer Directory</h1>
             <p className="text-xs text-slate-400">View registered customers, login methods (Google vs Email), order counts, and total spending.</p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="relative">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+            <div className="relative flex-1">
               <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
               <input
                 type="text"
                 placeholder="Search Name, Email, Phone..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 pr-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs"
+                className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs"
               />
             </div>
 
@@ -108,8 +108,8 @@ export const AdminCustomers = () => {
         </div>
 
         {/* Customers Table */}
-        <div className="glass-panel p-6 rounded-3xl border border-purple-500/20 overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-300">
+        <div className="glass-panel p-4 sm:p-6 rounded-3xl border border-purple-500/20 overflow-x-auto w-full">
+          <table className="w-full text-left text-xs text-slate-300 min-w-[600px]">
             <thead className="bg-slate-900/90 text-slate-400 font-extrabold uppercase tracking-wider">
               <tr>
                 <th className="p-3">Customer</th>

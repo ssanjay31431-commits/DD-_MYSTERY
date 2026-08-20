@@ -12,10 +12,10 @@ export const AdminRewards = () => {
   ];
 
   return (
-    <div className="flex min-h-screen bg-[#0f0c1b]">
+    <div className="flex flex-col lg:flex-row min-h-screen bg-[#0f0c1b] w-full max-w-full overflow-x-clip">
       <AdminSidebar />
 
-      <main className="flex-1 p-8 space-y-6 overflow-y-auto">
+      <main className="flex-1 w-full max-w-full min-w-0 p-4 sm:p-8 space-y-6 overflow-y-auto">
         <div className="flex justify-between items-center pb-4 border-b border-purple-500/20">
           <div>
             <h1 className="text-2xl font-black text-white font-display">Lucky Reward Configuration</h1>

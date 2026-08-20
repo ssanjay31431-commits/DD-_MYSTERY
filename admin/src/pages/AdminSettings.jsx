@@ -70,12 +70,12 @@ export const AdminSettings = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#0c0a17]">
+    <div className="flex flex-col lg:flex-row min-h-screen bg-[#0c0a17] w-full max-w-full overflow-x-clip">
       <AdminSidebar />
 
-      <main className="flex-1 p-8 space-y-6 overflow-y-auto">
+      <main className="flex-1 w-full max-w-full min-w-0 p-4 sm:p-8 space-y-6 overflow-y-auto">
         <div className="pb-4 border-b border-purple-500/20">
-          <h1 className="text-2xl font-black text-white font-display">Payment & Admin Settings</h1>
+          <h1 className="text-xl sm:text-2xl font-black text-white font-display">Payment & Admin Settings</h1>
           <p className="text-xs text-slate-400">Configure manual UPI payment account details, Instagram links, and WhatsApp support number.</p>
         </div>
 

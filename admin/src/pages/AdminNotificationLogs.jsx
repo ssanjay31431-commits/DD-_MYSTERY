@@ -91,9 +91,12 @@ export const AdminNotificationLogs = () => {
   });
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="flex flex-col lg:flex-row min-h-screen bg-[#0c0a17] w-full max-w-full overflow-x-clip">
+      <AdminSidebar />
+
+      <main className="flex-1 w-full max-w-full min-w-0 p-4 sm:p-8 space-y-6 overflow-y-auto">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-purple-500/20">
         <div>
           <h1 className="text-2xl font-black text-white font-display">Notification Message Logs</h1>
           <p className="text-xs text-slate-400 mt-1">
@@ -264,6 +267,7 @@ export const AdminNotificationLogs = () => {
           </table>
         </div>
       </div>
+      </main>
     </div>
   );
 };

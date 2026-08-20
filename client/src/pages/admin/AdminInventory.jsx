@@ -61,7 +61,7 @@ export const AdminInventory = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#0f0c1b]">
+    <div className="flex flex-col lg:flex-row min-h-screen bg-[#0f0c1b] w-full max-w-full overflow-x-clip">
       <AdminSidebar />
 
       <main className="flex-1 p-8 space-y-6 overflow-y-auto">
