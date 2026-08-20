@@ -13,7 +13,8 @@ const {
   testAdminSms,
   getFailedPayments,
   recoverPaymentOrder,
-  clearAllData
+  clearAllData,
+  deleteSingleOrder
 } = require('../controllers/adminController');
 const { getSettings, updateSettings } = require('../controllers/settingsController');
 const { protect, admin } = require('../middleware/authMiddleware');
@@ -23,6 +24,7 @@ router.use(protect, admin);
 router.get('/dashboard', getDashboardStats);
 router.get('/orders', getAllAdminOrders);
 router.put('/orders/:id/status', updateOrderStatus);
+router.delete('/orders/:id', deleteSingleOrder);
 router.get('/customers', getAdminCustomers);
 router.get('/settings', getSettings);
 router.put('/settings', updateSettings);

@@ -586,6 +586,47 @@ const clearAllData = async (req, res) => {
   }
 };
 
+// @desc Delete Single Order and associated Payment & Notification records
+// @route DELETE /api/admin/orders/:id
+const deleteSingleOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    let targetOrder = await Order.findById(id);
+
+    if (!targetOrder) {
+      targetOrder = await Order.findOne({
+        $or: [{ orderNumber: id }, { orderId: id }]
+      });
+    }
+
+    if (!targetOrder) {
+      const paymentItem = await Payment.findById(id);
+      if (paymentItem) {
+        if (paymentItem.orderId) {
+          targetOrder = await Order.findById(paymentItem.orderId);
+        }
+        await Payment.findByIdAndDelete(id);
+      }
+    }
+
+    if (targetOrder) {
+      const orderDbId = targetOrder._id;
+      await Order.findByIdAndDelete(orderDbId);
+      await Payment.deleteMany({ $or: [{ orderId: orderDbId }, { orderId: targetOrder.orderNumber }, { orderId: targetOrder.orderId }] });
+      await NotificationLog.deleteMany({ orderId: orderDbId });
+      return res.json({
+        success: true,
+        message: `Order #${targetOrder.orderNumber || targetOrder.orderId} deleted successfully`
+      });
+    }
+
+    res.json({ success: true, message: 'Order item removed' });
+  } catch (error) {
+    console.error('[Delete Single Order Error]', error);
+    res.status(500).json({ success: false, message: error.message || 'Failed to delete order' });
+  }
+};
+
 module.exports = {
   getDashboardStats,
   getAllAdminOrders,
@@ -599,5 +640,6 @@ module.exports = {
   testAdminSms,
   getFailedPayments,
   recoverPaymentOrder,
-  clearAllData
+  clearAllData,
+  deleteSingleOrder
 };

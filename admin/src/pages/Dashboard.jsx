@@ -35,6 +35,24 @@ export const Dashboard = () => {
     localStorage.setItem('dd_admin_notifs_cleared', 'true');
   };
 
+  const handleDeleteOrder = async (targetId, orderNumber) => {
+    if (!window.confirm(`Are you sure you want to delete order #${orderNumber}? This will remove the order and payment record from the database.`)) {
+      return;
+    }
+
+    try {
+      const { data } = await API.delete(`/admin/orders/${targetId}`);
+      if (data && data.success) {
+        fetchStats(true);
+      } else {
+        alert(data?.message || 'Failed to delete order');
+      }
+    } catch (err) {
+      console.error('[Delete Order Error]', err);
+      alert(err.response?.data?.message || 'Error deleting order');
+    }
+  };
+
   const fetchStats = async (showLoading = true) => {
     if (showLoading) setLoading(true);
     try {
@@ -334,28 +352,30 @@ export const Dashboard = () => {
           <div className="overflow-x-auto w-full">
             <table className="w-full text-left text-xs text-slate-300 min-w-[600px]">
               <thead className="bg-slate-900/90 text-slate-400 font-extrabold uppercase tracking-wider">
-                <tr>
-                  <th className="p-3">Order Number</th>
+                <tr className="border-b border-slate-800 text-[10px] text-slate-400 uppercase font-black">
+                  <th className="p-3">Order ID</th>
                   <th className="p-3">Customer</th>
                   <th className="p-3">Product</th>
-                  <th className="p-3">Total Value</th>
+                  <th className="p-3">Total</th>
                   <th className="p-3">Paid</th>
-                  <th className="p-3">Remaining Balance</th>
-                  <th className="p-3">Payment</th>
+                  <th className="p-3">Rem. COD</th>
+                  <th className="p-3">Method</th>
                   <th className="p-3">Status</th>
+                  <th className="p-3 text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/80">
+              <tbody className="divide-y divide-slate-800/60">
                 {recentOrders.length === 0 ? (
                   <tr>
-                    <td colSpan="8" className="p-8 text-center text-slate-400">
-                      No customer orders placed yet. Real orders placed on the website will appear here instantly!
+                    <td colSpan="9" className="p-8 text-center text-slate-400 font-semibold">
+                      No orders placed yet. New customer orders will appear here automatically!
                     </td>
                   </tr>
                 ) : (
                   recentOrders.map((ord) => {
-                    const ordNum = ord.orderNumber || ord.orderId;
-                    const productName = ord.items?.[0]?.productSnapshot?.name || ord.items?.[0]?.name || 'DD 90s Kids Mystery Box';
+                    const ordNum = ord.orderNumber || ord.orderId || 'DM1001';
+                    const firstItem = ord.items?.[0] || {};
+                    const productName = firstItem.productSnapshot?.name || firstItem.product?.name || 'DD Mystery Box';
                     const total = ord.pricing?.totalAmount || ord.totalAmount || 0;
                     const paid = ord.pricing?.amountPaid !== undefined ? ord.pricing.amountPaid : (ord.amountPaid || ord.advancePaid || 0);
                     const rem = ord.pricing?.remainingBalance !== undefined ? ord.pricing.remainingBalance : (ord.remainingBalance !== undefined ? ord.remainingBalance : (ord.remainingCodAmount || 0));
@@ -374,6 +394,24 @@ export const Dashboard = () => {
                           <span className="px-2.5 py-1 rounded-md bg-purple-500/20 text-purple-300 font-bold text-[10px]">
                             {ord.orderStatus}
                           </span>
+                        </td>
+                        <td className="p-3 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Link
+                              to={`/admin/orders/${ord._id}`}
+                              className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-purple-400 hover:text-white text-[11px] font-bold inline-flex items-center gap-1"
+                            >
+                              Inspect
+                            </Link>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteOrder(ord._id, ordNum)}
+                              className="p-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/30 text-rose-400 border border-rose-500/30 hover:text-white transition-all shrink-0"
+                              title="Delete Order"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );

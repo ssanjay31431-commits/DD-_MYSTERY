@@ -10,6 +10,7 @@ const {
   getOrderTracking
 } = require('../controllers/orderController');
 const { confirmPaymentAndCreateOrder } = require('../controllers/paymentController');
+const { deleteSingleOrder } = require('../controllers/adminController');
 const { protect, admin } = require('../middleware/authMiddleware');
 
 router.use(protect);
@@ -22,6 +23,7 @@ router.route('/')
 
 router.get('/admin/all', admin, getAllOrders);
 router.put('/admin/:id/status', admin, updateOrderStatus);
+router.delete('/admin/:id', admin, deleteSingleOrder);
 
 router.get('/tracking/:id', getOrderTracking);
 router.get('/:id', getOrderById);

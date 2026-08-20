@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Mail, CheckCircle2, Clock, Truck, ShieldCheck, RefreshCw, User, MapPin, CreditCard, Package } from 'lucide-react';
+import { ArrowLeft, Mail, CheckCircle2, Clock, Truck, ShieldCheck, RefreshCw, User, MapPin, CreditCard, Package, Trash2 } from 'lucide-react';
 import API from '../services/api';
 import { AdminSidebar } from '../components/AdminSidebar';
 import { useToast } from '../context/ToastContext';
@@ -30,6 +30,26 @@ export const OrderDetailsView = () => {
       addToast('Failed to fetch order details', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteThisOrder = async () => {
+    const ordNum = order?.orderNumber || order?.orderId || id;
+    if (!window.confirm(`Are you sure you want to delete Order #${ordNum}? This will remove the order from the database permanently.`)) {
+      return;
+    }
+
+    try {
+      const { data } = await API.delete(`/admin/orders/${order._id || id}`);
+      if (data && data.success) {
+        addToast(`🗑️ Order #${ordNum} deleted successfully!`);
+        navigate('/admin/orders');
+      } else {
+        addToast(data?.message || 'Failed to delete order', 'error');
+      }
+    } catch (err) {
+      console.error('[Delete Order Error]', err);
+      addToast(err.response?.data?.message || 'Error deleting order', 'error');
     }
   };
 
@@ -148,6 +168,13 @@ export const OrderDetailsView = () => {
               className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs uppercase flex items-center gap-2 shadow-lg shadow-purple-500/20"
             >
               <Mail className="w-4 h-4" /> Send Email
+            </button>
+            <button
+              onClick={handleDeleteThisOrder}
+              className="px-3 py-2.5 rounded-xl bg-rose-500/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/40 hover:text-white font-bold text-xs flex items-center gap-1.5 transition-all"
+              title="Delete This Order"
+            >
+              <Trash2 className="w-4 h-4" /> Delete Order
             </button>
           </div>
         </div>

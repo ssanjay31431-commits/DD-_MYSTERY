@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { CreditCard, CheckCircle2, Clock, Eye, AlertCircle, RefreshCw, X, User, Phone, Mail, Package } from 'lucide-react';
+import { CreditCard, CheckCircle2, Clock, Eye, AlertCircle, RefreshCw, X, User, Phone, Mail, Package, Trash2 } from 'lucide-react';
 import API from '../services/api';
 import { AdminSidebar } from '../components/AdminSidebar';
 import { useToast } from '../context/ToastContext';
@@ -30,6 +30,25 @@ export const AdminPaymentVerification = () => {
   useEffect(() => {
     fetchPendingPayments();
   }, []);
+
+  const handleDeleteOrder = async (targetId, orderNumber) => {
+    if (!window.confirm(`Are you sure you want to delete order #${orderNumber}? This will remove the order and payment record from the database.`)) {
+      return;
+    }
+
+    try {
+      const { data } = await API.delete(`/admin/orders/${targetId}`);
+      if (data && data.success) {
+        addToast(`🗑️ Order #${orderNumber} deleted successfully!`);
+        fetchPendingPayments();
+      } else {
+        addToast(data?.message || 'Failed to delete order', 'error');
+      }
+    } catch (err) {
+      console.error('[Delete Order Error]', err);
+      addToast(err.response?.data?.message || 'Error deleting order', 'error');
+    }
+  };
 
   const handleVerifyPayment = async (paymentItem) => {
     const targetId = paymentItem._id;
@@ -140,13 +159,23 @@ export const AdminPaymentVerification = () => {
                         <span className="font-mono text-sm sm:text-base font-black text-pink-400 bg-slate-950 px-3 py-1 rounded-xl border border-purple-500/30">
                           #{displayOrderId}
                         </span>
-                        <span className={`px-3 py-1 rounded-full text-[10px] sm:text-xs font-black uppercase border ${
-                          isVerified
-                            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-                            : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                        }`}>
-                          {isVerified ? '✅ PAYMENT COMPLETED' : '⏳ PENDING VERIFICATION'}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className={`px-3 py-1 rounded-full text-[10px] sm:text-xs font-black uppercase border ${
+                            isVerified
+                              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                              : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                          }`}>
+                            {isVerified ? '✅ PAYMENT COMPLETED' : '⏳ PENDING VERIFICATION'}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteOrder(orderObj._id || item.orderId || item._id, displayOrderId)}
+                            className="p-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/30 text-rose-400 border border-rose-500/30 hover:text-white transition-all shrink-0"
+                            title="Delete Order"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
 
                       <div className="space-y-1.5 text-xs text-slate-300 pt-2 border-t border-slate-800">

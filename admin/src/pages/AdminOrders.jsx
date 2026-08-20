@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingBag, Search, Eye, Filter, RefreshCw } from 'lucide-react';
+import { ShoppingBag, Search, Eye, Filter, RefreshCw, Trash2 } from 'lucide-react';
 import API from '../services/api';
 import { AdminSidebar } from '../components/AdminSidebar';
 
@@ -26,6 +26,24 @@ export const AdminOrders = () => {
       }
     } finally {
       if (showLoading) setLoading(false);
+    }
+  };
+
+  const handleDeleteOrder = async (targetId, orderNumber) => {
+    if (!window.confirm(`Are you sure you want to delete order #${orderNumber}? This will remove the order and payment record from the database.`)) {
+      return;
+    }
+
+    try {
+      const { data } = await API.delete(`/admin/orders/${targetId}`);
+      if (data && data.success) {
+        fetchOrders(true);
+      } else {
+        alert(data?.message || 'Failed to delete order');
+      }
+    } catch (err) {
+      console.error('[Delete Order Error]', err);
+      alert(err.response?.data?.message || 'Error deleting order');
     }
   };
 
@@ -168,12 +186,22 @@ export const AdminOrders = () => {
                         </span>
                       </td>
                       <td className="p-3 text-right">
-                        <Link
-                          to={`/admin/orders/${ord._id}`}
-                          className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-purple-400 hover:text-white text-xs font-bold inline-flex items-center gap-1"
-                        >
-                          <Eye className="w-3.5 h-3.5" /> Inspect Details
-                        </Link>
+                        <div className="flex items-center justify-end gap-2">
+                          <Link
+                            to={`/admin/orders/${ord._id}`}
+                            className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-purple-400 hover:text-white text-xs font-bold inline-flex items-center gap-1"
+                          >
+                            <Eye className="w-3.5 h-3.5" /> Inspect Details
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteOrder(ord._id, ordNumber)}
+                            className="p-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/30 text-rose-400 border border-rose-500/30 hover:text-white transition-all shrink-0"
+                            title="Delete Order"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
