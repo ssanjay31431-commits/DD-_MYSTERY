@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import API from '../services/api';
 import { useAuth } from './AuthContext';
 import { useToast } from './ToastContext';
@@ -166,25 +166,24 @@ export const CartProvider = ({ children }) => {
   const deliveryFee = 0;
   const totalAmount = Math.max(0, subtotal - couponApplied.discountAmount);
 
-  return (
-    <CartContext.Provider
-      value={{
-        cartItems: safeCartItems,
-        loading,
-        addToCart,
-        updateQuantity,
-        removeFromCart,
-        clearCart,
-        applyCoupon,
-        couponApplied,
-        subtotal,
-        deliveryFee,
-        totalAmount
-      }}
-    >
-      {children}
-    </CartContext.Provider>
+  const value = useMemo(
+    () => ({
+      cartItems: safeCartItems,
+      loading,
+      addToCart,
+      updateQuantity,
+      removeFromCart,
+      clearCart,
+      applyCoupon,
+      couponApplied,
+      subtotal,
+      deliveryFee,
+      totalAmount
+    }),
+    [safeCartItems, loading, couponApplied, subtotal, deliveryFee, totalAmount]
   );
+
+  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 };
 
 export const useCart = () => useContext(CartContext);

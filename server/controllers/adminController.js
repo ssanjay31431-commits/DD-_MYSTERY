@@ -56,8 +56,9 @@ const getDashboardStats = async (req, res) => {
     const recentOrders = await Order.find({ orderStatus: { $ne: 'PENDING_PAYMENT' } })
       .sort({ createdAt: -1 })
       .limit(10)
-      .populate('user', 'name email phone');
-    const unresolvedFailedPayments = await FailedPayment.find({ status: 'UNRESOLVED' }).sort({ createdAt: -1 });
+      .populate('user', 'name email phone')
+      .lean();
+    const unresolvedFailedPayments = await FailedPayment.find({ status: 'UNRESOLVED' }).sort({ createdAt: -1 }).lean();
 
     res.json({
       totalRevenue,
@@ -101,7 +102,7 @@ const getAllAdminOrders = async (req, res) => {
       ];
     }
 
-    const orders = await Order.find(filter).populate('user', 'name email phone').sort({ createdAt: -1 });
+    const orders = await Order.find(filter).populate('user', 'name email phone').sort({ createdAt: -1 }).lean();
     res.json(orders);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -281,22 +282,32 @@ const updateOrderStatus = async (req, res) => {
 // @route GET /api/admin/customers
 const getAdminCustomers = async (req, res) => {
   try {
-    const customers = await User.find({ role: 'customer' }).select('-password').sort({ createdAt: -1 });
+    const customers = await User.find({ role: 'customer' }).select('-password').sort({ createdAt: -1 }).lean();
 
-    const customerStats = await Promise.all(
-      customers.map(async (cust) => {
-        const orderCount = await Order.countDocuments({ user: cust._id });
-        const totalSpentData = await Order.aggregate([
-          { $match: { user: cust._id, orderStatus: { $ne: 'Cancelled' } } },
-          { $group: { _id: null, total: { $sum: '$totalAmount' } } }
-        ]);
-        return {
-          ...cust.toObject(),
-          totalOrders: orderCount,
-          totalSpent: totalSpentData[0]?.total || 0
-        };
-      })
-    );
+    const stats = await Order.aggregate([
+      { $match: { orderStatus: { $nin: ['Cancelled', 'CANCELLED'] } } },
+      {
+        $group: {
+          _id: '$user',
+          totalOrders: { $sum: 1 },
+          totalSpent: { $sum: '$totalAmount' }
+        }
+      }
+    ]);
+
+    const statsMap = {};
+    stats.forEach((s) => {
+      if (s._id) statsMap[s._id.toString()] = s;
+    });
+
+    const customerStats = customers.map((cust) => {
+      const custStat = statsMap[cust._id.toString()] || {};
+      return {
+        ...cust,
+        totalOrders: custStat.totalOrders || 0,
+        totalSpent: custStat.totalSpent || 0
+      };
+    });
 
     res.json(customerStats);
   } catch (error) {

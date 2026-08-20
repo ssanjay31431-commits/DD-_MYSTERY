@@ -44,4 +44,6 @@ const productSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+productSchema.index({ status: 1, isFeatured: -1 });
+
 module.exports = mongoose.model('Product', productSchema);

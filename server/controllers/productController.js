@@ -99,7 +99,7 @@ const getProducts = async (req, res) => {
       ];
     }
 
-    let products = await Product.find(filter).sort({ createdAt: -1 });
+    let products = await Product.find(filter).sort({ createdAt: -1 }).lean();
 
     // Auto-seed default initial products if MongoDB collection is empty
     if (products.length === 0) {
@@ -107,7 +107,7 @@ const getProducts = async (req, res) => {
       if (totalCount === 0) {
         try {
           await Product.insertMany(DEFAULT_MYSTERY_BOXES);
-          products = await Product.find(filter).sort({ createdAt: -1 });
+          products = await Product.find(filter).sort({ createdAt: -1 }).lean();
         } catch (e) {
           console.warn('Auto-seed default products notice:', e.message);
         }
@@ -128,9 +128,9 @@ const getProductById = async (req, res) => {
     let product;
 
     if (param.match(/^[0-9a-fA-F]{24}$/)) {
-      product = await Product.findById(param);
+      product = await Product.findById(param).lean();
     } else {
-      product = await Product.findOne({ slug: param });
+      product = await Product.findOne({ slug: param }).lean();
     }
 
     if (product) {

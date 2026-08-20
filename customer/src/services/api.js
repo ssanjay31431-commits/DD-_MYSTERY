@@ -56,7 +56,7 @@ API.interceptors.response.use(
       console.error(`[API 405 Error] 405 Method Not Allowed when sending to ${fullTarget}. Verify VITE_API_URL or backend CORS routing.`);
     }
 
-    if (status === 401) {
+    if (status === 401 && localStorage.getItem('dd_token')) {
       localStorage.removeItem('dd_token');
       localStorage.removeItem('dd_user');
       window.dispatchEvent(new Event('auth_logout'));

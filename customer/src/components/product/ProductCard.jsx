@@ -54,6 +54,8 @@ export const ProductCard = ({ product }) => {
         <img
           src={product.image}
           alt={product.name}
+          loading="lazy"
+          decoding="async"
           className="w-full h-full object-cover rounded-2xl group-hover:opacity-90 transition-opacity"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#18132a] via-transparent to-transparent opacity-80" />

@@ -23,4 +23,8 @@ const notificationLogSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+notificationLogSchema.index({ orderId: 1, createdAt: -1 });
+notificationLogSchema.index({ channel: 1, createdAt: -1 });
+notificationLogSchema.index({ idempotencyKey: 1 }, { sparse: true });
+
 module.exports = mongoose.model('NotificationLog', notificationLogSchema);
