@@ -96,6 +96,14 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
+process.on('unhandledRejection', (reason) => {
+  console.error('[Unhandled Rejection Intercepted]:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('[Uncaught Exception Intercepted]:', err.message || err);
+});
+
 app.listen(PORT, () => {
   console.log(`[DD Mystery Box Server] Running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
 });

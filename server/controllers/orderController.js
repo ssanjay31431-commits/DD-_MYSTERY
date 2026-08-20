@@ -28,6 +28,19 @@ const createOrder = async (req, res) => {
     }, 0);
 
     const totalAmount = Math.max(0, calculatedSubtotal + deliveryFee - couponDiscount);
+
+    // Idempotency / Double-click check: prevent duplicate order creation within 15 seconds for same user and total
+    const recentDuplicate = await Order.findOne({
+      user: req.user._id,
+      totalAmount,
+      createdAt: { $gte: new Date(Date.now() - 15000) }
+    }).sort({ createdAt: -1 });
+
+    if (recentDuplicate) {
+      console.log(`[Order Idempotency] Returning existing order #${recentDuplicate.orderId} created ${Date.now() - new Date(recentDuplicate.createdAt).getTime()}ms ago.`);
+      return res.status(200).json(recentDuplicate);
+    }
+
     const customOrderId = await generateOrderId();
 
     // Fetch Admin Settings for UPI details
@@ -163,7 +176,7 @@ const createOrder = async (req, res) => {
 // @route GET /api/orders
 const getMyOrders = async (req, res) => {
   try {
-    const orders = await Order.find({ user: req.user._id }).sort({ createdAt: -1 });
+    const orders = await Order.find({ user: req.user._id }).sort({ createdAt: -1 }).lean();
     res.json(orders);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -174,7 +187,7 @@ const getMyOrders = async (req, res) => {
 // @route GET /api/orders/admin/all
 const getAllOrders = async (req, res) => {
   try {
-    const orders = await Order.find().populate('user', 'name email phone').sort({ createdAt: -1 });
+    const orders = await Order.find().populate('user', 'name email phone').sort({ createdAt: -1 }).lean();
     res.json(orders);
   } catch (error) {
     res.status(500).json({ message: error.message });

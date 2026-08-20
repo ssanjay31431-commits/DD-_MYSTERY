@@ -50,8 +50,9 @@ export const AdminOrders = () => {
   useEffect(() => {
     fetchOrders(true);
 
-    // Automatic polling every 12 seconds to auto-refresh admin orders from MongoDB
+    // Automatic polling every 12 seconds to auto-refresh admin orders from MongoDB (pauses when tab is hidden)
     const interval = setInterval(() => {
+      if (document.hidden) return;
       fetchOrders(false);
     }, 12000);
 

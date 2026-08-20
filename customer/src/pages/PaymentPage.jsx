@@ -43,10 +43,11 @@ export const PaymentPage = () => {
 
     fetchPaymentDetails();
 
-    // Auto-polling for real-time status update every 4 seconds
+    // Auto-polling for real-time status update every 5 seconds (pauses when tab is hidden)
     const interval = setInterval(() => {
+      if (document.hidden) return;
       fetchPaymentDetails();
-    }, 4000);
+    }, 5000);
 
     return () => clearInterval(interval);
   }, [orderIdParam]);
