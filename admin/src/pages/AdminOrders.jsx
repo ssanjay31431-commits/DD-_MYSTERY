@@ -73,7 +73,7 @@ export const AdminOrders = () => {
             <p className="text-xs text-slate-400">Live order database synced with MongoDB. Automatic real-time refresh active.</p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
             <button
               onClick={() => fetchOrders(true)}
               className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white"
@@ -82,21 +82,21 @@ export const AdminOrders = () => {
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
 
-            <div className="relative">
+            <div className="relative flex-1 sm:flex-none min-w-[140px]">
               <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
               <input
                 type="text"
-                placeholder="Search Order ID, Name, Email, Phone..."
+                placeholder="Search Order ID..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 pr-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs"
+                className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs"
               />
             </div>
 
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs font-bold"
+              className="w-full sm:w-auto px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs font-bold"
             >
               <option value="All">All Statuses</option>
               <option value="ORDER PLACED">Order Placed</option>

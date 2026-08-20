@@ -111,10 +111,10 @@ export const Dashboard = () => {
     : (currentStats.expectedCodCollection || 0);
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen bg-[#0c0a17]">
+    <div className="flex flex-col lg:flex-row min-h-screen bg-[#0c0a17] w-full max-w-full overflow-x-clip">
       <AdminSidebar />
 
-      <main className="flex-1 p-4 sm:p-8 space-y-6 sm:space-y-8 overflow-y-auto min-w-0">
+      <main className="flex-1 w-full max-w-full min-w-0 p-4 sm:p-8 space-y-6 sm:space-y-8 overflow-y-auto">
         
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-purple-500/20">
@@ -123,7 +123,7 @@ export const Dashboard = () => {
             <p className="text-xs text-slate-400">Live order metrics & analytics direct from MongoDB. Auto-refresh active.</p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             <div className="relative">
               <button
                 type="button"

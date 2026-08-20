@@ -120,10 +120,10 @@ export const OrderDetailsView = () => {
   const cashfreeRef = order.paymentInfo?.cashfreePaymentId || order.paymentInfo?.cashfreeOrderId || order.paymentInfo?.transactionId || 'Verified Gateway';
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen bg-[#0c0a17]">
+    <div className="flex flex-col lg:flex-row min-h-screen bg-[#0c0a17] w-full max-w-full overflow-x-clip">
       <AdminSidebar />
 
-      <main className="flex-1 p-4 sm:p-8 space-y-6 overflow-y-auto min-w-0">
+      <main className="flex-1 w-full max-w-full min-w-0 p-4 sm:p-8 space-y-6 overflow-y-auto">
         
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-purple-500/20">
@@ -135,7 +135,7 @@ export const OrderDetailsView = () => {
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div>
-              <h1 className="text-2xl font-black text-white font-display">
+              <h1 className="text-xl sm:text-2xl font-black text-white font-display">
                 ORDER #{ordNumber}
               </h1>
               <p className="text-xs text-slate-400">Placed on {new Date(order.createdAt).toLocaleString()}</p>
@@ -183,7 +183,7 @@ export const OrderDetailsView = () => {
               <User className="w-4 h-4 text-pink-400" /> Customer Information
             </h3>
             <p className="text-xs text-slate-300 font-bold">{order.deliveryAddressSnapshot?.fullName || order.user?.name}</p>
-            <p className="text-xs text-slate-400 font-mono">Email: {recipientEmail}</p>
+            <p className="text-xs text-slate-400 font-mono break-all">Email: {recipientEmail}</p>
             <p className="text-xs text-slate-400 font-mono">Phone: {recipientPhone}</p>
           </div>
 
@@ -228,15 +228,15 @@ export const OrderDetailsView = () => {
 
           <div className="space-y-3">
             {order.items?.map((item, idx) => (
-              <div key={idx} className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between gap-4 text-xs">
+              <div key={idx} className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs">
                 <div className="flex items-center gap-3">
-                  <img src={item.productSnapshot?.image || item.product?.image || '/favicon.svg'} alt="" className="w-12 h-12 rounded-xl object-cover" />
-                  <div>
+                  <img src={item.productSnapshot?.image || item.product?.image || '/favicon.svg'} alt="" className="w-12 h-12 rounded-xl object-cover shrink-0" />
+                  <div className="min-w-0">
                     <h4 className="font-bold text-white">{item.productSnapshot?.name || item.product?.name || 'DD Mystery Box'}</h4>
-                    <p className="text-pink-300">For: {item.customizationSnapshot?.recipientName || 'Recipient'} | Qty: {item.quantity}</p>
+                    <p className="text-pink-300 break-words">For: {item.customizationSnapshot?.recipientName || 'Recipient'} | Qty: {item.quantity}</p>
                   </div>
                 </div>
-                <span className="font-black text-white font-display text-sm">₹{(item.unitPrice || item.price || 499) * item.quantity}</span>
+                <span className="font-black text-white font-display text-sm self-end sm:self-center">₹{(item.unitPrice || item.price || 499) * item.quantity}</span>
               </div>
             ))}
           </div>
@@ -248,7 +248,7 @@ export const OrderDetailsView = () => {
             <CreditCard className="w-4 h-4 text-purple-400" /> Payment & Financial Breakdown
           </h3>
 
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
             <div className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800">
               <span className="text-[10px] text-slate-400 uppercase font-bold block">Total Amount</span>
               <span className="text-xl font-black text-white font-display">₹{total}</span>
@@ -267,7 +267,7 @@ export const OrderDetailsView = () => {
             <div className="p-3.5 rounded-2xl bg-slate-900 border border-purple-500/30">
               <span className="text-[10px] text-purple-400 uppercase font-bold block">Payment Method</span>
               <span className="text-xs font-bold text-white block mt-1">{isFull ? 'Full Online Payment' : 'Advance Payment'}</span>
-              <span className="text-[10px] font-mono text-slate-400 block truncate">Ref: {cashfreeRef}</span>
+              <span className="text-[10px] font-mono text-slate-400 block break-all">Ref: {cashfreeRef}</span>
             </div>
           </div>
         </div>
@@ -280,11 +280,17 @@ export const OrderDetailsView = () => {
 
           <div className="space-y-2">
             {order.trackingHistory?.map((hist, idx) => (
-              <div key={idx} className="flex items-center gap-3 text-xs p-2.5 rounded-xl bg-slate-900/50">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span className="font-bold text-white w-40">{hist.status}</span>
-                <span className="text-slate-400">{hist.comment || hist.message}</span>
-                <span className="text-[10px] text-slate-500 font-mono ml-auto">{new Date(hist.timestamp || hist.createdAt).toLocaleString()}</span>
+              <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs p-3 rounded-xl bg-slate-900/50 border border-slate-800/80">
+                <div className="flex items-start sm:items-center gap-2.5 min-w-0">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5 sm:mt-0" />
+                  <div className="min-w-0">
+                    <span className="font-bold text-white block sm:inline mr-2">{hist.status}</span>
+                    <span className="text-slate-400 text-[11px] block sm:inline break-words">{hist.comment || hist.message}</span>
+                  </div>
+                </div>
+                <span className="text-[10px] text-slate-500 font-mono shrink-0 sm:ml-auto self-end sm:self-center">
+                  {new Date(hist.timestamp || hist.createdAt).toLocaleString()}
+                </span>
               </div>
             ))}
           </div>
