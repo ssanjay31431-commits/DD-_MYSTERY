@@ -1,10 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, ShoppingBag, Users, Package, Palette, Warehouse, Tag, Star, Award, Settings, Shield, ArrowLeft, CreditCard, Menu, X } from 'lucide-react';
 
 export const AdminSidebar = () => {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [mobileOpen]);
 
   const menu = [
     { name: 'Dashboard', path: '/admin', icon: LayoutDashboard },
@@ -93,10 +104,10 @@ export const AdminSidebar = () => {
       {mobileOpen && (
         <>
           <div
-            className="lg:hidden fixed inset-0 z-40 bg-slate-950/80 backdrop-blur-sm"
+            className="lg:hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm transition-opacity"
             onClick={() => setMobileOpen(false)}
           />
-          <aside className="lg:hidden fixed top-0 left-0 z-50 h-screen w-64 bg-[#140f24] border-r border-purple-500/20 p-4 flex flex-col justify-between overflow-y-auto animate-in slide-in-from-left duration-300">
+          <aside className="lg:hidden fixed top-0 left-0 z-50 h-full w-[280px] max-w-[85vw] bg-[#140f24] border-r border-purple-500/20 p-4 flex flex-col justify-between overflow-y-auto shadow-2xl animate-in slide-in-from-left duration-300">
             {renderNavItems()}
           </aside>
         </>

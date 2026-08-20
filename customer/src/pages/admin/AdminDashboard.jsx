@@ -103,57 +103,63 @@ export const AdminDashboard = () => {
               </button>
 
               {showNotifications && (
-                <div className="absolute right-0 top-12 z-50 w-72 sm:w-96 bg-slate-900/95 backdrop-blur-xl border border-purple-500/40 rounded-2xl p-4 shadow-2xl space-y-3">
-                  <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-                    <div className="flex items-center gap-2">
-                      <Bell className="w-4 h-4 text-pink-400" />
-                      <h3 className="text-xs font-black text-white font-display uppercase tracking-wider">
-                        New Order Notifications
-                      </h3>
-                    </div>
-                    <button
-                      onClick={() => setShowNotifications(false)}
-                      className="p-1 text-slate-400 hover:text-white rounded-lg"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  <div className="max-h-64 overflow-y-auto space-y-2 text-xs">
-                    {recentOrders.length === 0 ? (
-                      <div className="py-6 text-center text-slate-500 font-semibold">
-                        No new order notifications yet.
+                <>
+                  <div
+                    className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm sm:hidden"
+                    onClick={() => setShowNotifications(false)}
+                  />
+                  <div className="fixed inset-x-3 top-16 z-50 sm:absolute sm:inset-auto sm:right-0 sm:top-12 sm:w-96 max-w-[calc(100vw-24px)] bg-slate-900/95 backdrop-blur-xl border border-purple-500/40 rounded-2xl p-4 shadow-2xl space-y-3">
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                      <div className="flex items-center gap-2">
+                        <Bell className="w-4 h-4 text-pink-400" />
+                        <h3 className="text-xs font-black text-white font-display uppercase tracking-wider">
+                          New Order Notifications
+                        </h3>
                       </div>
-                    ) : (
-                      recentOrders.slice(0, 5).map((ord) => (
-                        <div
-                          key={ord._id}
-                          className="p-3 rounded-xl bg-slate-950/80 border border-purple-500/20 space-y-1 hover:border-pink-500/40 transition-all text-left"
-                        >
-                          <div className="flex justify-between items-center">
-                            <span className="font-mono font-bold text-amber-300">#{ord.orderId || ord.orderNumber}</span>
-                            <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-pink-500/20 text-pink-300">
-                              {ord.orderStatus}
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-slate-300 text-[11px]">
-                            <span>{ord.user?.name || ord.deliveryAddressSnapshot?.fullName || 'Customer'}</span>
-                            <span className="font-bold text-emerald-400">₹{ord.totalAmount}</span>
-                          </div>
-                          <div className="pt-1 flex justify-end gap-2 text-[10px]">
-                            <Link
-                              to="/admin/payments"
-                              onClick={() => setShowNotifications(false)}
-                              className="text-pink-400 font-bold hover:underline"
-                            >
-                              Verify Payment →
-                            </Link>
-                          </div>
+                      <button
+                        onClick={() => setShowNotifications(false)}
+                        className="p-1 text-slate-400 hover:text-white rounded-lg"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <div className="max-h-64 overflow-y-auto space-y-2 text-xs">
+                      {recentOrders.length === 0 ? (
+                        <div className="py-6 text-center text-slate-500 font-semibold">
+                          No new order notifications yet.
                         </div>
-                      ))
-                    )}
+                      ) : (
+                        recentOrders.slice(0, 5).map((ord) => (
+                          <div
+                            key={ord._id}
+                            className="p-3 rounded-xl bg-slate-950/80 border border-purple-500/20 space-y-1 hover:border-pink-500/40 transition-all text-left"
+                          >
+                            <div className="flex justify-between items-center">
+                              <span className="font-mono font-bold text-amber-300">#{ord.orderId || ord.orderNumber}</span>
+                              <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-pink-500/20 text-pink-300">
+                                {ord.orderStatus}
+                              </span>
+                            </div>
+                            <div className="flex justify-between text-slate-300 text-[11px]">
+                              <span>{ord.user?.name || ord.deliveryAddressSnapshot?.fullName || 'Customer'}</span>
+                              <span className="font-bold text-emerald-400">₹{ord.totalAmount}</span>
+                            </div>
+                            <div className="pt-1 flex justify-end gap-2 text-[10px]">
+                              <Link
+                                to="/admin/payments"
+                                onClick={() => setShowNotifications(false)}
+                                className="text-pink-400 font-bold hover:underline"
+                              >
+                                Verify Payment →
+                              </Link>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
                   </div>
-                </div>
+                </>
               )}
             </div>
 
