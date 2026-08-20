@@ -26,6 +26,14 @@ export const Dashboard = () => {
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deletingAll, setDeletingAll] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [notificationsCleared, setNotificationsCleared] = useState(() => {
+    return Boolean(localStorage.getItem('dd_admin_notifs_cleared'));
+  });
+
+  const handleClearNotifications = () => {
+    setNotificationsCleared(true);
+    localStorage.setItem('dd_admin_notifs_cleared', 'true');
+  };
 
   const fetchStats = async (showLoading = true) => {
     if (showLoading) setLoading(true);
@@ -124,7 +132,7 @@ export const Dashboard = () => {
                 title="New Order Notifications"
               >
                 <Bell className="w-4 h-4" />
-                {recentOrders.length > 0 && (
+                {!notificationsCleared && recentOrders.length > 0 && (
                   <>
                     <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-pink-500 animate-ping"></span>
                     <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-pink-500"></span>
@@ -146,18 +154,29 @@ export const Dashboard = () => {
                           New Order Notifications
                         </h3>
                       </div>
-                      <button
-                        onClick={() => setShowNotifications(false)}
-                        className="p-1 text-slate-400 hover:text-white rounded-lg"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {!notificationsCleared && recentOrders.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={handleClearNotifications}
+                            className="text-xs font-bold text-pink-400 hover:text-pink-300 hover:underline transition-colors mr-1"
+                          >
+                            Clear All
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setShowNotifications(false)}
+                          className="p-1 text-slate-400 hover:text-white rounded-lg"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
 
                     <div className="max-h-64 overflow-y-auto space-y-2 text-xs">
-                      {recentOrders.length === 0 ? (
+                      {notificationsCleared || recentOrders.length === 0 ? (
                         <div className="py-6 text-center text-slate-500 font-semibold">
-                          No new order notifications yet.
+                          No new order notifications.
                         </div>
                       ) : (
                         recentOrders.slice(0, 5).map((ord) => (
