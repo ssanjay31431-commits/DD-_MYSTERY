@@ -344,28 +344,28 @@ export const Checkout = () => {
         <div className="lg:col-span-8 space-y-6">
           
           {/* Customer Info Card */}
-          <div className="glass-panel p-6 rounded-3xl border border-purple-500/20">
+          <div className="glass-panel p-4 sm:p-6 rounded-3xl border border-purple-500/20">
             <h3 className="text-sm font-extrabold uppercase tracking-wider text-pink-400 mb-4 flex items-center gap-2">
               <User className="w-4 h-4" /> Customer Contact Information
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+            <div className="grid grid-cols-1 xs:grid-cols-3 gap-3 text-xs">
               <div>
                 <span className="block text-slate-400">Name:</span>
-                <span className="font-bold text-white text-sm">{user?.name || 'Guest User'}</span>
+                <span className="font-bold text-white text-sm truncate block">{user?.name || 'Guest User'}</span>
               </div>
               <div>
                 <span className="block text-slate-400">Email:</span>
-                <span className="font-bold text-white text-sm">{user?.email || 'N/A'}</span>
+                <span className="font-bold text-white text-sm truncate block">{user?.email || 'N/A'}</span>
               </div>
               <div>
                 <span className="block text-slate-400">Phone:</span>
-                <span className="font-bold text-white text-sm">{user?.phone || 'N/A'}</span>
+                <span className="font-bold text-white text-sm truncate block">{user?.phone || 'N/A'}</span>
               </div>
             </div>
           </div>
 
           {/* Delivery Address Form / Selection */}
-          <div className="glass-panel p-6 rounded-3xl border border-purple-500/20">
+          <div className="glass-panel p-4 sm:p-6 rounded-3xl border border-purple-500/20">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-extrabold uppercase tracking-wider text-purple-400 flex items-center gap-2">
                 <MapPin className="w-4 h-4" /> Delivery Address
@@ -385,19 +385,19 @@ export const Checkout = () => {
                   <div
                     key={addr._id || addr.houseNo}
                     onClick={() => setSelectedAddress(addr)}
-                    className={`p-4 rounded-2xl border cursor-pointer transition-all ${
+                    className={`p-3.5 sm:p-4 rounded-2xl border cursor-pointer transition-all ${
                       selectedAddress?._id === addr._id
                         ? 'bg-purple-600/20 border-pink-500 text-white shadow-lg'
                         : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:border-purple-500/40'
                     }`}
                   >
                     <div className="flex justify-between items-start mb-2">
-                      <span className="font-bold text-white text-sm">{addr.fullName}</span>
-                      <span className="px-2 py-0.5 rounded-md bg-slate-800 text-[10px] font-bold text-pink-300">
+                      <span className="font-bold text-white text-sm truncate">{addr.fullName}</span>
+                      <span className="px-2 py-0.5 rounded-md bg-slate-800 text-[10px] font-bold text-pink-300 shrink-0">
                         {addr.addressType}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-300">
+                    <p className="text-xs text-slate-300 leading-snug">
                       {[addr.houseNo, addr.street, addr.area, addr.landmark ? `(Landmark: ${addr.landmark})` : ''].filter(Boolean).join(', ')}<br />
                       {addr.city}, {addr.state} - {addr.pincode}
                     </p>
@@ -412,7 +412,7 @@ export const Checkout = () => {
               <form onSubmit={handleSaveAddress} className="space-y-4 pt-2">
                 
                 {/* Location Detection Buttons */}
-                <div className="flex gap-2 mb-4">
+                <div className="flex flex-col sm:flex-row gap-2 mb-4">
                   <button
                     type="button"
                     onClick={handleGetCurrentLocation}

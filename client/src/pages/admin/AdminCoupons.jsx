@@ -83,7 +83,7 @@ export const AdminCoupons = () => {
         </div>
 
         <div className="glass-panel rounded-3xl border border-purple-500/20 overflow-hidden">
-          <table className="w-full text-left text-xs text-slate-300">
+          <table className="w-full text-left text-xs text-slate-300 min-w-[600px]">
             <thead className="bg-slate-900/80 text-slate-400 uppercase text-[10px]">
               <tr>
                 <th className="p-4">Coupon Code</th>

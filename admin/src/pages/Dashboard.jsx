@@ -103,15 +103,15 @@ export const Dashboard = () => {
     : (currentStats.expectedCodCollection || 0);
 
   return (
-    <div className="flex min-h-screen bg-[#0c0a17]">
+    <div className="flex flex-col lg:flex-row min-h-screen bg-[#0c0a17]">
       <AdminSidebar />
 
-      <main className="flex-1 p-8 space-y-8 overflow-y-auto">
+      <main className="flex-1 p-4 sm:p-8 space-y-6 sm:space-y-8 overflow-y-auto min-w-0">
         
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-purple-500/20">
           <div>
-            <h1 className="text-3xl font-black text-white font-display">Business Analytics Dashboard</h1>
+            <h1 className="text-xl sm:text-3xl font-black text-white font-display">Business Analytics Dashboard</h1>
             <p className="text-xs text-slate-400">Live order metrics & analytics direct from MongoDB. Auto-refresh active.</p>
           </div>
 
@@ -133,7 +133,7 @@ export const Dashboard = () => {
               </button>
 
               {showNotifications && (
-                <div className="absolute right-0 top-12 z-50 w-80 sm:w-96 bg-slate-900/95 backdrop-blur-xl border border-purple-500/40 rounded-2xl p-4 shadow-2xl space-y-3">
+                <div className="absolute right-0 top-12 z-50 w-72 sm:w-96 bg-slate-900/95 backdrop-blur-xl border border-purple-500/40 rounded-2xl p-4 shadow-2xl space-y-3">
                   <div className="flex items-center justify-between pb-2 border-b border-slate-800">
                     <div className="flex items-center gap-2">
                       <Bell className="w-4 h-4 text-pink-400" />
@@ -247,7 +247,7 @@ export const Dashboard = () => {
         )}
 
         {/* Analytics Cards Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           
           <div className="glass-panel p-6 rounded-3xl border border-purple-500/30 space-y-2">
             <div className="flex justify-between items-center">
@@ -306,8 +306,8 @@ export const Dashboard = () => {
             <span className="text-xs font-mono text-purple-400">Synced with MongoDB</span>
           </div>
           
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-300">
+          <div className="overflow-x-auto w-full">
+            <table className="w-full text-left text-xs text-slate-300 min-w-[600px]">
               <thead className="bg-slate-900/90 text-slate-400 font-extrabold uppercase tracking-wider">
                 <tr>
                   <th className="p-3">Order Number</th>

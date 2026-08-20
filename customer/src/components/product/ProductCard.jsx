@@ -31,7 +31,7 @@ export const ProductCard = ({ product }) => {
   };
 
   return (
-    <div className="group relative glass-panel glass-panel-hover rounded-3xl p-6 flex flex-col justify-between overflow-hidden border border-purple-500/20">
+    <div className="group relative glass-panel glass-panel-hover rounded-3xl p-4 sm:p-6 flex flex-col justify-between overflow-hidden border border-purple-500/20 w-full">
       
       {/* Product Tag / Badge */}
       {product.tag && (

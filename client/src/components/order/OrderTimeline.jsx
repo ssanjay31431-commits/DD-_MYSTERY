@@ -102,14 +102,30 @@ export const OrderTimeline = ({ currentStatus, trackingHistory = [] }) => {
 
       {/* Mobile Vertical Timeline */}
       <div className="md:hidden space-y-4 relative border-l-2 border-purple-500/30 ml-4 pl-6">
-        {trackingHistory.map((history, idx) => (
-          <div key={idx} className="relative">
-            <div className="absolute -left-[31px] top-0 w-4 h-4 rounded-full bg-purple-500 border-2 border-pink-400" />
-            <h5 className="text-sm font-bold text-white">{history.status}</h5>
-            <p className="text-xs text-slate-400">{history.comment}</p>
-            <span className="text-[10px] text-slate-500">{new Date(history.timestamp).toLocaleString()}</span>
-          </div>
-        ))}
+        {trackingHistory && trackingHistory.length > 0 ? (
+          trackingHistory.map((history, idx) => (
+            <div key={idx} className="relative">
+              <div className="absolute -left-[31px] top-1 w-3.5 h-3.5 rounded-full bg-purple-500 border-2 border-pink-400" />
+              <h5 className="text-sm font-bold text-white">{history.status}</h5>
+              <p className="text-xs text-slate-400">{history.comment}</p>
+              <span className="text-[10px] text-slate-500">{new Date(history.timestamp).toLocaleString()}</span>
+            </div>
+          ))
+        ) : (
+          steps.map((step, idx) => {
+            const isDone = idx <= currentIndex;
+            return (
+              <div key={step.key} className="relative">
+                <div className={`absolute -left-[31px] top-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                  isDone ? 'bg-purple-600 border-pink-400 text-white' : 'bg-slate-900 border-slate-700 text-slate-500'
+                }`}>
+                  <div className={`w-1.5 h-1.5 rounded-full ${isDone ? 'bg-pink-400' : 'bg-slate-600'}`} />
+                </div>
+                <h5 className={`text-xs font-bold ${isDone ? 'text-white' : 'text-slate-500'}`}>{step.label}</h5>
+              </div>
+            );
+          })
+        )}
       </div>
     </div>
   );

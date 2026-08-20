@@ -156,7 +156,7 @@ export const CustomizeBox = () => {
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-3">
                 Select Mystery Box Budget Tier:
               </label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 xs:grid-cols-3 gap-2">
                 {productList.map((p) => (
                   <button
                     key={p._id}
@@ -179,7 +179,7 @@ export const CustomizeBox = () => {
 
         {/* Right Side: Customization Options Form */}
         <div className="lg:col-span-7">
-          <form onSubmit={handleAddToCart} className="glass-panel p-8 rounded-3xl border border-purple-500/30 space-y-6">
+          <form onSubmit={handleAddToCart} className="glass-panel p-4 sm:p-8 rounded-3xl border border-purple-500/30 space-y-6">
             
             {/* Step 1: Recipient Basics */}
             <div>
@@ -269,7 +269,7 @@ export const CustomizeBox = () => {
               {/* Theme Grid */}
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-2">Select Theme:</label>
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {themesList.map((t) => (
                     <button
                       key={t}

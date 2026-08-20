@@ -52,7 +52,7 @@ export const Profile = () => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8">
       
       {/* Header Banner */}
-      <div className="glass-panel p-8 rounded-3xl border border-purple-500/30 flex flex-col md:flex-row items-center justify-between gap-6">
+      <div className="glass-panel p-4 sm:p-8 rounded-3xl border border-purple-500/30 flex flex-col md:flex-row items-center justify-between gap-6">
         <div className="flex items-center gap-5">
           <div className="relative">
             {user?.profileImage ? (
@@ -126,7 +126,7 @@ export const Profile = () => {
       )}
 
       {/* Dashboard Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div className="glass-panel p-5 rounded-2xl border border-purple-500/20 flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center shrink-0">
             <Package className="w-6 h-6" />

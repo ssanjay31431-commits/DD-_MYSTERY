@@ -76,13 +76,13 @@ export const AdminDashboard = () => {
   const recentOrders = Array.isArray(currentStats.recentOrders) ? currentStats.recentOrders : [];
 
   return (
-    <div className="flex min-h-screen bg-[#0f0c1b]">
+    <div className="flex flex-col lg:flex-row min-h-screen bg-[#0f0c1b]">
       <AdminSidebar />
 
-      <main className="flex-1 p-8 space-y-8 overflow-y-auto">
-        <div className="flex justify-between items-center pb-4 border-b border-purple-500/20">
+      <main className="flex-1 p-4 sm:p-8 space-y-6 sm:space-y-8 overflow-y-auto min-w-0">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-4 border-b border-purple-500/20 gap-4">
           <div>
-            <h1 className="text-2xl font-black text-white font-display">Dashboard Overview</h1>
+            <h1 className="text-xl sm:text-2xl font-black text-white font-display">Dashboard Overview</h1>
             <p className="text-xs text-slate-400">DD MYSTERY BOX Commercial Operations & Analytics</p>
           </div>
           <div className="flex items-center gap-3">
@@ -103,7 +103,7 @@ export const AdminDashboard = () => {
               </button>
 
               {showNotifications && (
-                <div className="absolute right-0 top-12 z-50 w-80 sm:w-96 bg-slate-900/95 backdrop-blur-xl border border-purple-500/40 rounded-2xl p-4 shadow-2xl space-y-3">
+                <div className="absolute right-0 top-12 z-50 w-72 sm:w-96 bg-slate-900/95 backdrop-blur-xl border border-purple-500/40 rounded-2xl p-4 shadow-2xl space-y-3">
                   <div className="flex items-center justify-between pb-2 border-b border-slate-800">
                     <div className="flex items-center gap-2">
                       <Bell className="w-4 h-4 text-pink-400" />
@@ -157,7 +157,7 @@ export const AdminDashboard = () => {
               )}
             </div>
 
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold shrink-0">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span> Live Analytics Active
             </div>
           </div>
@@ -168,7 +168,7 @@ export const AdminDashboard = () => {
         ) : (
           <>
             {/* Key Metrics Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               <div className="glass-panel p-5 rounded-2xl border border-purple-500/20">
                 <span className="text-xs text-slate-400 font-bold block mb-1">Total Revenue</span>
                 <span className="text-2xl font-black text-white font-display">₹{(currentStats.totalRevenue || 0).toLocaleString()}</span>
@@ -240,8 +240,8 @@ export const AdminDashboard = () => {
                 <Link to="/admin/orders" className="text-xs font-bold text-pink-400 hover:underline">View All Orders →</Link>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs text-slate-300">
+              <div className="overflow-x-auto w-full">
+                <table className="w-full text-left text-xs text-slate-300 min-w-[600px]">
                   <thead className="bg-slate-900/80 text-slate-400 uppercase text-[10px]">
                     <tr>
                       <th className="p-3">Order ID</th>

@@ -73,17 +73,17 @@ export const CartPage = () => {
             const customization = item.customization || {};
 
             return (
-              <div key={item._id} className="glass-panel p-6 rounded-2xl border border-purple-500/20 flex flex-col sm:flex-row gap-6 items-start sm:items-center justify-between">
+              <div key={item._id} className="glass-panel p-4 sm:p-6 rounded-2xl border border-purple-500/20 flex flex-col sm:flex-row gap-4 sm:gap-6 items-start sm:items-center justify-between">
                 
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                   <img
                     src={product.image || 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=300&q=80'}
                     alt={product.name}
-                    className="w-20 h-20 rounded-xl object-cover border border-slate-800"
+                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-cover border border-slate-800 shrink-0"
                   />
-                  <div>
-                    <h3 className="font-bold text-white text-base">{product.name || 'Mystery Box'}</h3>
-                    <p className="text-xs text-pink-400 font-semibold">
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-white text-sm sm:text-base truncate">{product.name || 'Mystery Box'}</h3>
+                    <p className="text-xs text-pink-400 font-semibold truncate">
                       For: {customization.recipientName || 'Recipient'} • Theme: {customization.theme || 'Nostalgia'}
                     </p>
 
@@ -96,14 +96,14 @@ export const CartPage = () => {
 
                     <Link
                       to={`/product/${product._id || 'default'}`}
-                      className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-400 hover:text-pink-400 mt-2"
+                      className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-400 hover:text-pink-400 mt-1.5"
                     >
                       <Edit3 className="w-3 h-3" /> View Box Details
                     </Link>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between sm:justify-end gap-6 w-full sm:w-auto pt-4 sm:pt-0 border-t sm:border-t-0 border-slate-800">
+                <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-6 w-full sm:w-auto pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-800">
                   <div className="flex items-center bg-slate-900 rounded-xl border border-slate-800">
                     <button
                       onClick={() => updateQuantity(item._id, item.quantity - 1)}

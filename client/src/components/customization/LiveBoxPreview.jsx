@@ -29,7 +29,7 @@ export const LiveBoxPreview = ({ recipientName, birthdayDate, age, favoriteColor
 
       {/* 3D Styled Birthday Box Canvas Card */}
       <div
-        className="relative w-full aspect-[4/3] rounded-3xl p-6 flex flex-col justify-between overflow-hidden transition-all duration-500 border-2"
+        className="relative w-full aspect-[4/3] rounded-3xl p-3.5 sm:p-6 flex flex-col justify-between overflow-hidden transition-all duration-500 border-2"
         style={{
           borderColor: currentColor.border,
           backgroundColor: '#16102b',
@@ -41,22 +41,22 @@ export const LiveBoxPreview = ({ recipientName, birthdayDate, age, favoriteColor
         <div className="ribbon-horizontal opacity-80 pointer-events-none"></div>
 
         {/* Floating Confetti Elements */}
-        <div className="absolute top-3 left-4 text-pink-400 opacity-60 animate-bounce">🎉</div>
-        <div className="absolute top-4 right-6 text-amber-300 opacity-70 animate-pulse">✨</div>
-        <div className="absolute bottom-6 left-6 text-purple-300 opacity-60 animate-float">🎈</div>
-        <div className="absolute bottom-4 right-8 text-cyan-300 opacity-70">🎁</div>
+        <div className="absolute top-3 left-4 text-pink-400 opacity-60 animate-bounce text-xs sm:text-base">🎉</div>
+        <div className="absolute top-4 right-6 text-amber-300 opacity-70 animate-pulse text-xs sm:text-base">✨</div>
+        <div className="absolute bottom-6 left-6 text-purple-300 opacity-60 animate-float text-xs sm:text-base">🎈</div>
+        <div className="absolute bottom-4 right-8 text-cyan-300 opacity-70 text-xs sm:text-base">🎁</div>
 
         {/* Top Header: Box Title & Theme Badge */}
-        <div className="relative z-20 flex justify-between items-start">
-          <div>
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+        <div className="relative z-20 flex justify-between items-start gap-2">
+          <div className="min-w-0">
+            <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-slate-400 block truncate">
               DD MYSTERY BOX
             </span>
-            <h3 className="text-lg font-black text-white font-display leading-tight">{boxName}</h3>
+            <h3 className="text-xs sm:text-lg font-black text-white font-display leading-tight truncate">{boxName}</h3>
           </div>
 
           <div
-            className="px-3 py-1 rounded-full text-xs font-bold tracking-wide uppercase shadow-lg border backdrop-blur-md"
+            className="px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold tracking-wide uppercase shadow-lg border backdrop-blur-md shrink-0 truncate max-w-[120px] sm:max-w-none"
             style={{ backgroundColor: currentColor.bg, color: currentColor.text, borderColor: currentColor.border }}
           >
             Theme: {theme || 'Anime'}
@@ -64,34 +64,34 @@ export const LiveBoxPreview = ({ recipientName, birthdayDate, age, favoriteColor
         </div>
 
         {/* Centerpiece: Birthday Person Name & Age */}
-        <div className="relative z-20 my-auto text-center py-2 bg-slate-950/75 backdrop-blur-md rounded-2xl border border-white/10 p-4">
-          <div className="flex items-center justify-center gap-1.5 text-xs text-amber-400 font-bold tracking-widest uppercase mb-1">
-            <Cake className="w-4 h-4" /> Happy Birthday <Cake className="w-4 h-4" />
+        <div className="relative z-20 my-auto text-center py-1.5 sm:py-2 bg-slate-950/75 backdrop-blur-md rounded-2xl border border-white/10 p-2 sm:p-4">
+          <div className="flex items-center justify-center gap-1 text-[10px] sm:text-xs text-amber-400 font-bold tracking-widest uppercase mb-0.5 sm:mb-1">
+            <Cake className="w-3 h-3 sm:w-4 sm:h-4" /> Happy Birthday <Cake className="w-3 h-3 sm:w-4 sm:h-4" />
           </div>
           <h2
-            className="text-2xl sm:text-3xl font-black font-display tracking-wide drop-shadow-md"
+            className="text-lg sm:text-3xl font-black font-display tracking-wide drop-shadow-md truncate"
             style={{ color: currentColor.text }}
           >
             {recipientName ? recipientName : 'Rahul'}
           </h2>
 
           {age && (
-            <span className="inline-block mt-1 px-2.5 py-0.5 rounded-md bg-pink-500/20 text-pink-300 text-xs font-bold">
+            <span className="inline-block mt-0.5 sm:mt-1 px-2 py-0.5 rounded-md bg-pink-500/20 text-pink-300 text-[10px] sm:text-xs font-bold">
               Turning {age} Years Old!
             </span>
           )}
 
           {birthdayDate && (
-            <div className="mt-1 flex items-center justify-center gap-1 text-[11px] text-slate-300 font-medium">
-              <Calendar className="w-3.5 h-3.5 text-purple-400" />
+            <div className="mt-0.5 sm:mt-1 flex items-center justify-center gap-1 text-[10px] sm:text-[11px] text-slate-300 font-medium">
+              <Calendar className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-purple-400" />
               <span>{birthdayDate}</span>
             </div>
           )}
         </div>
 
         {/* Bottom Card: Personal Message Snippet */}
-        <div className="relative z-20 bg-slate-900/90 rounded-xl p-2.5 border border-purple-500/20 text-center">
-          <p className="text-xs italic text-slate-300 line-clamp-2">
+        <div className="relative z-20 bg-slate-900/90 rounded-xl p-1.5 sm:p-2.5 border border-purple-500/20 text-center">
+          <p className="text-[10px] sm:text-xs italic text-slate-300 line-clamp-2">
             "{personalMessage ? personalMessage : `Happy Birthday ${recipientName || 'Rahul'}! Have an amazing year ahead!`}"
           </p>
         </div>

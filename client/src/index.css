@@ -3,9 +3,29 @@
 @tailwind utilities;
 
 @layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html,
+  body,
+  #root {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow-x: clip;
+  }
+
   body {
-    @apply bg-[#0f0c1b] text-slate-100 font-sans selection:bg-pink-500 selection:text-white antialiased;
-    overflow-x: hidden;
+    @apply bg-[#0f0c1b] text-slate-100 font-sans selection:bg-pink-500 selection:text-white antialiased min-h-screen;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+
+  img, video, canvas, svg {
+    max-width: 100%;
+    height: auto;
   }
 }
 

@@ -50,10 +50,10 @@ export const AdminOrders = () => {
   const statuses = ['All', 'Pending', 'Confirmed', 'Preparing', 'Packed', 'Shipped', 'Out for Delivery', 'Delivered', 'Cancelled'];
 
   return (
-    <div className="flex min-h-screen bg-[#0f0c1b]">
+    <div className="flex flex-col lg:flex-row min-h-screen bg-[#0f0c1b]">
       <AdminSidebar />
 
-      <main className="flex-1 p-8 space-y-6 overflow-y-auto">
+      <main className="flex-1 p-4 sm:p-8 space-y-6 overflow-y-auto min-w-0">
         <div className="flex justify-between items-center pb-4 border-b border-purple-500/20">
           <div>
             <h1 className="text-2xl font-black text-white font-display">Manage Customer Orders</h1>
@@ -93,7 +93,7 @@ export const AdminOrders = () => {
 
         {/* Orders Table */}
         <div className="glass-panel rounded-3xl border border-purple-500/20 overflow-hidden">
-          <table className="w-full text-left text-xs text-slate-300">
+          <table className="w-full text-left text-xs text-slate-300 min-w-[600px]">
             <thead className="bg-slate-900/80 text-slate-400 uppercase text-[10px]">
               <tr>
                 <th className="p-4">Order Reference</th>

@@ -88,20 +88,20 @@ export const SavedAddresses = () => {
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-pink-500/20 text-pink-400 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-pink-500/20 text-pink-400 flex items-center justify-center shrink-0">
             <MapPin className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-3xl font-black text-white font-display">Saved Addresses</h1>
+            <h1 className="text-2xl sm:text-3xl font-black text-white font-display">Saved Addresses</h1>
             <p className="text-xs text-slate-400">Manage your shipping destinations for quick checkout.</p>
           </div>
         </div>
 
         <button
           onClick={() => setShowAddForm(!showAddForm)}
-          className="px-4 py-2.5 rounded-xl bg-pink-500 hover:bg-pink-600 text-white font-bold text-xs uppercase flex items-center gap-1.5"
+          className="px-4 py-2.5 rounded-xl bg-pink-500 hover:bg-pink-600 text-white font-bold text-xs uppercase flex items-center gap-1.5 shrink-0"
         >
           <Plus className="w-4 h-4" /> {showAddForm ? 'Cancel' : 'Add New Address'}
         </button>

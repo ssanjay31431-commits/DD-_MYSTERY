@@ -94,7 +94,7 @@ export const ProductDetails = () => {
         <ArrowLeft className="w-4 h-4" /> Back to All Mystery Boxes
       </Link>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-12 glass-panel p-8 rounded-3xl border border-purple-500/20">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 sm:gap-12 glass-panel p-4 sm:p-8 rounded-3xl border border-purple-500/20">
         
         {/* Left Column: Product Image & Highlights */}
         <div className="space-y-6">

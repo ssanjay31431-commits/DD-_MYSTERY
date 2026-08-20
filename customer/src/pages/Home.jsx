@@ -41,8 +41,8 @@ export const Home = () => {
     <div className="space-y-20 pb-16">
       
       {/* Hero Section */}
-      <section className="relative overflow-hidden pt-12 pb-20 lg:py-24">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-tr from-pink-500/20 via-purple-600/20 to-amber-400/20 rounded-full blur-[120px] pointer-events-none" />
+      <section className="relative overflow-hidden w-full max-w-full pt-8 pb-16 lg:py-24">
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[280px] h-[280px] sm:w-[500px] sm:h-[500px] lg:w-[600px] lg:h-[600px] bg-gradient-to-tr from-pink-500/20 via-purple-600/20 to-amber-400/20 rounded-full blur-[90px] sm:blur-[120px] pointer-events-none" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
@@ -51,9 +51,9 @@ export const Home = () => {
             <div className="text-center lg:text-left space-y-6">
               
               {/* Badge */}
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-pink-500/10 border border-pink-500/30 text-pink-300 text-xs sm:text-sm font-extrabold uppercase tracking-widest shadow-inner">
-                <Sparkles className="w-4 h-4 text-pink-400 animate-pulse" />
-                <span>✨ THE SURPRISE BOX FOR EVERY MOMENT</span>
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-pink-500/10 border border-pink-500/30 text-pink-300 text-xs sm:text-sm font-extrabold uppercase tracking-widest shadow-inner max-w-full">
+                <Sparkles className="w-4 h-4 text-pink-400 animate-pulse shrink-0" />
+                <span className="truncate">✨ THE SURPRISE BOX FOR EVERY MOMENT</span>
               </div>
 
               {/* Logo & Heading Container */}
@@ -62,7 +62,7 @@ export const Home = () => {
                 {/* Official DD Mystery Box Logo */}
                 <div className="relative shrink-0 group">
                   <div className="absolute -inset-1 bg-gradient-to-r from-pink-500 via-purple-600 to-amber-400 rounded-full blur-md opacity-70 group-hover:opacity-100 transition duration-500"></div>
-                  <div className="relative w-24 h-24 sm:w-28 sm:h-28 lg:w-32 lg:h-32 rounded-full p-1 bg-[#0f0c1b] border border-pink-500/30 overflow-hidden shadow-2xl shadow-pink-500/30 flex items-center justify-center">
+                  <div className="relative w-20 h-20 sm:w-28 sm:h-28 lg:w-32 lg:h-32 rounded-full p-1 bg-[#0f0c1b] border border-pink-500/30 overflow-hidden shadow-2xl shadow-pink-500/30 flex items-center justify-center">
                     <img
                       src="/logo.png"
                       alt="DD Mystery Box Official Logo"
@@ -76,9 +76,9 @@ export const Home = () => {
 
                 {/* Main Hero Heading */}
                 <div>
-                  <h1 className="font-display text-3xl sm:text-5xl lg:text-6xl font-black text-white leading-tight tracking-tight">
+                  <h1 className="font-display text-2xl sm:text-5xl lg:text-6xl font-black text-white leading-tight tracking-tight">
                     DD MYSTERY BOX
-                    <span className="block mt-2 text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-purple-300 to-amber-300 text-xl sm:text-3xl lg:text-4xl font-extrabold">
+                    <span className="block mt-2 text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-purple-300 to-amber-300 text-lg sm:text-3xl lg:text-4xl font-extrabold">
                       "Not Just a Gift.
                       <br className="hidden sm:inline" /> A Mystery Waiting to Be Yours!"
                     </span>
@@ -88,14 +88,14 @@ export const Home = () => {
               </div>
 
               {/* Description */}
-              <p className="text-slate-300 text-sm sm:text-base lg:text-lg max-w-xl mx-auto lg:mx-0 leading-relaxed font-medium">
+              <p className="text-slate-300 text-xs sm:text-base lg:text-lg max-w-xl mx-auto lg:mx-0 leading-relaxed font-medium">
                 From birthdays and anniversaries to friendship, celebrations, nostalgia, thank-you moments, or simply 'just because' — choose a mystery box made to turn ordinary moments into unforgettable surprises.
               </p>
 
               {/* Highlight Box */}
-              <div className="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-purple-950/60 border border-amber-500/30 text-amber-300 font-bold text-xs sm:text-sm shadow-lg shadow-purple-900/20">
-                <span className="text-base sm:text-lg">🎁</span>
-                <span>One Box. Endless Reasons to Surprise.</span>
+              <div className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-purple-950/60 border border-amber-500/30 text-amber-300 font-bold text-xs sm:text-sm shadow-lg shadow-purple-900/20 max-w-full">
+                <span className="text-base sm:text-lg shrink-0">🎁</span>
+                <span className="truncate">One Box. Endless Reasons to Surprise.</span>
               </div>
 
               {/* Occasion Tags List */}
@@ -144,7 +144,7 @@ export const Home = () => {
               </div>
 
               {/* Trust Badges */}
-              <div className="pt-6 grid grid-cols-3 gap-4 border-t border-slate-800/80 max-w-lg mx-auto lg:mx-0">
+              <div className="pt-6 grid grid-cols-1 xs:grid-cols-3 gap-3 sm:gap-4 border-t border-slate-800/80 max-w-lg mx-auto lg:mx-0">
                 <div className="text-center lg:text-left">
                   <span className="block text-xl font-black text-white font-display">10,000+</span>
                   <span className="text-[11px] text-slate-400 font-medium">Happy Surprises</span>

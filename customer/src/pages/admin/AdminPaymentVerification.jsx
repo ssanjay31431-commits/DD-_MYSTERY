@@ -83,7 +83,7 @@ export const AdminPaymentVerification = () => {
   const paymentList = Array.isArray(payments) ? payments : [];
 
   return (
-    <div className="p-8 space-y-6 max-w-6xl mx-auto text-white">
+    <div className="p-4 sm:p-8 space-y-6 max-w-6xl mx-auto text-white w-full max-w-full">
       <div className="flex items-center justify-between pb-4 border-b border-purple-500/20">
         <div>
           <h1 className="text-2xl font-black text-white font-display">Payment Verification</h1>
