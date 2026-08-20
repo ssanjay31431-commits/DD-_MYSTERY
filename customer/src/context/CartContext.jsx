@@ -163,8 +163,8 @@ export const CartProvider = ({ children }) => {
 
   const safeCartItems = Array.isArray(cartItems) ? cartItems : [];
   const subtotal = safeCartItems.reduce((acc, item) => acc + (item.unitPrice || item.product?.price || 0) * item.quantity, 0);
-  const deliveryFee = subtotal > 0 ? (subtotal >= 499 ? 0 : 49) : 0;
-  const totalAmount = Math.max(0, subtotal + deliveryFee - couponApplied.discountAmount);
+  const deliveryFee = 0;
+  const totalAmount = Math.max(0, subtotal - couponApplied.discountAmount);
 
   return (
     <CartContext.Provider

@@ -189,13 +189,6 @@ export const CartPage = () => {
                 <span className="font-bold text-white">₹{subtotal}</span>
               </div>
 
-              <div className="flex justify-between text-slate-300">
-                <span>Delivery Charge</span>
-                <span className="font-bold text-emerald-400">
-                  {deliveryFee === 0 ? 'FREE' : `₹${deliveryFee}`}
-                </span>
-              </div>
-
               {couponApplied.discountAmount > 0 && (
                 <div className="flex justify-between text-emerald-400 font-semibold">
                   <span>Coupon Discount</span>

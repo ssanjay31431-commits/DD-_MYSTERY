@@ -120,10 +120,10 @@ export const OrderDetailsView = () => {
   const cashfreeRef = order.paymentInfo?.cashfreePaymentId || order.paymentInfo?.cashfreeOrderId || order.paymentInfo?.transactionId || 'Verified Gateway';
 
   return (
-    <div className="flex min-h-screen bg-[#0c0a17]">
+    <div className="flex flex-col lg:flex-row min-h-screen bg-[#0c0a17]">
       <AdminSidebar />
 
-      <main className="flex-1 p-8 space-y-6 overflow-y-auto">
+      <main className="flex-1 p-4 sm:p-8 space-y-6 overflow-y-auto min-w-0">
         
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-purple-500/20">

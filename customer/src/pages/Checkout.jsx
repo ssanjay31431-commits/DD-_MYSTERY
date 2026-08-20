@@ -43,8 +43,8 @@ export const Checkout = () => {
     (acc, item) => acc + (item.unitPrice || item.product?.price || 0) * item.quantity,
     0
   );
-  const computedDeliveryFee = computedSubtotal > 0 ? (computedSubtotal >= 499 ? 0 : 49) : 0;
-  const computedTotal = Math.max(0, computedSubtotal + computedDeliveryFee - (couponApplied?.discountAmount || 0));
+  const computedDeliveryFee = 0;
+  const computedTotal = Math.max(0, computedSubtotal - (couponApplied?.discountAmount || 0));
 
   const handleProceedToPayment = async () => {
     if (!selectedAddress) {
@@ -528,10 +528,6 @@ export const Checkout = () => {
               <div className="flex justify-between text-slate-300">
                 <span>Subtotal</span>
                 <span className="font-bold text-white">₹{computedSubtotal}</span>
-              </div>
-              <div className="flex justify-between text-slate-300">
-                <span>Delivery Charge</span>
-                <span className="font-bold text-emerald-400">{computedDeliveryFee === 0 ? 'FREE' : `₹${computedDeliveryFee}`}</span>
               </div>
               {couponApplied?.discountAmount > 0 && (
                 <div className="flex justify-between text-emerald-400">
