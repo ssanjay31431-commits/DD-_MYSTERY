@@ -18,6 +18,7 @@ export const Checkout = () => {
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [submittingPayment, setSubmittingPayment] = useState(false);
+  const [settings, setSettings] = useState({ codAdvanceType: 'percentage', codAdvanceValue: 20 });
 
   // Buy Now item check
   const locationState = location.state || {};

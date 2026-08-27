@@ -14,6 +14,7 @@ import { AdminSettings } from './pages/AdminSettings';
 import { AdminNotificationLogs } from './pages/AdminNotificationLogs';
 import { AdminInventory } from './pages/AdminInventory';
 import { AdminCoupons } from './pages/AdminCoupons';
+import { ScrollToTop } from './components/ScrollToTop';
 
 const AdminProtectedRoute = ({ children }) => {
   const { admin, loading } = useAdminAuth();
@@ -29,6 +30,7 @@ export default function App() {
     <ToastProvider>
       <AdminAuthProvider>
         <Router>
+          <ScrollToTop />
           <Routes>
             <Route path="/admin/login" element={<AdminLogin />} />
             

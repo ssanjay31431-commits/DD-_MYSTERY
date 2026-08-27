@@ -9,6 +9,7 @@ import { ToastProvider } from './context/ToastContext';
 import { Navbar } from './components/common/Navbar';
 import { Footer } from './components/common/Footer';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
+import { ScrollToTop } from './components/common/ScrollToTop';
 
 // Customer Pages
 import { Home } from './pages/Home';
@@ -65,6 +66,7 @@ export default function App() {
         <CartProvider>
           <WishlistProvider>
             <Router>
+              <ScrollToTop />
               <Routes>
                 {/* Customer Routes */}
                 <Route path="/" element={<CustomerLayout><Home /></CustomerLayout>} />
