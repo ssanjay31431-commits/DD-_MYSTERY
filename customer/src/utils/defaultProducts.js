@@ -67,3 +67,8 @@ export const DEFAULT_PRODUCTS = [
     ]
   }
 ];
+
+export const findFallbackProduct = (id) => {
+  if (!id) return DEFAULT_PRODUCTS[0];
+  return DEFAULT_PRODUCTS.find((p) => p._id === id || String(p.price) === String(id)) || DEFAULT_PRODUCTS[0];
+};

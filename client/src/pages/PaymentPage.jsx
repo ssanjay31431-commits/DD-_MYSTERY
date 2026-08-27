@@ -4,6 +4,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { QrCode, Upload, CheckCircle2, Clock, Copy, ShieldCheck, ArrowRight, Image as ImageIcon, Loader2 } from 'lucide-react';
 import API from '../services/api';
 import { useToast } from '../context/ToastContext';
+import { safeGetSessionItem, safeRemoveSessionItem } from '../utils/storage';
 
 export const PaymentPage = () => {
   const [searchParams] = useSearchParams();
@@ -22,10 +23,10 @@ export const PaymentPage = () => {
 
   useEffect(() => {
     // Check if there is a pending checkout in sessionStorage (order not saved in MongoDB yet)
-    const storedPendingStr = sessionStorage.getItem('dd_pending_checkout');
+    const storedPendingStr = safeGetSessionItem('dd_pending_checkout');
     if (storedPendingStr) {
       try {
-        const parsed = JSON.parse(storedPendingStr);
+        const parsed = typeof storedPendingStr === 'object' ? storedPendingStr : JSON.parse(storedPendingStr);
         if (parsed && parsed.items && parsed.deliveryAddress) {
           setPendingCheckout(parsed);
           setLoading(false);
@@ -121,7 +122,7 @@ export const PaymentPage = () => {
       const { data } = await API.post('/payments/upload-screenshot', payload);
 
       if (data && data.success) {
-        sessionStorage.removeItem('dd_pending_checkout');
+        safeRemoveSessionItem('dd_pending_checkout');
         setPendingCheckout(null);
         
         addToast('🎉 Payment screenshot submitted! Our team will verify it shortly.');

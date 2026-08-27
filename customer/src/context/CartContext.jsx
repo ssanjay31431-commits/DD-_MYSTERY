@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useMemo } from '
 import API from '../services/api';
 import { useAuth } from './AuthContext';
 import { useToast } from './ToastContext';
+import { safeSetLocalItem, safeGetLocalItem, sanitizeItem } from '../utils/storage';
 
 const CartContext = createContext();
 
@@ -20,7 +21,7 @@ export const CartProvider = ({ children }) => {
       const { data } = await API.get('/cart');
       if (data && Array.isArray(data.items) && data.items.length > 0) {
         setCartItems(data.items);
-        localStorage.setItem('dd_guest_cart', JSON.stringify(data.items));
+        safeSetLocalItem('dd_guest_cart', data.items.map(sanitizeItem));
       }
     } catch (error) {
       console.warn('[Cart Fetch Notice] Backend unavailable, using local cart:', error.message);
@@ -30,7 +31,7 @@ export const CartProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    const localCart = localStorage.getItem('dd_guest_cart');
+    const localCart = safeGetLocalItem('dd_guest_cart');
     let initialCart = [];
     if (localCart) {
       try {
@@ -49,13 +50,13 @@ export const CartProvider = ({ children }) => {
   const addToCart = async (product, customization, quantity = 1) => {
     if (!product) return;
 
-    const newItem = {
+    const newItem = sanitizeItem({
       _id: `item_${Date.now()}`,
       product,
       customization,
       quantity,
       unitPrice: product.price || 499
-    };
+    });
 
     if (user) {
       try {
@@ -66,7 +67,7 @@ export const CartProvider = ({ children }) => {
         });
         if (data && Array.isArray(data.items)) {
           setCartItems(data.items);
-          localStorage.setItem('dd_guest_cart', JSON.stringify(data.items));
+          safeSetLocalItem('dd_guest_cart', data.items.map(sanitizeItem));
           addToast(`Added ${product.name || 'Mystery Box'} to Cart!`);
           return;
         }
@@ -79,7 +80,7 @@ export const CartProvider = ({ children }) => {
     const currentList = Array.isArray(cartItems) ? cartItems : [];
     const updated = [...currentList, newItem];
     setCartItems(updated);
-    localStorage.setItem('dd_guest_cart', JSON.stringify(updated));
+    safeSetLocalItem('dd_guest_cart', updated.map(sanitizeItem));
     addToast(`Added ${product.name || 'Mystery Box'} to Cart!`);
   };
 
@@ -90,7 +91,7 @@ export const CartProvider = ({ children }) => {
       item._id === itemId ? { ...item, quantity } : item
     );
     setCartItems(updated);
-    localStorage.setItem('dd_guest_cart', JSON.stringify(updated));
+    safeSetLocalItem('dd_guest_cart', updated.map(sanitizeItem));
 
     if (user) {
       try {
@@ -105,7 +106,7 @@ export const CartProvider = ({ children }) => {
     const currentList = Array.isArray(cartItems) ? cartItems : [];
     const updated = currentList.filter((item) => item._id !== itemId);
     setCartItems(updated);
-    localStorage.setItem('dd_guest_cart', JSON.stringify(updated));
+    safeSetLocalItem('dd_guest_cart', updated.map(sanitizeItem));
     addToast('Item removed from cart', 'info');
 
     if (user) {

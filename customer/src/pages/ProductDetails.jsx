@@ -7,6 +7,7 @@ import { useWishlist } from '../context/WishlistContext';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
 import { DEFAULT_PRODUCTS } from '../utils/defaultProducts';
+import { safeSetSessionItem, sanitizeProduct } from '../utils/storage';
 
 export const ProductDetails = () => {
   const { id } = useParams();
@@ -70,12 +71,12 @@ export const ProductDetails = () => {
     };
     const buyNowItem = {
       _id: `buynow_${Date.now()}`,
-      product: targetProduct,
+      product: sanitizeProduct(targetProduct),
       customization: customizationDefault,
       quantity: quantity,
       unitPrice: targetProduct.price || 499
     };
-    sessionStorage.setItem('dd_buynow_item', JSON.stringify(buyNowItem));
+    safeSetSessionItem('dd_buynow_item', buyNowItem);
     navigate('/checkout', { state: { isBuyNow: true } });
   };
 

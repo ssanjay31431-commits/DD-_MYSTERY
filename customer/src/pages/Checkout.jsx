@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
 import { getDeviceLocation, getReverseGeocode, getLocationFromPincode, watchDeviceLocation, clearWatchLocation } from '../services/locationService';
+import { safeSetSessionItem, safeGetSessionItem, safeRemoveSessionItem, sanitizeCheckoutData } from '../utils/storage';
 
 export const Checkout = () => {
   const { user } = useAuth();
@@ -22,7 +23,7 @@ export const Checkout = () => {
 
   // Buy Now item check
   const locationState = location.state || {};
-  const storedBuyNowStr = sessionStorage.getItem('dd_buynow_item');
+  const storedBuyNowStr = safeGetSessionItem('dd_buynow_item');
   const isBuyNowFlow = Boolean(locationState.isBuyNow || storedBuyNowStr);
   let buyNowItemObj = null;
 
@@ -56,7 +57,7 @@ export const Checkout = () => {
     setSubmittingPayment(true);
 
     try {
-      const checkoutData = {
+      const checkoutData = sanitizeCheckoutData({
         items: itemList,
         deliveryAddress: selectedAddress,
         subtotal: computedSubtotal,
@@ -64,13 +65,13 @@ export const Checkout = () => {
         couponDiscount: couponApplied?.discountAmount || 0,
         couponCode: couponApplied?.code || '',
         totalAmount: computedTotal
-      };
+      });
 
-      // Store pending checkout in sessionStorage so order is created ONLY AFTER screenshot upload
-      sessionStorage.setItem('dd_pending_checkout', JSON.stringify(checkoutData));
+      // Safely store pending checkout with quota fallback and sanitization
+      safeSetSessionItem('dd_pending_checkout', checkoutData);
 
       if (isBuyNowFlow) {
-        sessionStorage.removeItem('dd_buynow_item');
+        safeRemoveSessionItem('dd_buynow_item');
       }
 
       addToast('Please scan GPay QR code & submit payment screenshot to place order.');

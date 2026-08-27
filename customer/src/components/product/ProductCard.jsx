@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Sparkles, Check, ShoppingBag, Heart, Star, Eye, Zap } from 'lucide-react';
 import { useWishlist } from '../../context/WishlistContext';
+import { safeSetSessionItem, sanitizeProduct } from '../../utils/storage';
 
 export const ProductCard = ({ product }) => {
   const { toggleWishlist, isInWishlist } = useWishlist();
@@ -15,7 +16,7 @@ export const ProductCard = ({ product }) => {
     e.preventDefault();
     const buyNowItem = {
       _id: `buynow_${Date.now()}`,
-      product: product,
+      product: sanitizeProduct(product),
       customization: {
         recipientName: 'Birthday Star',
         birthdayDate: new Date().toISOString().split('T')[0],
@@ -26,7 +27,7 @@ export const ProductCard = ({ product }) => {
       quantity: 1,
       unitPrice: product.price || 499
     };
-    sessionStorage.setItem('dd_buynow_item', JSON.stringify(buyNowItem));
+    safeSetSessionItem('dd_buynow_item', buyNowItem);
     navigate('/checkout', { state: { isBuyNow: true } });
   };
 
