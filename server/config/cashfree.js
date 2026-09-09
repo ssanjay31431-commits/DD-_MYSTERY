@@ -37,13 +37,18 @@ const cashfreeRequest = async (method, endpoint, data = null) => {
 
   const url = `${baseUrl}${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`;
 
+  const options = {
+    method: method.toUpperCase(),
+    url,
+    headers
+  };
+
+  if (data && method.toUpperCase() !== 'GET') {
+    options.data = data;
+  }
+
   try {
-    const response = await axios({
-      method,
-      url,
-      headers,
-      data
-    });
+    const response = await axios(options);
     return response.data;
   } catch (error) {
     const errorData = error.response?.data || {};
