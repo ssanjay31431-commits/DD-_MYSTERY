@@ -22,7 +22,7 @@ const failedPaymentSchema = new mongoose.Schema(
       amountPaid: Number,
       remainingBalance: Number
     },
-    paymentMethod: { type: String, enum: ['ADVANCE', 'FULL'], default: 'ADVANCE' },
+    paymentMethod: { type: String, enum: ['Cashfree', 'Cashfree Payment Gateway', 'CASHFREE', 'ADVANCE', 'FULL'], default: 'Cashfree' },
     errorDetails: { type: String, default: '' },
     status: { type: String, enum: ['UNRESOLVED', 'RESOLVED'], default: 'UNRESOLVED' },
     resolvedOrderId: { type: String, default: null }
