@@ -34,6 +34,7 @@ import { ReviewsPage } from './pages/ReviewsPage';
 import { FAQ } from './pages/FAQ';
 import { ContactUs } from './pages/ContactUs';
 import { PrivacyPolicy, TermsAndConditions, RefundPolicy } from './pages/Policies';
+import { MaintenancePage } from './pages/MaintenancePage';
 
 // Admin Pages
 import { AdminDashboard } from './pages/admin/AdminDashboard';
@@ -60,6 +61,12 @@ function CustomerLayout({ children }) {
 }
 
 export default function App() {
+  const isMaintenanceMode = import.meta.env.VITE_MAINTENANCE_MODE === 'true';
+
+  if (isMaintenanceMode) {
+    return <MaintenancePage />;
+  }
+
   return (
     <ToastProvider>
       <AuthProvider>
