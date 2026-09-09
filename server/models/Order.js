@@ -77,6 +77,9 @@ const orderSchema = new mongoose.Schema(
       method: {
         type: String,
         enum: [
+          'Cashfree',
+          'Cashfree Payment Gateway',
+          'CASHFREE',
           'Manual UPI',
           'MANUAL_UPI',
           'ADVANCE',
@@ -86,12 +89,13 @@ const orderSchema = new mongoose.Schema(
           'Advance (₹100) + Cash on Delivery'
         ],
         required: true,
-        default: 'Manual UPI'
+        default: 'Cashfree'
       },
-      provider: { type: String, default: 'MANUAL_UPI' },
+      provider: { type: String, default: 'CASHFREE' },
       status: {
         type: String,
         enum: [
+          'SUCCESS',
           'PAID',
           'PARTIALLY_PAID',
           'PENDING',
@@ -113,6 +117,7 @@ const orderSchema = new mongoose.Schema(
       type: String,
       enum: [
         'PENDING_PAYMENT',
+        'PAYMENT_FAILED',
         'SCREENSHOT_SUBMITTED',
         'PAYMENT_VERIFICATION',
         'PAYMENT_COMPLETED',

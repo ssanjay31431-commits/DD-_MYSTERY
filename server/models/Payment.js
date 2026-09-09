@@ -23,12 +23,11 @@ const paymentSchema = new mongoose.Schema(
     },
     upiId: {
       type: String,
-      required: true,
-      default: 'david468468@airtel'
+      default: 'CASHFREE'
     },
     upiName: {
       type: String,
-      default: 'Sagariya David S'
+      default: 'Cashfree'
     },
     paymentReference: {
       type: String,
@@ -42,6 +41,9 @@ const paymentSchema = new mongoose.Schema(
       type: String,
       enum: [
         'PENDING_PAYMENT',
+        'PENDING',
+        'SUCCESS',
+        'PAID',
         'SCREENSHOT_SUBMITTED',
         'PAYMENT_VERIFICATION',
         'PAYMENT_COMPLETED',

@@ -92,7 +92,7 @@ const createOrder = async (req, res) => {
       remainingBalance: totalAmount,
       remainingCodAmount: 0,
       paymentInfo: {
-        method: 'Cashfree Payment Gateway',
+        method: 'Cashfree',
         provider: 'CASHFREE',
         status: 'PENDING_PAYMENT',
         paymentOrderId: customOrderId

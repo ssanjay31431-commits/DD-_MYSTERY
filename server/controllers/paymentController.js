@@ -88,7 +88,7 @@ const createCashfreeOrder = async (req, res) => {
       remainingBalance: totalAmount,
       remainingCodAmount: 0,
       paymentInfo: {
-        method: 'Cashfree Payment Gateway',
+        method: 'Cashfree',
         provider: 'CASHFREE',
         status: 'PENDING_PAYMENT',
         paymentOrderId: customOrderId
@@ -216,7 +216,7 @@ const verifyCashfreePayment = async (req, res) => {
       // Mark order as CONFIRMED & PAID in MongoDB
       order.orderStatus = 'ORDER_CONFIRMED';
       order.paymentInfo = {
-        method: 'Cashfree Payment Gateway',
+        method: 'Cashfree',
         provider: 'CASHFREE',
         status: 'SUCCESS',
         transactionId: cfPayments?.[0]?.cf_payment_id || `CF_${Date.now()}`,
@@ -323,7 +323,7 @@ const handleCashfreeWebhook = async (req, res) => {
       if (order && order.orderStatus !== 'ORDER_CONFIRMED') {
         order.orderStatus = 'ORDER_CONFIRMED';
         order.paymentInfo = {
-          method: 'Cashfree Payment Gateway',
+          method: 'Cashfree',
           provider: 'CASHFREE',
           status: 'SUCCESS',
           transactionId: rawBody.data.payment.cf_payment_id || `CF_${Date.now()}`
