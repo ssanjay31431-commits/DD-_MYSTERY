@@ -206,7 +206,12 @@ const verifyCashfreePayment = async (req, res) => {
       }
     } catch (cfErr) {
       console.error(`[Cashfree Order Fetch Error] ${displayOrderId}:`, cfErr.message);
-      return res.status(500).json({ message: 'Failed to verify payment status with Cashfree' });
+      return res.json({
+        success: false,
+        paymentStatus: 'PENDING',
+        orderStatus: order.orderStatus,
+        message: 'Payment verification is processing. Please check again in a moment.'
+      });
     }
 
     const cfOrderStatus = cfOrder?.order_status || '';

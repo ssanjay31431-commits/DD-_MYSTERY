@@ -136,7 +136,7 @@ export const MyOrders = () => {
                       to={`/payment?order_id=${ordNumber}`}
                       className="px-4 py-2 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-bold text-xs uppercase shadow-md shadow-pink-500/20 flex items-center gap-1"
                     >
-                      <CreditCard className="w-3.5 h-3.5" /> Pay / Upload
+                      <CreditCard className="w-3.5 h-3.5" /> Pay Now with Cashfree
                     </Link>
                   )}
                   <Link

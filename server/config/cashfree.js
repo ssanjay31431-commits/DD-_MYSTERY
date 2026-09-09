@@ -26,8 +26,7 @@ const getCashfreeHeaders = () => {
     'x-client-secret': clientSecret.trim(),
     'x-api-version': apiVersion.trim(),
     'Content-Type': 'application/json',
-    'Accept': 'application/json',
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+    'Accept': 'application/json'
   };
 };
 
