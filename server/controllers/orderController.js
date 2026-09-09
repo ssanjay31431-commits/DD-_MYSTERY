@@ -92,16 +92,16 @@ const createOrder = async (req, res) => {
       remainingBalance: totalAmount,
       remainingCodAmount: 0,
       paymentInfo: {
-        method: 'Manual UPI',
-        provider: 'MANUAL_UPI',
-        status: 'PENDING',
+        method: 'Cashfree Payment Gateway',
+        provider: 'CASHFREE',
+        status: 'PENDING_PAYMENT',
         paymentOrderId: customOrderId
       },
       orderStatus: 'PENDING_PAYMENT',
       trackingHistory: [
         {
           status: 'PENDING_PAYMENT',
-          comment: 'Order registered. Please scan GPay QR and upload payment screenshot to complete order.'
+          comment: 'Order registered. Awaiting online payment via Cashfree Payment Gateway.'
         }
       ],
       expectedDeliveryDate: expectedDelivery,

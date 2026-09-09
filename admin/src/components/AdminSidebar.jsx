@@ -22,7 +22,7 @@ export const AdminSidebar = () => {
   const menu = [
     { name: 'Dashboard', path: '/admin', icon: LayoutDashboard },
     { name: 'Orders', path: '/admin/orders', icon: ShoppingBag },
-    { name: 'Payment Verification', path: '/admin/payments', icon: CreditCard },
+    { name: 'Cashfree Payments', path: '/admin/payments', icon: CreditCard },
     { name: 'Products & Boxes', path: '/admin/products', icon: Package },
     { name: 'Customers', path: '/admin/customers', icon: Users },
     { name: 'Inventory Stock', path: '/admin/inventory', icon: Warehouse },

@@ -20,9 +20,15 @@ export const OrderSuccess = () => {
     const fetchConfirmedOrder = async () => {
       if (!orderId) return;
       try {
-        const { data } = await API.get(`/orders/${orderId}`);
-        if (data && (data._id || data.orderNumber)) {
-          setOrder(data);
+        // Verify payment status with Cashfree to ensure order is marked confirmed
+        const statusRes = await API.get(`/payments/status/${orderId}`).catch(() => null);
+        if (statusRes?.data?.order) {
+          setOrder(statusRes.data.order);
+        } else {
+          const { data } = await API.get(`/orders/${orderId}`);
+          if (data && (data._id || data.orderNumber)) {
+            setOrder(data);
+          }
         }
       } catch (err) {
         console.warn('Fetch confirmed order notice:', err.message);
@@ -36,10 +42,9 @@ export const OrderSuccess = () => {
 
   const activeOrder = order || {};
   const orderNumber = activeOrder.orderNumber || activeOrder.orderId || orderId;
-  const amountPaid = activeOrder.pricing?.amountPaid !== undefined ? activeOrder.pricing.amountPaid : (activeOrder.amountPaid || activeOrder.advancePaid || 100);
-  const remainingBalance = activeOrder.pricing?.remainingBalance !== undefined ? activeOrder.pricing.remainingBalance : (activeOrder.remainingBalance !== undefined ? activeOrder.remainingBalance : (activeOrder.remainingCodAmount || 0));
-  const rawMethod = activeOrder.paymentInfo?.method || activeOrder.paymentMethod || 'ADVANCE';
-  const paymentMethodTitle = rawMethod === 'FULL' || rawMethod === 'Full Online Payment' ? 'Full Online Payment' : 'Advance Payment';
+  const amountPaid = activeOrder.pricing?.totalAmount || activeOrder.totalAmount || activeOrder.pricing?.amountPaid || activeOrder.amountPaid || 499;
+  const remainingBalance = 0;
+  const paymentMethodTitle = activeOrder.paymentInfo?.method || 'Cashfree Payment Gateway';
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-12 space-y-8">

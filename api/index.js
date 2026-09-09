@@ -129,15 +129,19 @@ app.delete('/api/cart/clear', (req, res) => {
 
 app.post('/api/payments/create-order', (req, res) => {
   res.json({
-    id: `pay_${Date.now()}`,
-    amount: 10000,
-    currency: 'INR',
-    isMockMode: true
+    success: true,
+    payment_session_id: `session_cf_mock_${Date.now()}`,
+    order_id: `DDMB-${Date.now()}`,
+    amount: req.body?.totalAmount || 499
   });
 });
 
+app.get('/api/payments/status/:orderId', (req, res) => {
+  res.json({ success: true, paymentStatus: 'SUCCESS', orderStatus: 'ORDER_CONFIRMED' });
+});
+
 app.post('/api/payments/verify', (req, res) => {
-  res.json({ success: true });
+  res.json({ success: true, paymentStatus: 'SUCCESS', orderStatus: 'ORDER_CONFIRMED' });
 });
 
 app.use((req, res) => {

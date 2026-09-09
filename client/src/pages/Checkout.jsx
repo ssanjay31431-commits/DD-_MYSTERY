@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { MapPin, Plus, Check, ShieldCheck, ArrowRight, User, Phone, Home, Building2, Lock, Loader, Navigation } from 'lucide-react';
+import { MapPin, Plus, Check, ShieldCheck, User, Loader, Navigation, Lock, CreditCard, AlertCircle } from 'lucide-react';
 import API from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
 import { getDeviceLocation, getReverseGeocode, getLocationFromPincode, watchDeviceLocation, clearWatchLocation } from '../services/locationService';
 import { safeSetSessionItem, safeGetSessionItem, safeRemoveSessionItem, sanitizeCheckoutData } from '../utils/storage';
+import { loadCashfreeSDK } from '../utils/cashfree';
 
 export const Checkout = () => {
   const { user } = useAuth();
@@ -19,6 +20,7 @@ export const Checkout = () => {
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [submittingPayment, setSubmittingPayment] = useState(false);
+  const [paymentError, setPaymentError] = useState('');
   const [settings, setSettings] = useState({ codAdvanceType: 'percentage', codAdvanceValue: 20 });
 
   // Buy Now item check
@@ -48,13 +50,44 @@ export const Checkout = () => {
   const computedDeliveryFee = 0;
   const computedTotal = Math.max(0, computedSubtotal - (couponApplied?.discountAmount || 0));
 
+  const verifyOrderPaymentStatus = async (targetOrderId) => {
+    try {
+      addToast('Verifying payment status with Cashfree...', 'info');
+      const { data } = await API.get(`/payments/status/${targetOrderId}`);
+
+      if (data && data.success && (data.paymentStatus === 'SUCCESS' || data.orderStatus === 'ORDER_CONFIRMED')) {
+        clearCart();
+        addToast('🎉 Payment Successful! Your order is confirmed.');
+        navigate(`/order-success/${targetOrderId}`, { replace: true });
+      } else if (data && data.paymentStatus === 'PENDING') {
+        addToast('Payment is pending verification. Please check your order status shortly.', 'info');
+        navigate(`/order/${targetOrderId}`);
+      } else {
+        setPaymentError(data?.message || 'Payment failed or was cancelled. Please try again.');
+        addToast('Payment failed or was cancelled.', 'error');
+      }
+    } catch (err) {
+      console.error('Payment Verification error:', err);
+      setPaymentError('Unable to confirm payment status automatically. Please check My Orders.');
+      addToast('Verification error. Please check My Orders.', 'error');
+    } finally {
+      setSubmittingPayment(false);
+    }
+  };
+
   const handleProceedToPayment = async () => {
     if (!selectedAddress) {
       addToast('Please select or add a delivery address', 'error');
       return;
     }
 
+    if (itemList.length === 0) {
+      addToast('Your cart is empty. Please add products before checking out.', 'error');
+      return;
+    }
+
     setSubmittingPayment(true);
+    setPaymentError('');
 
     try {
       const checkoutData = sanitizeCheckoutData({
@@ -67,19 +100,47 @@ export const Checkout = () => {
         totalAmount: computedTotal
       });
 
-      // Safely store pending checkout with quota fallback and sanitization
-      safeSetSessionItem('dd_pending_checkout', checkoutData);
+      // 1. Create Cashfree Order via Backend
+      const { data } = await API.post('/payments/create-order', checkoutData);
+
+      if (!data || !data.payment_session_id) {
+        throw new Error(data?.message || 'Failed to create payment order with Cashfree');
+      }
+
+      const sessionId = data.payment_session_id;
+      const orderId = data.order_id;
 
       if (isBuyNowFlow) {
         safeRemoveSessionItem('dd_buynow_item');
       }
 
-      addToast('Please scan GPay QR code & submit payment screenshot to place order.');
-      navigate('/payment');
+      // 2. Initialize Cashfree JS SDK
+      const cashfree = await loadCashfreeSDK();
+
+      // 3. Open Cashfree Checkout UI
+      const checkoutOptions = {
+        paymentSessionId: sessionId,
+        redirectTarget: '_modal'
+      };
+
+      const result = await cashfree.checkout(checkoutOptions);
+
+      if (result?.error) {
+        console.error('Cashfree SDK Checkout error:', result.error);
+        setPaymentError(result.error.message || 'Payment checkout could not be completed.');
+        addToast(result.error.message || 'Payment cancelled or failed', 'error');
+        setSubmittingPayment(false);
+        return;
+      }
+
+      // 4. Verify payment status on backend after modal closes/returns
+      await verifyOrderPaymentStatus(orderId);
+
     } catch (error) {
-      console.error('Checkout error:', error);
-      addToast('Failed to proceed to payment page', 'error');
-    } finally {
+      console.error('Cashfree checkout error:', error);
+      const errorMsg = error.response?.data?.message || error.message || 'Failed to initiate Cashfree payment.';
+      setPaymentError(errorMsg);
+      addToast(errorMsg, 'error');
       setSubmittingPayment(false);
     }
   };
@@ -337,7 +398,7 @@ export const Checkout = () => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div className="text-center max-w-xl mx-auto mb-10">
         <h1 className="text-3xl font-black text-white font-display">Checkout & Delivery Address</h1>
-        <p className="text-xs text-slate-400 mt-1">Select your delivery location and payment option to complete your mystery box order.</p>
+        <p className="text-xs text-slate-400 mt-1">Select your delivery location and complete your mystery box order securely.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -508,7 +569,7 @@ export const Checkout = () => {
 
         </div>
 
-        {/* Right Column: Order Summary & Select Payment Options */}
+        {/* Right Column: Order Summary & Cashfree Payment */}
         <div className="lg:col-span-4 space-y-6">
           <div className="glass-panel p-6 rounded-3xl border border-purple-500/30 space-y-6">
             <h3 className="text-lg font-bold text-white font-display border-b border-slate-800 pb-3">
@@ -517,11 +578,11 @@ export const Checkout = () => {
 
             <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
               {itemList.map((item) => (
-                <div key={item._id} className="flex justify-between text-xs text-slate-300">
+                <div key={item._id || item.product?._id} className="flex justify-between text-xs text-slate-300">
                   <span className="truncate max-w-[180px]">
-                    {item.product?.name || 'Mystery Box'} (x{item.quantity})
+                    {item.product?.name || item.name || 'Mystery Box'} (x{item.quantity})
                   </span>
-                  <span className="font-bold text-white">₹{(item.unitPrice || item.product?.price || 0) * item.quantity}</span>
+                  <span className="font-bold text-white">₹{(item.unitPrice || item.product?.price || item.price || 0) * item.quantity}</span>
                 </div>
               ))}
             </div>
@@ -538,51 +599,51 @@ export const Checkout = () => {
                 </div>
               )}
               <div className="flex justify-between text-base font-black text-white border-t border-slate-800 pt-3">
-                <span>Total Order Value</span>
+                <span>Total Amount</span>
                 <span className="text-white">₹{computedTotal}</span>
               </div>
             </div>
 
-            {/* Select Payment Method Cards - Full Payment Only */}
+            {/* Cashfree Payment Gateway Box */}
             <div className="space-y-3 pt-2 border-t border-slate-800">
               <h4 className="text-xs font-extrabold uppercase tracking-wider text-pink-400 flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4" /> PAYMENT METHOD
+                <ShieldCheck className="w-4 h-4" /> PAYMENT
               </h4>
 
-              <div className="p-4 rounded-2xl bg-purple-600/20 border border-pink-500 text-white shadow-lg ring-1 ring-pink-500/50">
-                <div className="flex justify-between items-center mb-1">
-                  <span className="font-bold text-xs text-pink-400 flex items-center gap-1.5">
-                    💳 FULL ONLINE PAYMENT ONLY
-                  </span>
-                  <Check className="w-4 h-4 text-pink-400" />
-                </div>
-                <p className="text-xs text-slate-300 leading-snug">
-                  Pay the complete ₹{computedTotal} online securely.
+              <div className="p-4 rounded-2xl bg-purple-950/40 border border-purple-500/30 space-y-2">
+                <p className="text-xs text-slate-300 flex items-center gap-2 font-semibold">
+                  <CreditCard className="w-4 h-4 text-emerald-400" />
+                  Secure payment powered by Cashfree
                 </p>
-                <p className="text-xs text-slate-400 mt-1">
-                  Remaining Balance: <strong className="text-emerald-400 font-bold">₹0 (Fully Paid)</strong>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  Supports UPI (Google Pay, PhonePe, Paytm), Credit/Debit Cards, NetBanking, & Digital Wallets.
                 </p>
               </div>
             </div>
 
-            {/* Breakdown Explanation Box */}
-            <div className="p-4 rounded-2xl bg-slate-950/90 border border-purple-500/30 space-y-1.5 text-xs">
-              <div className="flex justify-between text-emerald-400 font-bold">
-                <span>Online Paid Amount:</span>
-                <span>₹{computedTotal}</span>
+            {/* Error Message Display */}
+            {paymentError && (
+              <div className="p-3.5 rounded-xl bg-red-950/60 border border-red-500/40 text-red-300 text-xs flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                <span>{paymentError}</span>
               </div>
-              <div className="flex justify-between text-slate-300">
-                <span>Remaining COD Balance:</span>
-                <span className="font-bold text-white">₹0</span>
-              </div>
-            </div>
+            )}
 
             <button
               onClick={handleProceedToPayment}
               disabled={submittingPayment}
-              className="w-full py-4 rounded-2xl bg-gradient-to-r from-pink-500 via-purple-600 to-amber-500 text-white font-black text-xs uppercase tracking-wider shadow-2xl shadow-pink-500/30 hover:scale-105 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full py-4 rounded-2xl bg-gradient-to-r from-pink-500 via-purple-600 to-amber-500 text-white font-black text-xs uppercase tracking-wider shadow-2xl shadow-pink-500/30 hover:scale-105 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:hover:scale-100"
             >
-              PAY ₹{computedTotal} NOW →
+              {submittingPayment ? (
+                <>
+                  <Loader className="w-4 h-4 animate-spin text-white" />
+                  Creating Payment Session...
+                </>
+              ) : (
+                <>
+                  <Lock className="w-4 h-4" /> Pay Now (₹{computedTotal}) →
+                </>
+              )}
             </button>
           </div>
         </div>

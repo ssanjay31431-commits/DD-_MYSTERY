@@ -1,30 +1,26 @@
 const express = require('express');
 const router = express.Router();
 const {
-  getPaymentDetailsForOrder,
-  uploadPaymentScreenshot,
-  adminGetPendingPayments,
-  adminVerifyPayment,
-  adminRejectPayment,
-  createPaymentSession,
-  confirmPaymentAndCreateOrder
+  createCashfreeOrder,
+  verifyCashfreePayment,
+  handleCashfreeWebhook,
+  adminGetPaymentsList
 } = require('../controllers/paymentController');
 const { protect, admin } = require('../middleware/authMiddleware');
 
-router.use(protect);
+// Public Webhook route (Cashfree server-to-server call)
+router.post('/webhook', handleCashfreeWebhook);
 
-// Customer endpoints
-router.get('/order/:id', getPaymentDetailsForOrder);
-router.post('/upload-screenshot', uploadPaymentScreenshot);
+// Protected Customer payment routes
+router.post('/create-order', protect, createCashfreeOrder);
+router.get('/status/:orderId', protect, verifyCashfreePayment);
+router.post('/verify', protect, verifyCashfreePayment);
 
-// Admin endpoints
-router.get('/admin/pending', admin, adminGetPendingPayments);
-router.put('/admin/verify/:id', admin, adminVerifyPayment);
-router.put('/admin/reject/:id', admin, adminRejectPayment);
+// Compatibility alias for session creation
+router.post('/create-session', protect, createCashfreeOrder);
 
-// Compatibility aliases
-router.post('/create-session', createPaymentSession);
-router.post('/confirm-payment', confirmPaymentAndCreateOrder);
-router.post('/verify', confirmPaymentAndCreateOrder);
+// Protected Admin payment routes
+router.get('/admin/pending', protect, admin, adminGetPaymentsList);
+router.get('/admin/list', protect, admin, adminGetPaymentsList);
 
 module.exports = router;
