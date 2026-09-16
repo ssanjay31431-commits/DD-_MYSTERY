@@ -17,6 +17,8 @@ const app = express();
 app.use(helmet({ contentSecurityPolicy: false }));
 // Dynamic & Permissive CORS to prevent origin blocking across Vercel, Render & Localhost
 const allowedOrigins = [
+  'https://www.ddmarket.shop',
+  'https://ddmarket.shop',
   'https://dd-mystery.vercel.app',
   'https://dd-mystery.onrender.com',
   'http://localhost:5173',
@@ -33,20 +35,11 @@ if (process.env.CLIENT_URL) {
 
 const corsOptions = {
   origin: (origin, callback) => {
+    // Allow requests without origin (like mobile apps, curl, postman) or any origin dynamically
     if (!origin) {
-      return callback(null, '*');
+      return callback(null, true);
     }
-
-    if (
-      allowedOrigins.includes(origin) ||
-      origin.endsWith('.vercel.app') ||
-      origin.includes('localhost') ||
-      origin.includes('127.0.0.1')
-    ) {
-      return callback(null, origin);
-    }
-
-    return callback(null, origin);
+    return callback(null, true);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],

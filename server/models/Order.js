@@ -1,13 +1,13 @@
 const mongoose = require('mongoose');
 
 const orderItemSchema = new mongoose.Schema({
-  product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
+  product: { type: mongoose.Schema.Types.Mixed, ref: 'Product' },
   productSnapshot: {
     name: String,
     image: String,
     price: Number,
     description: String,
-    contents: [String]
+    contents: [mongoose.Schema.Types.Mixed]
   },
   customizationSnapshot: {
     recipientName: String,
