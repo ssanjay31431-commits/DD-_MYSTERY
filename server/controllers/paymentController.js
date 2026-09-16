@@ -2,24 +2,14 @@ const Order = require('../models/Order');
 const User = require('../models/User');
 const Cart = require('../models/Cart');
 const Payment = require('../models/Payment');
+const AdminSettings = require('../models/AdminSettings');
 const NotificationLog = require('../models/NotificationLog');
 const { generateOrderId } = require('../utils/orderIdGenerator');
 const { sendNotification } = require('../utils/emailService');
-const { cashfreeRequest, getCashfreeConfig } = require('../config/cashfree');
 
-// Helper to format clean 10-digit phone number for Cashfree API requirements
-const formatPhoneForCashfree = (phoneStr) => {
-  if (!phoneStr) return '9876543210';
-  const digits = String(phoneStr).replace(/[^\d]/g, '');
-  if (digits.length >= 10) {
-    return digits.slice(-10);
-  }
-  return '9876543210';
-};
-
-// @desc Create Cashfree Payment Order
+// @desc Create Order for Manual UPI Payment
 // @route POST /api/payments/create-order
-const createCashfreeOrder = async (req, res) => {
+const confirmPaymentAndCreateOrder = async (req, res) => {
   try {
     const { items, deliveryAddress, subtotal, deliveryFee = 0, couponDiscount = 0, couponCode = '', totalAmount: reqTotalAmount } = req.body;
 
@@ -31,7 +21,6 @@ const createCashfreeOrder = async (req, res) => {
       return res.status(400).json({ message: 'Delivery address is required' });
     }
 
-    // 1. Calculate Order Total on Backend for Security
     const calculatedSubtotal = items.reduce((acc, item) => {
       const price = item.unitPrice || item.product?.price || item.price || 0;
       return acc + price * (item.quantity || 1);
@@ -44,6 +33,10 @@ const createCashfreeOrder = async (req, res) => {
     }
 
     const customOrderId = await generateOrderId();
+    const settings = (await AdminSettings.findOne()) || {};
+    const upiId = settings.upiId || 'david468468@airtel';
+    const upiName = settings.upiName || 'Sagariya David S';
+
     const expectedDelivery = new Date();
     expectedDelivery.setDate(expectedDelivery.getDate() + 4);
 
@@ -61,7 +54,6 @@ const createCashfreeOrder = async (req, res) => {
       unitPrice: item.unitPrice || item.price || 0
     }));
 
-    // Save initial Order in MongoDB with status PENDING_PAYMENT
     const order = new Order({
       orderNumber: customOrderId,
       orderId: customOrderId,
@@ -88,16 +80,16 @@ const createCashfreeOrder = async (req, res) => {
       remainingBalance: totalAmount,
       remainingCodAmount: 0,
       paymentInfo: {
-        method: 'Cashfree',
-        provider: 'CASHFREE',
-        status: 'PENDING_PAYMENT',
+        method: 'Manual UPI',
+        provider: 'MANUAL_UPI',
+        status: 'PENDING',
         paymentOrderId: customOrderId
       },
       orderStatus: 'PENDING_PAYMENT',
       trackingHistory: [
         {
           status: 'PENDING_PAYMENT',
-          comment: 'Cashfree payment session initialized. Awaiting customer checkout.',
+          comment: 'Order registered. Please scan GPay QR and upload payment screenshot to complete order.',
           timestamp: new Date()
         }
       ],
@@ -107,67 +99,39 @@ const createCashfreeOrder = async (req, res) => {
 
     const createdOrder = await order.save();
 
-    // 2. Prepare Cashfree Customer Details
-    const customerPhone = formatPhoneForCashfree(deliveryAddress.mobileNumber || req.user.phone);
-    const customerName = (deliveryAddress.fullName || req.user.name || 'Customer').trim();
-    const customerEmail = (deliveryAddress.email || req.user.email || 'customer@ddmysterybox.com').trim();
-    const customerId = `cust_${req.user._id.toString()}`;
-
-    const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
-
-    // 3. Call Cashfree Create Order API
-    const cashfreeOrderPayload = {
-      order_id: customOrderId,
-      order_amount: totalAmount,
-      order_currency: 'INR',
-      customer_details: {
-        customer_id: customerId,
-        customer_name: customerName,
-        customer_email: customerEmail,
-        customer_phone: customerPhone
-      },
-      order_meta: {
-        return_url: `${clientUrl}/order-success/${customOrderId}?order_id={order_id}`
-      }
-    };
-
-    console.log(`[Cashfree] Creating Cashfree order ${customOrderId} for ₹${totalAmount}...`);
-    const cfResponse = await cashfreeRequest('POST', '/orders', cashfreeOrderPayload);
-
-    if (!cfResponse || !cfResponse.payment_session_id) {
-      throw new Error('Cashfree order creation failed: missing payment_session_id');
-    }
-
-    // Save linked Payment record
     await Payment.create({
       order: createdOrder._id,
       orderId: customOrderId,
       customer: req.user._id,
       amount: totalAmount,
-      paymentReference: cfResponse.cf_order_id || customOrderId,
+      upiId,
+      upiName,
+      paymentReference: customOrderId,
       status: 'PENDING_PAYMENT'
-    }).catch(err => console.error('[Payment Record Warning]', err.message));
+    }).catch((err) => console.error('[Payment Record Warning]', err.message));
+
+    // Clear cart after placing order
+    await Cart.findOneAndUpdate(
+      { user: req.user._id },
+      { items: [], couponApplied: { code: '', discountAmount: 0 } }
+    ).catch(() => {});
 
     res.status(201).json({
       success: true,
-      payment_session_id: cfResponse.payment_session_id,
       order_id: customOrderId,
       orderMongoId: createdOrder._id,
       amount: totalAmount,
       order: createdOrder
     });
   } catch (error) {
-    console.error('[Create Cashfree Order Error]', error);
-    res.status(error.status || 500).json({
-      message: error.message || 'Failed to create Cashfree payment order',
-      details: error.data || null
-    });
+    console.error('[Create Order Error]', error);
+    res.status(500).json({ message: error.message || 'Order creation failed' });
   }
 };
 
-// @desc Verify Cashfree Payment Status via Backend
-// @route GET /api/payments/status/:orderId
-const verifyCashfreePayment = async (req, res) => {
+// @desc Get Payment Details for Order (QR code & screenshot status)
+// @route GET /api/payments/order/:orderId
+const getPaymentDetailsForOrder = async (req, res) => {
   try {
     const param = req.params.orderId;
     let order;
@@ -182,193 +146,329 @@ const verifyCashfreePayment = async (req, res) => {
       return res.status(404).json({ message: 'Order not found' });
     }
 
-    const displayOrderId = order.orderNumber || order.orderId;
+    const settings = (await AdminSettings.findOne()) || {};
+    const upiId = settings.upiId || 'david468468@airtel';
+    const upiName = settings.upiName || 'Sagariya David S';
 
-    // Check if order is already confirmed in DB
-    if (order.orderStatus === 'ORDER_CONFIRMED' || order.orderStatus === 'CONFIRMED' || order.paymentInfo?.status === 'SUCCESS') {
-      return res.json({
-        success: true,
-        paymentStatus: 'SUCCESS',
-        orderStatus: order.orderStatus,
-        order
-      });
-    }
+    let payment = await Payment.findOne({ order: order._id });
 
-    // Fetch actual Cashfree order status from Cashfree REST API
-    let cfOrder;
-    let cfPayments = [];
-    try {
-      cfOrder = await cashfreeRequest('GET', `/orders/${displayOrderId}`);
-      try {
-        cfPayments = await cashfreeRequest('GET', `/orders/${displayOrderId}/payments`);
-      } catch (e) {
-        console.warn(`[Cashfree Payments Fetch Notice] ${displayOrderId}:`, e.message);
-      }
-    } catch (cfErr) {
-      console.error(`[Cashfree Order Fetch Error] ${displayOrderId}:`, cfErr.message);
-      return res.json({
-        success: false,
-        paymentStatus: 'PENDING',
-        orderStatus: order.orderStatus,
-        message: 'Payment verification is processing. Please check again in a moment.'
-      });
-    }
-
-    const cfOrderStatus = cfOrder?.order_status || '';
-    const hasSuccessfulPayment = Array.isArray(cfPayments) && cfPayments.some(p => p.payment_status === 'SUCCESS');
-
-    if (cfOrderStatus === 'PAID' || hasSuccessfulPayment) {
-      // Mark order as CONFIRMED & PAID in MongoDB
-      order.orderStatus = 'ORDER_CONFIRMED';
-      order.paymentInfo = {
-        method: 'Cashfree',
-        provider: 'CASHFREE',
-        status: 'SUCCESS',
-        transactionId: cfPayments?.[0]?.cf_payment_id || `CF_${Date.now()}`,
-        paymentOrderId: displayOrderId
-      };
-
-      if (order.pricing) {
-        order.pricing.amountPaid = order.totalAmount;
-        order.pricing.remainingBalance = 0;
-      }
-      order.amountPaid = order.totalAmount;
-      order.advancePaid = order.totalAmount;
-      order.remainingBalance = 0;
-      order.remainingCodAmount = 0;
-
-      if (!order.trackingHistory.some(t => t.status === 'ORDER_CONFIRMED')) {
-        order.trackingHistory.push({
-          status: 'ORDER_CONFIRMED',
-          comment: 'Payment verified successfully powered by Cashfree Payment Gateway.',
-          timestamp: new Date()
-        });
-      }
-
-      const updatedOrder = await order.save();
-
-      // Update linked Payment model
-      await Payment.findOneAndUpdate(
-        { order: order._id },
-        { status: 'PAYMENT_COMPLETED', verifiedAt: new Date() }
-      ).catch(e => {});
-
-      // Clear user cart
-      if (order.user?._id) {
-        await Cart.findOneAndUpdate(
-          { user: order.user._id },
-          { items: [], couponApplied: { code: '', discountAmount: 0 } }
-        ).catch(e => {});
-      }
-
-      // Dispatch order confirmation notification
-      try {
-        await sendNotification({
-          type: 'ORDER_CONFIRMATION',
-          order: updatedOrder,
-          orderId: displayOrderId,
-          recipientEmail: order.user?.email || order.deliveryAddressSnapshot?.email,
-          recipientPhone: order.user?.phone || order.deliveryAddressSnapshot?.mobileNumber
-        });
-      } catch (e) {
-        console.error('[Notification Warning]', e.message);
-      }
-
-      return res.json({
-        success: true,
-        paymentStatus: 'SUCCESS',
-        orderStatus: 'ORDER_CONFIRMED',
-        order: updatedOrder
-      });
-    } else if (cfOrderStatus === 'ACTIVE') {
-      return res.json({
-        success: false,
-        paymentStatus: 'PENDING',
-        orderStatus: order.orderStatus,
-        message: 'Payment is pending. Please complete checkout.'
-      });
-    } else {
-      // Payment Failed / Cancelled / Expired
-      order.orderStatus = 'PAYMENT_FAILED';
-      if (order.paymentInfo) {
-        order.paymentInfo.status = 'FAILED';
-      }
-      await order.save();
-
-      await Payment.findOneAndUpdate(
-        { order: order._id },
-        { status: 'FAILED' }
-      ).catch(e => {});
-
-      return res.json({
-        success: false,
-        paymentStatus: 'FAILED',
-        orderStatus: 'PAYMENT_FAILED',
-        message: 'Payment failed or was cancelled by user.'
-      });
-    }
+    res.json({
+      success: true,
+      order,
+      payment,
+      upiId,
+      upiName,
+      amountToPay: order.totalAmount,
+      screenshotUrl: payment?.screenshotUrl || '',
+      status: payment?.status || order.paymentInfo?.status || order.orderStatus
+    });
   } catch (error) {
-    console.error('[Verify Cashfree Payment Error]', error);
+    console.error('[Get Payment Details Error]', error);
+    res.status(500).json({ message: error.message || 'Failed to fetch payment details' });
+  }
+};
+
+// @desc Customer Uploads Payment Screenshot
+// @route POST /api/payments/upload-screenshot
+const uploadPaymentScreenshot = async (req, res) => {
+  try {
+    const { orderId, screenshotUrl, screenshot } = req.body;
+    const finalScreenshot = screenshotUrl || screenshot;
+
+    if (!orderId) {
+      return res.status(400).json({ message: 'Order ID is required' });
+    }
+
+    if (!finalScreenshot) {
+      return res.status(400).json({ message: 'Payment screenshot image is required' });
+    }
+
+    let order = await Order.findOne({ $or: [{ orderId }, { orderNumber: orderId }, { _id: orderId.match(/^[0-9a-fA-F]{24}$/) ? orderId : null }] });
+
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    order.orderStatus = 'SCREENSHOT_SUBMITTED';
+    if (order.paymentInfo) {
+      order.paymentInfo.status = 'SCREENSHOT_SUBMITTED';
+    }
+    if (!order.trackingHistory.some((t) => t.status === 'SCREENSHOT_SUBMITTED')) {
+      order.trackingHistory.push({
+        status: 'SCREENSHOT_SUBMITTED',
+        comment: 'Payment screenshot submitted by customer. Awaiting admin verification.',
+        timestamp: new Date()
+      });
+    }
+
+    const updatedOrder = await order.save();
+
+    let payment = await Payment.findOne({ order: order._id });
+    if (payment) {
+      payment.screenshotUrl = finalScreenshot;
+      payment.status = 'SCREENSHOT_SUBMITTED';
+      payment.submittedAt = new Date();
+      await payment.save();
+    } else {
+      payment = await Payment.create({
+        order: order._id,
+        orderId: order.orderNumber || order.orderId,
+        customer: order.user,
+        amount: order.totalAmount,
+        screenshotUrl: finalScreenshot,
+        paymentReference: order.orderNumber || order.orderId,
+        status: 'SCREENSHOT_SUBMITTED',
+        submittedAt: new Date()
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Payment screenshot uploaded successfully! Pending Admin verification.',
+      order: updatedOrder,
+      payment
+    });
+  } catch (error) {
+    console.error('[Upload Screenshot Error]', error);
+    res.status(500).json({ message: error.message || 'Failed to upload screenshot' });
+  }
+};
+
+// @desc Get List of Payments for Admin Verification Dashboard
+// @route GET /api/payments/admin/pending
+// @route GET /api/payments/admin/list
+const adminGetPendingPayments = async (req, res) => {
+  try {
+    const payments = await Payment.find()
+      .populate('customer', 'name email phone')
+      .populate({
+        path: 'order',
+        populate: { path: 'user', select: 'name email phone' }
+      })
+      .sort({ updatedAt: -1, createdAt: -1 })
+      .limit(100);
+
+    // Also fetch orders directly that might be pending verification without payment docs
+    const pendingOrders = await Order.find({
+      orderStatus: { $in: ['PENDING_PAYMENT', 'SCREENSHOT_SUBMITTED', 'PAYMENT_VERIFICATION'] }
+    })
+      .populate('user', 'name email phone')
+      .sort({ createdAt: -1 });
+
+    const mergedList = [...payments];
+
+    // Guarantee orders are present in the list even if Payment doc wasn't populated properly
+    pendingOrders.forEach((ord) => {
+      const exists = mergedList.some(
+        (p) => String(p.order?._id || p.order) === String(ord._id) || p.orderId === ord.orderNumber || p.orderId === ord.orderId
+      );
+      if (!exists) {
+        mergedList.push({
+          _id: `temp_${ord._id}`,
+          order: ord,
+          orderId: ord.orderNumber || ord.orderId,
+          customer: ord.user,
+          amount: ord.totalAmount,
+          screenshotUrl: '',
+          status: ord.orderStatus,
+          createdAt: ord.createdAt
+        });
+      }
+    });
+
+    res.json(mergedList);
+  } catch (error) {
+    console.error('[Admin Pending Payments Error]', error);
+    res.status(500).json({ message: error.message || 'Failed to fetch pending payments' });
+  }
+};
+
+// @desc Admin Approves Payment for an Order ("Payment Completed")
+// @route PUT /api/payments/admin/verify/:id
+// @route POST /api/payments/admin/verify/:id
+const adminVerifyPayment = async (req, res) => {
+  try {
+    const targetId = req.params.id;
+    let payment = await Payment.findById(targetId);
+    let order;
+
+    if (payment) {
+      order = await Order.findById(payment.order).populate('user', 'name email phone');
+    } else {
+      const cleanId = targetId.replace('temp_', '');
+      order = await Order.findOne({
+        $or: [{ _id: cleanId.match(/^[0-9a-fA-F]{24}$/) ? cleanId : null }, { orderId: targetId }, { orderNumber: targetId }]
+      }).populate('user', 'name email phone');
+
+      if (order) {
+        payment = await Payment.findOne({ order: order._id });
+        if (!payment) {
+          payment = await Payment.create({
+            order: order._id,
+            orderId: order.orderNumber || order.orderId,
+            customer: order.user?._id || req.user._id,
+            amount: order.totalAmount,
+            paymentReference: order.orderNumber || order.orderId
+          });
+        }
+      }
+    }
+
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found for verification' });
+    }
+
+    if (payment) {
+      payment.status = 'PAYMENT_COMPLETED';
+      payment.verifiedAt = new Date();
+      payment.verifiedBy = req.user._id;
+      await payment.save();
+    }
+
+    order.orderStatus = 'ORDER_CONFIRMED';
+    order.paymentInfo = {
+      ...order.paymentInfo,
+      method: 'Manual UPI',
+      status: 'PAYMENT_COMPLETED',
+      provider: 'MANUAL_UPI',
+      transactionId: `UPI_VERIFIED_${Date.now()}`
+    };
+
+    if (order.pricing) {
+      order.pricing.amountPaid = order.totalAmount;
+      order.pricing.remainingBalance = 0;
+    }
+    order.amountPaid = order.totalAmount;
+    order.advancePaid = order.totalAmount;
+    order.remainingBalance = 0;
+    order.remainingCodAmount = 0;
+
+    order.trackingHistory.push({
+      status: 'ORDER_CONFIRMED',
+      comment: 'Payment verified by DD Mystery Box Admin. Order Confirmed!',
+      timestamp: new Date()
+    });
+
+    const updatedOrder = await order.save();
+
+    // Clear user cart if any
+    if (order.user?._id) {
+      await Cart.findOneAndUpdate(
+        { user: order.user._id },
+        { items: [], couponApplied: { code: '', discountAmount: 0 } }
+      ).catch(() => {});
+    }
+
+    // Dispatch confirmation notification email/SMS
+    try {
+      await sendNotification({
+        type: 'ORDER_CONFIRMATION',
+        order: updatedOrder,
+        orderId: updatedOrder.orderNumber || updatedOrder.orderId,
+        recipientEmail: order.user?.email || order.deliveryAddressSnapshot?.email,
+        recipientPhone: order.user?.phone || order.deliveryAddressSnapshot?.mobileNumber
+      });
+    } catch (e) {
+      console.error('[Notification Warning on Verify]', e.message);
+    }
+
+    res.json({
+      success: true,
+      message: `Payment verified and order ${updatedOrder.orderNumber || updatedOrder.orderId} confirmed successfully!`,
+      order: updatedOrder,
+      payment
+    });
+  } catch (error) {
+    console.error('[Admin Verify Payment Error]', error);
     res.status(500).json({ message: error.message || 'Payment verification failed' });
   }
 };
 
-// @desc Cashfree Webhook Handler
-// @route POST /api/payments/webhook
-const handleCashfreeWebhook = async (req, res) => {
+// @desc Admin Rejects Payment for an Order ("Payment Rejected")
+// @route PUT /api/payments/admin/reject/:id
+// @route POST /api/payments/admin/reject/:id
+const adminRejectPayment = async (req, res) => {
   try {
-    const rawBody = req.body;
-    console.log('[Cashfree Webhook Received]:', JSON.stringify(rawBody));
+    const targetId = req.params.id;
+    const { reason } = req.body || {};
+    let payment = await Payment.findById(targetId);
+    let order;
 
-    const orderId = rawBody?.data?.order?.order_id;
-    const paymentStatus = rawBody?.data?.payment?.payment_status;
+    if (payment) {
+      order = await Order.findById(payment.order).populate('user', 'name email phone');
+    } else {
+      const cleanId = targetId.replace('temp_', '');
+      order = await Order.findOne({
+        $or: [{ _id: cleanId.match(/^[0-9a-fA-F]{24}$/) ? cleanId : null }, { orderId: targetId }, { orderNumber: targetId }]
+      }).populate('user', 'name email phone');
 
-    if (orderId && paymentStatus === 'SUCCESS') {
-      const order = await Order.findOne({ $or: [{ orderId }, { orderNumber: orderId }] });
-      if (order && order.orderStatus !== 'ORDER_CONFIRMED') {
-        order.orderStatus = 'ORDER_CONFIRMED';
-        order.paymentInfo = {
-          method: 'Cashfree',
-          provider: 'CASHFREE',
-          status: 'SUCCESS',
-          transactionId: rawBody.data.payment.cf_payment_id || `CF_${Date.now()}`
-        };
-        order.amountPaid = order.totalAmount;
-        order.remainingBalance = 0;
-        await order.save();
-
-        await Payment.findOneAndUpdate({ order: order._id }, { status: 'PAYMENT_COMPLETED', verifiedAt: new Date() });
+      if (order) {
+        payment = await Payment.findOne({ order: order._id });
       }
     }
 
-    res.status(200).json({ status: 'OK' });
-  } catch (error) {
-    console.error('[Cashfree Webhook Error]', error);
-    res.status(500).json({ message: 'Webhook processing error' });
-  }
-};
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found for rejection' });
+    }
 
-// @desc Get Payment Status Log for Admin
-// @route GET /api/payments/admin/pending
-const adminGetPaymentsList = async (req, res) => {
-  try {
-    const payments = await Payment.find()
-      .populate('customer', 'name email phone')
-      .populate('order')
-      .sort({ updatedAt: -1 })
-      .limit(50);
-    res.json(payments);
+    const displayOrderId = order.orderNumber || order.orderId || targetId;
+
+    if (payment) {
+      payment.status = 'REJECTED';
+      payment.verifiedAt = new Date();
+      payment.verifiedBy = req.user._id;
+      await payment.save();
+    }
+
+    order.orderStatus = 'CANCELLED';
+    if (order.paymentInfo) {
+      order.paymentInfo.status = 'REJECTED';
+    }
+    order.trackingHistory.push({
+      status: 'CANCELLED',
+      comment: `Payment verification rejected by admin. Reason: ${reason || 'Your payment details or screenshot could not be verified.'}`,
+      timestamp: new Date()
+    });
+
+    const updatedOrder = await order.save();
+
+    // Dispatch rejection notification email to customer
+    try {
+      await sendNotification({
+        type: 'CANCELLED',
+        order: updatedOrder,
+        orderId: displayOrderId,
+        recipientEmail: order.user?.email || order.deliveryAddressSnapshot?.email,
+        recipientPhone: order.user?.phone || order.deliveryAddressSnapshot?.mobileNumber,
+        reason: reason || 'Your payment for this order could not be verified by the administrator.'
+      });
+    } catch (e) {
+      console.error('[Notification Warning on Reject]', e.message);
+    }
+
+    res.json({
+      success: true,
+      message: `Payment rejected and order ${displayOrderId} cancelled. Notification email sent.`,
+      order: updatedOrder,
+      payment
+    });
   } catch (error) {
-    res.status(500).json({ message: error.message || 'Failed to fetch payments' });
+    console.error('[Admin Reject Payment Error]', error);
+    res.status(500).json({ message: error.message || 'Payment rejection failed' });
   }
 };
 
 module.exports = {
-  createCashfreeOrder,
-  verifyCashfreePayment,
-  handleCashfreeWebhook,
-  adminGetPaymentsList,
+  confirmPaymentAndCreateOrder,
+  getPaymentDetailsForOrder,
+  uploadPaymentScreenshot,
+  adminGetPendingPayments,
+  adminVerifyPayment,
+  adminRejectPayment,
   // Compatibility exports
-  createPaymentSession: createCashfreeOrder,
-  confirmPaymentAndCreateOrder: createCashfreeOrder
+  createCashfreeOrder: confirmPaymentAndCreateOrder,
+  verifyCashfreePayment: getPaymentDetailsForOrder,
+  handleCashfreeWebhook: (req, res) => res.json({ status: 'OK' }),
+  adminGetPaymentsList: adminGetPendingPayments,
+  createPaymentSession: confirmPaymentAndCreateOrder
 };

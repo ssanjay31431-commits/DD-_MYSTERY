@@ -100,45 +100,25 @@ export const Checkout = () => {
         totalAmount: computedTotal
       });
 
-      // 1. Create Cashfree Order via Backend
       const { data } = await API.post('/payments/create-order', checkoutData);
 
-      if (!data || !data.payment_session_id) {
-        throw new Error(data?.message || 'Failed to create payment order with Cashfree');
+      if (!data || (!data.order_id && !data.order?.orderId)) {
+        throw new Error(data?.message || 'Failed to create order');
       }
 
-      const sessionId = data.payment_session_id;
-      const orderId = data.order_id;
+      const targetOrderId = data.order_id || data.order?.orderId || data.order?.orderNumber;
 
       if (isBuyNowFlow) {
         safeRemoveSessionItem('dd_buynow_item');
       }
 
-      // 2. Initialize Cashfree JS SDK
-      const cashfree = await loadCashfreeSDK();
-
-      // 3. Open Cashfree Checkout UI
-      const checkoutOptions = {
-        paymentSessionId: sessionId,
-        redirectTarget: '_modal'
-      };
-
-      const result = await cashfree.checkout(checkoutOptions);
-
-      if (result?.error) {
-        console.error('Cashfree SDK Checkout error:', result.error);
-        setPaymentError(result.error.message || 'Payment checkout could not be completed.');
-        addToast(result.error.message || 'Payment cancelled or failed', 'error');
-        setSubmittingPayment(false);
-        return;
-      }
-
-      // 4. Verify payment status on backend after modal closes/returns
-      await verifyOrderPaymentStatus(orderId);
+      clearCart();
+      addToast('Order registered! Redirecting to payment page...');
+      navigate(`/payment?orderId=${targetOrderId}`, { replace: true });
 
     } catch (error) {
-      console.error('Cashfree checkout error:', error);
-      const errorMsg = error.response?.data?.message || error.message || 'Failed to initiate Cashfree payment.';
+      console.error('Checkout error:', error);
+      const errorMsg = error.response?.data?.message || error.message || 'Failed to create order.';
       setPaymentError(errorMsg);
       addToast(errorMsg, 'error');
       setSubmittingPayment(false);
@@ -604,7 +584,7 @@ export const Checkout = () => {
               </div>
             </div>
 
-            {/* Cashfree Payment Gateway Box */}
+            {/* Manual UPI Payment Info Box */}
             <div className="space-y-3 pt-2 border-t border-slate-800">
               <h4 className="text-xs font-extrabold uppercase tracking-wider text-pink-400 flex items-center gap-1.5">
                 <ShieldCheck className="w-4 h-4" /> PAYMENT
@@ -613,10 +593,10 @@ export const Checkout = () => {
               <div className="p-4 rounded-2xl bg-purple-950/40 border border-purple-500/30 space-y-2">
                 <p className="text-xs text-slate-300 flex items-center gap-2 font-semibold">
                   <CreditCard className="w-4 h-4 text-emerald-400" />
-                  Secure payment powered by Cashfree
+                  Manual UPI Payment (GPay, PhonePe, Paytm, QR Code)
                 </p>
                 <p className="text-[11px] text-slate-400 leading-relaxed">
-                  Supports UPI (Google Pay, PhonePe, Paytm), Credit/Debit Cards, NetBanking, & Digital Wallets.
+                  After clicking Pay Now, scan the dynamic QR code on the payment page & upload your payment screenshot for instant admin confirmation.
                 </p>
               </div>
             </div>

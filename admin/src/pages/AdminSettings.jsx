@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Settings, Save, ShieldCheck, Share2, Instagram, MessageSquare } from 'lucide-react';
+import { Settings, Save, ShieldCheck, Share2, Instagram, MessageSquare, QrCode } from 'lucide-react';
 import API from '../services/api';
 import { AdminSidebar } from '../components/AdminSidebar';
 import { useToast } from '../context/ToastContext';
@@ -9,6 +9,8 @@ export const AdminSettings = () => {
   const [saving, setSaving] = useState(false);
   const { addToast } = useToast();
 
+  const [upiId, setUpiId] = useState('david468468@airtel');
+  const [upiName, setUpiName] = useState('Sagariya David S');
   const [instagramLink, setInstagramLink] = useState('https://www.instagram.com/david_op468/');
   const [whatsappNumber, setWhatsappNumber] = useState('+91 79042 79655');
 
@@ -16,11 +18,13 @@ export const AdminSettings = () => {
     try {
       const { data } = await API.get('/admin/settings');
       if (data) {
+        setUpiId(data.upiId || 'david468468@airtel');
+        setUpiName(data.upiName || 'Sagariya David S');
         setInstagramLink(data.instagramLink || 'https://www.instagram.com/david_op468/');
         setWhatsappNumber(data.whatsappNumber || '+91 79042 79655');
       }
     } catch (err) {
-      console.error(err);
+      console.error('[Fetch Admin Settings Error]', err);
     } finally {
       setLoading(false);
     }
@@ -36,11 +40,14 @@ export const AdminSettings = () => {
 
     try {
       await API.put('/admin/settings', {
+        upiId,
+        upiName,
         instagramLink,
         whatsappNumber
       });
-      addToast('Admin Settings updated successfully!');
+      addToast('Admin & Payment Settings updated successfully!');
     } catch (err) {
+      console.error('[Update Settings Error]', err);
       addToast('Settings update failed', 'error');
     } finally {
       setSaving(false);
@@ -54,23 +61,45 @@ export const AdminSettings = () => {
       <main className="flex-1 w-full max-w-full min-w-0 p-4 sm:p-8 space-y-6 overflow-y-auto">
         <div className="pb-4 border-b border-purple-500/20">
           <h1 className="text-xl sm:text-2xl font-black text-white font-display">Payment & Admin Settings</h1>
-          <p className="text-xs text-slate-400">Configure Cashfree Payment Gateway status, Instagram links, and WhatsApp support number.</p>
+          <p className="text-xs text-slate-400">Configure your target UPI ID for QR code payment generation, Instagram links, and WhatsApp support number.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
           
-          {/* Section 1: Cashfree Payment Gateway Info */}
+          {/* Section 1: Manual UPI Payment Settings */}
           <div className="glass-panel p-6 rounded-3xl border border-purple-500/30 space-y-4 bg-slate-900/40">
             <h3 className="text-sm font-bold text-white font-display flex items-center gap-2 border-b border-slate-800 pb-2">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" /> Payment Gateway (Cashfree Integration)
+              <QrCode className="w-4 h-4 text-emerald-400" /> Manual UPI QR Payment Settings
             </h3>
 
             <div className="space-y-3 text-xs">
-              <div className="p-3.5 rounded-xl bg-purple-950/40 border border-purple-500/30 text-slate-300">
-                <span className="font-bold text-white block mb-1">Active Gateway: Cashfree Payment Gateway</span>
-                <p className="text-[11px] text-slate-400">
-                  Manual UPI payments have been completely replaced with Cashfree Payment Gateway. API credentials are set as environment variables in <code className="text-pink-300">server/.env</code> (<code className="text-amber-300">CASHFREE_CLIENT_ID</code>, <code className="text-amber-300">CASHFREE_CLIENT_SECRET</code>, <code className="text-amber-300">CASHFREE_ENV</code>).
-                </p>
+              <div>
+                <label className="block mb-1 font-bold text-slate-300">
+                  Target Admin UPI ID
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={upiId}
+                  onChange={(e) => setUpiId(e.target.value)}
+                  placeholder="e.g. david468468@airtel"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-amber-300 font-mono font-bold"
+                />
+                <p className="text-[10px] text-slate-500 mt-1">This UPI ID is encoded into the dynamic QR code on the customer payment page.</p>
+              </div>
+
+              <div>
+                <label className="block mb-1 font-bold text-slate-300">
+                  Payee Display Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={upiName}
+                  onChange={(e) => setUpiName(e.target.value)}
+                  placeholder="e.g. Sagariya David S"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white font-mono"
+                />
               </div>
             </div>
           </div>
