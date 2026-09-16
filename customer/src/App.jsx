@@ -48,6 +48,7 @@ import { AdminCoupons } from './pages/admin/AdminCoupons';
 import { AdminReviews } from './pages/admin/AdminReviews';
 import { AdminRewards } from './pages/admin/AdminRewards';
 import { AdminSettings } from './pages/admin/AdminSettings';
+import { AdminNotificationLogs } from './pages/admin/AdminNotificationLogs';
 import { MobileBottomNav } from './components/common/MobileBottomNav';
 
 function CustomerLayout({ children }) {
