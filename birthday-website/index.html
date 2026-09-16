@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Happy Birthday — A Private Archive</title>
+  
+  <!-- Google Fonts: Cormorant Garamond (Serif Heading) & Inter (Sans Body) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Custom Cursor -->
+  <div class="cursor-dot" id="cursorDot"></div>
+  <div class="cursor-follower" id="cursorFollower">
+    <span class="cursor-text" id="cursorText"></span>
+  </div>
+
+  <!-- Header Navigation -->
+  <header class="navbar" id="navbar">
+    <div class="nav-container">
+      <a href="#hero" class="nav-brand" id="navBrand">
+        <span class="brand-name" id="brandSanjay">SANJAY</span>
+        <span class="brand-divider">×</span>
+        <span class="brand-name" id="brandHer">HER NAME</span>
+      </a>
+
+      <nav class="nav-menu" id="navMenu">
+        <a href="#story" class="nav-link">STORY</a>
+        <a href="#timeline" class="nav-link">TIMELINE</a>
+        <a href="#archive" class="nav-link">ARCHIVE</a>
+        <a href="#reasons" class="nav-link">REASONS</a>
+        <a href="#memories" class="nav-link">MEMORIES</a>
+        <a href="#letter" class="nav-link">LETTER</a>
+      </nav>
+
+      <button class="mobile-toggle" id="mobileToggle" aria-label="Toggle Navigation">
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Mobile Drawer Menu -->
+  <div class="mobile-drawer" id="mobileDrawer">
+    <div class="drawer-content">
+      <a href="#story" class="drawer-link">01 / STORY</a>
+      <a href="#timeline" class="drawer-link">02 / TIMELINE</a>
+      <a href="#archive" class="drawer-link">03 / ARCHIVE</a>
+      <a href="#reasons" class="drawer-link">04 / REASONS</a>
+      <a href="#memories" class="drawer-link">05 / MEMORIES</a>
+      <a href="#letter" class="drawer-link">06 / LETTER</a>
+    </div>
+  </div>
+
+  <!-- Hero Section -->
+  <section class="hero" id="hero">
+    <div class="hero-image-wrapper">
+      <img src="https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=2000&q=85" alt="Hero Photography" id="heroImage" class="hero-image">
+      <div class="hero-overlay"></div>
+    </div>
+
+    <div class="hero-content">
+      <span class="hero-label">FOR YOU</span>
+      <h1 class="hero-title font-serif" id="heroTitle">
+        Happy Birthday,<br>
+        <span id="heroHerName">HER NAME</span>.
+      </h1>
+      <p class="hero-subtitle" id="heroSubtitle">
+        A little collection of moments, memories and everything in between.
+      </p>
+      
+      <div class="hero-scroll-indicator">
+        <span>SCROLL TO EXPLORE</span>
+        <div class="scroll-line"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 01: Our Story -->
+  <section class="section story-section" id="story">
+    <div class="container">
+      <div class="section-header reveal">
+        <span class="section-number">01 — OUR STORY</span>
+        <h2 class="section-title font-serif" id="storyTitle">
+          Every story has a beginning.<br>
+          <em>Ours has more than one.</em>
+        </h2>
+      </div>
+
+      <div class="story-grid">
+        <div class="story-image-col reveal">
+          <div class="story-frame">
+            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1200&q=85" alt="Story Feature" id="storyPhoto" class="story-photo">
+            <span class="frame-caption" id="storyCaption">CHAPTER 01</span>
+          </div>
+        </div>
+
+        <div class="story-text-col reveal">
+          <div class="story-content-body">
+            <span class="chapter-badge">CHAPTER 01 / THE BEGINNING</span>
+            <div class="story-text-paragraphs" id="storyText">
+              <p>Looking back, every path we took seemed to quietly point toward each other. From our very first quiet conversations to the days that followed, everything fell into place with a natural grace.</p>
+              <p>You brought warmth into ordinary moments and turned simple days into memories I carry with me everywhere.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 02: Timeline Spreads -->
+  <section class="section timeline-section" id="timeline">
+    <div class="container">
+      <div class="section-header reveal">
+        <span class="section-number">02 — THE CHRONICLE</span>
+        <h2 class="section-title font-serif">
+          Chapters of Us
+        </h2>
+        <p class="section-lead">A visual timeline of key milestones and quiet everyday magic.</p>
+      </div>
+
+      <div class="timeline-spreads" id="timelineContainer">
+        <!-- Rendered dynamically from script.js -->
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 03: Photo Gallery (The Archive) -->
+  <section class="section archive-section" id="archive">
+    <div class="container">
+      <div class="section-header reveal">
+        <span class="section-number">03 — THE ARCHIVE</span>
+        <h2 class="section-title font-serif">
+          Moments Captured
+        </h2>
+        <p class="section-lead">"A collection of moments I never want to forget."</p>
+      </div>
+
+      <!-- Asymmetric Editorial Gallery Grid -->
+      <div class="archive-gallery" id="archiveGallery">
+        <!-- Rendered dynamically from script.js -->
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 04: Things I Love About You -->
+  <section class="section reasons-section" id="reasons">
+    <div class="container">
+      <div class="section-header reveal">
+        <span class="section-number">04 — REFLECTIONS</span>
+        <h2 class="section-title font-serif">
+          Things I Love About You
+        </h2>
+        <p class="section-lead">The quiet qualities that make you uniquely, undeniably you.</p>
+      </div>
+
+      <div class="reasons-list" id="reasonsContainer">
+        <!-- Rendered dynamically from script.js -->
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 05: Memories (The Little Things & Conversations) -->
+  <section class="section memories-section" id="memories">
+    <div class="container">
+      <div class="section-header reveal">
+        <span class="section-number">05 — THE LITTLE THINGS</span>
+        <h2 class="section-title font-serif">
+          Keepsakes & Memories
+        </h2>
+        <p class="section-lead">Small fragments of time, conversations, and inside jokes.</p>
+      </div>
+
+      <!-- Category Filter Tabs -->
+      <div class="memory-filters" id="memoryFilters">
+        <button class="filter-btn active" data-category="ALL">ALL KEEPSAKES</button>
+        <button class="filter-btn" data-category="CONVERSATIONS">CONVERSATIONS</button>
+        <button class="filter-btn" data-category="LATE NIGHTS">LATE NIGHTS</button>
+        <button class="filter-btn" data-category="FUNNY MOMENTS">FUNNY MOMENTS</button>
+        <button class="filter-btn" data-category="PLACES">PLACES</button>
+      </div>
+
+      <!-- Memory Cards Grid -->
+      <div class="memories-grid" id="memoriesGrid">
+        <!-- Rendered dynamically from script.js -->
+      </div>
+
+      <!-- Conversations / Editorial Quotes Subsection -->
+      <div class="conversations-wrapper reveal">
+        <span class="sub-label">ECHOES & QUOTES</span>
+        <div class="conversations-slider" id="conversationsContainer">
+          <!-- Rendered dynamically from script.js -->
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 06: Final Letter -->
+  <section class="section letter-section" id="letter">
+    <div class="container">
+      <div class="letter-teaser reveal" id="letterTeaser">
+        <span class="section-number">06 — A PRIVATE LETTER</span>
+        <h2 class="letter-teaser-title font-serif">
+          For Your Eyes Only
+        </h2>
+        <p class="letter-teaser-sub">A personal letter written with love, thoughts, and memories.</p>
+        
+        <button class="btn-luxury" id="openLetterBtn">
+          <span>READ THE LETTER</span>
+          <span class="btn-arrow">→</span>
+        </button>
+      </div>
+
+      <!-- Revealed Letter Container -->
+      <div class="letter-paper hidden" id="letterPaper">
+        <div class="paper-inner">
+          <div class="paper-header">
+            <span class="paper-tag">PRIVATE CORRESPONDENCE</span>
+            <span class="paper-date" id="letterDate">SEPTEMBER 16</span>
+          </div>
+
+          <div class="letter-body font-serif" id="letterBody">
+            <!-- Rendered from script.js -->
+          </div>
+
+          <div class="paper-footer">
+            <span class="paper-closing">Always,</span>
+            <span class="paper-signature font-serif" id="letterSignature">SANJAY</span>
+            <div class="paper-mark">✦</div>
+          </div>
+
+          <div class="center-btn">
+            <button class="btn-luxury-outline" id="closeLetterBtn">CLOSE LETTER</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Final Quiet Ending Section -->
+  <section class="final-section" id="final">
+    <div class="final-image-wrapper">
+      <img src="https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=1800&q=85" alt="Final Portrait" id="finalPhoto" class="final-photo">
+      <div class="final-overlay"></div>
+    </div>
+
+    <div class="final-content container">
+      <span class="final-sublabel">FOR ALL THE DAYS AHEAD.</span>
+      <h2 class="final-title font-serif" id="finalTitle">
+        Happy Birthday,<br>
+        <span id="finalHerName">HER NAME</span>.
+      </h2>
+      
+      <div class="final-gold-line"></div>
+      
+      <span class="final-signature" id="finalSignature">— SANJAY</span>
+    </div>
+  </section>
+
+  <!-- Fullscreen Photo Lightbox Modal -->
+  <div class="lightbox-modal" id="lightboxModal">
+    <button class="modal-close" id="lightboxClose" aria-label="Close Lightbox">&times;</button>
+    <div class="lightbox-content">
+      <div class="lightbox-image-wrapper">
+        <img src="" alt="Enlarged Memory" id="lightboxImg" class="lightbox-img">
+      </div>
+      <div class="lightbox-caption-bar">
+        <span class="lightbox-index" id="lightboxIndex">01 / 08</span>
+        <h3 class="lightbox-title font-serif" id="lightboxTitle">Photo Caption</h3>
+        <p class="lightbox-desc" id="lightboxDesc"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Memory Modal -->
+  <div class="memory-modal" id="memoryModal">
+    <div class="memory-modal-dialog">
+      <button class="modal-close" id="memoryClose" aria-label="Close Memory">&times;</button>
+      <div class="memory-modal-body">
+        <span class="memory-modal-category" id="memoryModalCategory">KEEPSAKE</span>
+        <h3 class="memory-modal-title font-serif" id="memoryModalTitle">Memory Title</h3>
+        <div class="memory-modal-text" id="memoryModalText"></div>
+        <div class="memory-modal-img-wrap hidden" id="memoryModalImgWrap">
+          <img src="" alt="Memory Image" id="memoryModalImg" class="memory-modal-img">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main JavaScript File -->
+  <script src="script.js"></script>
+</body>
+</html>
