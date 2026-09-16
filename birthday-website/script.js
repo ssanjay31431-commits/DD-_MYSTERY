@@ -1,59 +1,54 @@
 /**
- * LUXURY EDITORIAL BIRTHDAY EXPERIENCE
- * ====================================
- * Configurable Content Store
- * Edit all names, dates, photos, memories, and letter below without touching UI logic.
+ * PREMIUM MINIMALIST EDITORIAL EXPERIENCE
+ * ========================================
+ * Configurable Content Data Store
+ * All names, dates, photos, timelines, reflections, memories, and letter can be edited cleanly below.
  */
 
 const birthdayData = {
   girlfriendName: "YOUR GIRLFRIEND",
   yourName: "SANJAY",
-  
-  heroPhoto: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=2000&q=85",
-  heroSubtitle: "A little collection of moments, memories and everything in between.",
+  birthdayDate: "SEPTEMBER 16",
+
+  heroPhoto: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=1800&q=85",
+  intro: "A little collection of memories, made just for you.",
 
   story: {
-    chapterNumber: "01",
-    chapterLabel: "THE BEGINNING",
-    title: "Every story has a beginning.\nOurs has more than one.",
+    headline: "It started with a hello.",
     image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1200&q=85",
-    caption: "SUMMER MEMORIES",
+    caption: "CHAPTER 01",
     text: [
       "Looking back, every path we took seemed to quietly point toward each other. From our very first quiet conversations to the days that followed, everything fell into place with a natural, effortless grace.",
       "You brought warmth into ordinary moments and turned simple days into memories I carry with me everywhere.",
-      "This digital journal is a tribute to your grace, your laugh, and every single second we have shared so far."
+      "This digital journal is a tribute to your smile, your kindness, and every single moment we have shared so far."
     ]
   },
 
   timeline: [
     {
       number: "01",
-      label: "FIRST HELLO",
-      title: "Where It All Began",
-      date: "THE FIRST MOMENT",
-      text: "A simple introduction that quietly changed everything. Neither of us knew then how much those first few words would mean.",
+      title: "FIRST HELLO",
+      date: "OCTOBER 2024",
+      text: "A simple introduction that quietly changed everything. Neither of us knew then how much those first few words would come to mean.",
       image: "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=1200&q=85"
     },
     {
       number: "02",
-      label: "FIRST MEMORY",
-      title: "The Evening Time Stood Still",
-      date: "AN UNFORGETTABLE DAY",
+      title: "THE FIRST MEMORY",
+      date: "NOVEMBER 2024",
       text: "Hours passed like minutes. We talked about everything and nothing at all, losing track of time in the quiet stillness.",
       image: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=1200&q=85"
     },
     {
       number: "03",
-      label: "UNFILTERED JOY",
-      title: "The Day We Couldn't Stop Laughing",
-      date: "A RANDOM AFTERNOON",
+      title: "UNFILTERED JOY",
+      date: "DECEMBER 2024",
       text: "No plans, no agenda. Just pure, unscripted happiness and a smile on your face that I will never forget.",
       image: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1200&q=85"
     },
     {
       number: "04",
-      label: "FOREVER AHEAD",
-      title: "Growing Together",
+      title: "FOREVER AHEAD",
       date: "PRESENT DAY",
       text: "Through every season and every milestone, you continue to inspire me. The journey is just getting started.",
       image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=1200&q=85"
@@ -62,79 +57,62 @@ const birthdayData = {
 
   photos: [
     {
-      id: "01",
-      title: "A RANDOM AFTERNOON",
-      subtitle: "Soft sunlight & quiet moments",
-      url: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=1200&q=85",
+      image: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=1200&q=85",
+      caption: "A RANDOM AFTERNOON",
       aspect: "portrait"
     },
     {
-      id: "02",
-      title: "THE DAY WE COULDN'T STOP LAUGHING",
-      subtitle: "Pure spontaneous joy",
-      url: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1200&q=85",
+      image: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1200&q=85",
+      caption: "THE DAY WE COULDN'T STOP LAUGHING",
       aspect: "landscape"
     },
     {
-      id: "03",
-      title: "SOMEWHERE BETWEEN EVERYTHING",
-      subtitle: "Golden hour glow",
-      url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1200&q=85",
+      image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1200&q=85",
+      caption: "SOMEWHERE BETWEEN EVERYTHING",
       aspect: "square"
     },
     {
-      id: "04",
-      title: "ONE OF MY FAVOURITE PHOTOS OF YOU",
-      subtitle: "Unfiltered elegance",
-      url: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=1200&q=85",
+      image: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=1200&q=85",
+      caption: "ONE OF MY FAVOURITE PHOTOS OF YOU",
       aspect: "portrait"
     },
     {
-      id: "05",
-      title: "MIDNIGHT CONVERSATIONS",
-      subtitle: "Underneath the city lights",
-      url: "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=1200&q=85",
+      image: "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=1200&q=85",
+      caption: "MIDNIGHT CONVERSATIONS",
       aspect: "landscape"
     },
     {
-      id: "06",
-      title: "QUIET OBSERVATIONS",
-      subtitle: "The way you look when thinking",
-      url: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=1200&q=85",
+      image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=1200&q=85",
+      caption: "QUIET OBSERVATIONS",
       aspect: "portrait"
     }
   ],
 
   reasons: [
     {
-      number: "01",
-      title: "YOUR SMILE",
-      detail: "How it effortlessly lights up the room and instantly turns my day around.",
-      previewImage: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=600&q=80"
+      title: "THE WAY YOU SMILE",
+      text: "How it effortlessly lights up the room and instantly turns my day around.",
+      image: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=500&q=80"
     },
     {
-      number: "02",
       title: "THE WAY YOU LAUGH",
-      detail: "Unfiltered, genuine, and completely contagious. It's my favorite sound.",
-      previewImage: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=600&q=80"
+      text: "Unfiltered, genuine, and completely contagious. It's my favorite sound.",
+      image: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=500&q=80"
     },
     {
-      number: "03",
       title: "THE WAY YOU CARE",
-      detail: "Your empathy and the subtle ways you show kindness to everyone around you.",
-      previewImage: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=600&q=80"
+      text: "Your empathy and the subtle ways you show kindness to everyone around you.",
+      image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=500&q=80"
     },
     {
-      number: "04",
       title: "YOUR LITTLE HABITS",
-      detail: "The adorable quirks and small rituals that make you entirely unique.",
-      previewImage: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=600&q=80"
+      text: "The adorable quirks and small rituals that make you entirely unique.",
+      image: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=500&q=80"
     },
     {
-      number: "05",
-      title: "HOW YOU MAKE ORDINARY DAYS SPECIAL",
-      detail: "Even simple walks or coffee runs feel like meaningful adventures with you.",
-      previewImage: "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=600&q=80"
+      title: "THE WAY YOU MAKE ORDINARY DAYS SPECIAL",
+      text: "Even simple walks or coffee runs feel like meaningful adventures with you.",
+      image: "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=500&q=80"
     }
   ],
 
@@ -142,36 +120,32 @@ const birthdayData = {
     {
       category: "CONVERSATIONS",
       title: "The 3 AM Phone Calls",
-      preview: "Talking about everything from deep philosophies to silly stories until the sun came up.",
-      text: "I still remember those late-night calls where time seemed to completely lose all meaning. We talked about our childhoods, our dreams, and everything in between. Those quiet hours laid the foundation for everything we have today.",
+      text: "I still remember those late-night calls where time seemed to completely lose all meaning. We talked about our childhoods, our dreams, and everything in between.",
       image: "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=1000&q=85"
     },
     {
       category: "LATE NIGHTS",
       title: "City Lights & Late Drives",
-      preview: "Windows down, music playing softly, and no specific destination in mind.",
-      text: "Driving through quiet city streets late at night, watching the yellow lights blur past while your favorite playlist played in the background. It was simple, calm, and perfect.",
+      text: "Driving through quiet city streets late at night, watching yellow streetlights blur past while your favorite playlist played in the background.",
       image: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=1000&q=85"
     },
     {
       category: "FUNNY MOMENTS",
       title: "The Inside Jokes",
-      preview: "That one phrase that makes us instantly burst out laughing in public.",
-      text: "We have developed our own secret language over time. Just a single look across a crowded room is enough to send us into fits of laughter while everyone else wonders what's so funny.",
+      text: "We have developed our own secret language over time. A single look across a crowded room is enough to send us into fits of laughter.",
       image: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1000&q=85"
     },
     {
       category: "PLACES",
       title: "Our Quiet Corner",
-      preview: "The cozy spot where we spent endless afternoons drinking tea and reading.",
-      text: "Tucked away from the noise of the world, that little corner table became our sanctuary. Every time I visit, I am instantly reminded of your warmth.",
+      text: "Tucked away from the noise of the world, that little corner table became our sanctuary. Every time I visit, I am reminded of your warmth.",
       image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1000&q=85"
     }
   ],
 
   conversations: [
     {
-      quote: "I still remember when you said, 'I think some people enter our lives exactly when they are supposed to.'",
+      quote: "I still remember you saying, 'I think some people enter our lives exactly when they are supposed to.'",
       date: "OCTOBER 14, 2024"
     },
     {
@@ -184,134 +158,113 @@ const birthdayData = {
     }
   ],
 
+  feature: {
+    image: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=1600&q=85",
+    title: "This One.",
+    text: "Because I remember exactly how happy we were that day. The sun was warm, time was slow, and everything felt completely right."
+  },
+
   letterDate: "SEPTEMBER 16",
   letter: `
-    <p><span class="first-letter">D</span>ear ${"HER NAME"},</p>
+    <p><span class="first-letter">D</span>ear HER_NAME,</p>
     <p>As I sit down to write this, I wanted to create something timeless — a quiet space dedicated entirely to you and the incredible person you are.</p>
     <p>Happy Birthday. Thank you for filling my world with so much warmth, grace, and genuine joy. From our small everyday conversations to the bigger milestones, sharing life with you has been one of the greatest privileges I have ever known.</p>
-    <p>You have an extraordinary gift for making ordinary moments feel like poetry. The way you listen, the way you smile when you're truly happy, and the kindness you extend to everyone around you is something I admire more than words can express.</p>
+    <p>You have an extraordinary gift for making ordinary moments feel special. The way you listen, the way you smile when you are truly happy, and the kindness you extend to everyone around you is something I admire more than words can express.</p>
     <p>As you step into another beautiful year, I hope it brings you all the peace, ambition, happiness, and love that you deserve. Whatever lies ahead, I am so grateful to walk alongside you.</p>
     <p>Happy Birthday, my love.</p>
   `,
 
-  finalPhoto: "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=1800&q=85"
+  finalPhoto: "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=1800&q=85",
+  finalQuote: "Here's to everything we've already lived, and everything still waiting for us."
 };
 
 /* ==========================================================================
-   UI CONTROLLER & EDITORIAL INTERACTION LOGIC
+   MINIMALIST EDITORIAL CONTROLLER
    ========================================================================== */
 
 document.addEventListener('DOMContentLoaded', () => {
-  initDataBinding();
-  initCustomCursor();
+  bindContentData();
   initNavbarScroll();
   initMobileMenu();
-  initRenderTimeline();
-  initRenderArchive();
-  initRenderReasons();
-  initRenderMemories();
-  initRenderConversations();
-  initScrollAnimations();
+  renderTimeline();
+  renderGallery();
+  renderReasons();
+  renderMemories();
+  renderConversations();
+  initIntersectionObserver();
   initLightboxModal();
   initMemoryModal();
   initLetterToggle();
 });
 
-/* 1. Populate Text & Names Across DOM */
-function initDataBinding() {
+/* 1. Bind Config Data to Elements */
+function bindContentData() {
   const gName = birthdayData.girlfriendName || "HER NAME";
   const yName = birthdayData.yourName || "SANJAY";
 
-  // Navigation Brand
+  // Nav
   const brandHer = document.getElementById('brandHer');
   const brandSanjay = document.getElementById('brandSanjay');
   if (brandHer) brandHer.textContent = gName;
   if (brandSanjay) brandSanjay.textContent = yName;
 
-  // Hero Section
+  // Hero
   const heroHerName = document.getElementById('heroHerName');
-  const heroSubtitle = document.getElementById('heroSubtitle');
+  const heroDate = document.getElementById('heroDate');
+  const heroIntro = document.getElementById('heroIntro');
   const heroImage = document.getElementById('heroImage');
   if (heroHerName) heroHerName.textContent = gName;
-  if (heroSubtitle) heroSubtitle.textContent = birthdayData.heroSubtitle;
+  if (heroDate && birthdayData.birthdayDate) heroDate.textContent = birthdayData.birthdayDate;
+  if (heroIntro && birthdayData.intro) heroIntro.textContent = birthdayData.intro;
   if (heroImage && birthdayData.heroPhoto) heroImage.src = birthdayData.heroPhoto;
 
-  // Story Section
-  const storyTitle = document.getElementById('storyTitle');
-  const storyPhoto = document.getElementById('storyPhoto');
-  const storyTextContainer = document.getElementById('storyText');
+  // Story
+  const storyHeadline = document.getElementById('storyHeadline');
+  const storyImage = document.getElementById('storyImage');
   const storyCaption = document.getElementById('storyCaption');
+  const storyParagraphs = document.getElementById('storyParagraphs');
 
-  if (storyTitle && birthdayData.story.title) {
-    storyTitle.innerHTML = birthdayData.story.title.replace(/\n/g, '<br>');
-  }
-  if (storyPhoto && birthdayData.story.image) storyPhoto.src = birthdayData.story.image;
+  if (storyHeadline && birthdayData.story.headline) storyHeadline.textContent = birthdayData.story.headline;
+  if (storyImage && birthdayData.story.image) storyImage.src = birthdayData.story.image;
   if (storyCaption && birthdayData.story.caption) storyCaption.textContent = birthdayData.story.caption;
-
-  if (storyTextContainer && Array.isArray(birthdayData.story.text)) {
-    storyTextContainer.innerHTML = birthdayData.story.text
-      .map(paragraph => `<p>${paragraph}</p>`)
+  if (storyParagraphs && Array.isArray(birthdayData.story.text)) {
+    storyParagraphs.innerHTML = birthdayData.story.text
+      .map(p => `<p>${p}</p>`)
       .join('');
   }
 
-  // Final Section
+  // Feature Section
+  const featureImage = document.getElementById('featureImage');
+  const featureTitle = document.getElementById('featureTitle');
+  const featureText = document.getElementById('featureText');
+  if (featureImage && birthdayData.feature?.image) featureImage.src = birthdayData.feature.image;
+  if (featureTitle && birthdayData.feature?.title) featureTitle.textContent = birthdayData.feature.title;
+  if (featureText && birthdayData.feature?.text) featureText.textContent = birthdayData.feature.text;
+
+  // Final Section & Footer
   const finalHerName = document.getElementById('finalHerName');
-  const finalSignature = document.getElementById('finalSignature');
-  const finalPhoto = document.getElementById('finalPhoto');
+  const finalAuthor = document.getElementById('finalAuthor');
+  const finalImage = document.getElementById('finalImage');
+  const finalQuote = document.getElementById('finalQuote');
+  const footerHerName = document.getElementById('footerHerName');
+  const footerPair = document.getElementById('footerPair');
+
   if (finalHerName) finalHerName.textContent = gName;
-  if (finalSignature) finalSignature.textContent = `— ${yName}`;
-  if (finalPhoto && birthdayData.finalPhoto) finalPhoto.src = birthdayData.finalPhoto;
+  if (finalAuthor) finalAuthor.textContent = `— ${yName}`;
+  if (finalImage && birthdayData.finalPhoto) finalImage.src = birthdayData.finalPhoto;
+  if (finalQuote && birthdayData.finalQuote) finalQuote.textContent = `"${birthdayData.finalQuote}"`;
+
+  if (footerHerName) footerHerName.textContent = gName;
+  if (footerPair) footerPair.textContent = `${yName} × ${gName}`;
 }
 
-/* 2. Custom Cursor */
-function initCustomCursor() {
-  const dot = document.getElementById('cursorDot');
-  const follower = document.getElementById('cursorFollower');
-  const text = document.getElementById('cursorText');
-
-  if (!dot || !follower || window.matchMedia('(max-width: 991px)').matches) return;
-
-  let mouseX = 0, mouseY = 0;
-  let followerX = 0, followerY = 0;
-
-  document.addEventListener('mousemove', (e) => {
-    mouseX = e.clientX;
-    mouseY = e.clientY;
-    dot.style.transform = `translate(${mouseX}px, ${mouseY}px)`;
-  });
-
-  function renderCursor() {
-    followerX += (mouseX - followerX) * 0.15;
-    followerY += (mouseY - followerY) * 0.15;
-    follower.style.transform = `translate(${followerX}px, ${followerY}px)`;
-    requestAnimationFrame(renderCursor);
-  }
-  renderCursor();
-
-  // Hover triggers for images and links
-  document.querySelectorAll('a, button, .archive-item, .reason-item, .memory-card').forEach(el => {
-    el.addEventListener('mouseenter', () => {
-      follower.classList.add('active');
-      if (el.classList.contains('archive-item')) {
-        follower.classList.add('cursor-view');
-        if (text) text.textContent = 'VIEW';
-      }
-    });
-
-    el.addEventListener('mouseleave', () => {
-      follower.classList.remove('active', 'cursor-view');
-      if (text) text.textContent = '';
-    });
-  });
-}
-
-/* 3. Header Scroll Glass Effect */
+/* 2. Navbar Scroll Behavior */
 function initNavbarScroll() {
   const navbar = document.getElementById('navbar');
   if (!navbar) return;
 
   window.addEventListener('scroll', () => {
-    if (window.scrollY > 80) {
+    if (window.scrollY > 60) {
       navbar.classList.add('scrolled');
     } else {
       navbar.classList.remove('scrolled');
@@ -319,7 +272,7 @@ function initNavbarScroll() {
   });
 }
 
-/* 4. Mobile Drawer Menu */
+/* 3. Mobile Navigation Menu */
 function initMobileMenu() {
   const toggle = document.getElementById('mobileToggle');
   const drawer = document.getElementById('mobileDrawer');
@@ -342,49 +295,44 @@ function initMobileMenu() {
   });
 }
 
-/* 5. Render Editorial Timeline Spreads */
-function initRenderTimeline() {
+/* 4. Render Editorial Timeline Spreads */
+function renderTimeline() {
   const container = document.getElementById('timelineContainer');
   if (!container || !Array.isArray(birthdayData.timeline)) return;
 
   container.innerHTML = birthdayData.timeline.map((item, idx) => {
     const isEven = idx % 2 === 1;
     return `
-      <div class="timeline-spread reveal ${isEven ? 'spread-reverse' : ''}">
-        <div class="spread-image-col">
-          <div class="spread-frame">
-            <img src="${item.image}" alt="${item.title}" class="spread-image">
-            <span class="spread-num">${item.number}</span>
-          </div>
+      <div class="timeline-row reveal ${isEven ? 'row-reverse' : ''}">
+        <div class="timeline-meta-col">
+          <span class="timeline-num">CHAPTER ${item.number || (idx + 1).toString().padStart(2, '0')}</span>
+          <h3 class="timeline-heading font-serif">${item.title}</h3>
+          <span class="timeline-date">${item.date}</span>
+          <p class="timeline-text">${item.text}</p>
         </div>
-        <div class="spread-text-col">
-          <span class="spread-label">${item.label}</span>
-          <h3 class="spread-title font-serif">${item.title}</h3>
-          <span class="spread-date">${item.date}</span>
-          <p class="spread-text">${item.text}</p>
+        <div class="timeline-image-col">
+          <div class="timeline-frame">
+            <img src="${item.image}" alt="${item.title}" class="editorial-img" loading="lazy">
+          </div>
         </div>
       </div>
     `;
   }).join('');
 }
 
-/* 6. Render Asymmetric Photo Archive Grid */
-function initRenderArchive() {
-  const container = document.getElementById('archiveGallery');
-  if (!container || !Array.isArray(birthdayData.photos)) return;
+/* 5. Render Asymmetric Gallery Grid */
+function renderGallery() {
+  const grid = document.getElementById('galleryGrid');
+  if (!grid || !Array.isArray(birthdayData.photos)) return;
 
-  container.innerHTML = birthdayData.photos.map((photo, idx) => {
+  grid.innerHTML = birthdayData.photos.map((photo, idx) => {
     return `
-      <div class="archive-item archive-${photo.aspect || 'portrait'} reveal" data-index="${idx}">
-        <div class="archive-image-wrapper">
-          <img src="${photo.url}" alt="${photo.title}" class="archive-img">
-          <div class="archive-overlay">
-            <span class="archive-number">${photo.id || (idx + 1).toString().padStart(2, '0')}</span>
-            <div class="archive-caption-box">
-              <h4 class="archive-title font-serif">${photo.title}</h4>
-              <p class="archive-subtitle">${photo.subtitle || ''}</p>
-            </div>
-            <span class="archive-action">VIEW MEMORY →</span>
+      <div class="gallery-item gallery-${photo.aspect || 'portrait'} reveal" data-index="${idx}">
+        <div class="gallery-image-box">
+          <img src="${photo.image}" alt="${photo.caption}" class="gallery-img" loading="lazy">
+          <div class="gallery-overlay">
+            <span class="gallery-action">VIEW MEMORY →</span>
+            <span class="gallery-caption-text">${photo.caption}</span>
           </div>
         </div>
       </div>
@@ -392,95 +340,92 @@ function initRenderArchive() {
   }).join('');
 }
 
-/* 7. Render Numbered Reflections / Reasons List */
-function initRenderReasons() {
+/* 6. Render Reflections (Things I Love) */
+function renderReasons() {
   const container = document.getElementById('reasonsContainer');
   if (!container || !Array.isArray(birthdayData.reasons)) return;
 
-  container.innerHTML = birthdayData.reasons.map((item) => {
+  container.innerHTML = birthdayData.reasons.map((item, idx) => {
+    const numStr = (idx + 1).toString().padStart(2, '0');
     return `
-      <div class="reason-item reveal">
-        <div class="reason-left">
-          <span class="reason-num">${item.number}</span>
-          <h3 class="reason-title font-serif">${item.title}</h3>
+      <div class="reason-row reveal">
+        <div class="reason-title-group">
+          <span class="reason-num">${numStr}</span>
+          <h3 class="reason-heading font-serif">${item.title}</h3>
         </div>
-        <div class="reason-right">
-          <p class="reason-detail">${item.detail}</p>
+        <div class="reason-text-group">
+          <p class="reason-desc">${item.text}</p>
         </div>
-        ${item.previewImage ? `
-          <div class="reason-preview-pop">
-            <img src="${item.previewImage}" alt="${item.title}">
+        ${item.image ? `
+          <div class="reason-image-pop">
+            <img src="${item.image}" alt="${item.title}">
           </div>
         ` : ''}
-        <div class="reason-border-line"></div>
+        <div class="reason-line"></div>
       </div>
     `;
   }).join('');
 }
 
-/* 8. Render Keepsake Memories Cards */
-function initRenderMemories() {
+/* 7. Render Keepsake Memories Cards */
+function renderMemories() {
   const grid = document.getElementById('memoriesGrid');
-  const filterBtns = document.querySelectorAll('#memoryFilters .filter-btn');
+  const filterPills = document.querySelectorAll('#categoryFilters .filter-pill');
   if (!grid || !Array.isArray(birthdayData.memories)) return;
 
-  function renderGrid(cat = 'ALL') {
-    const filtered = cat === 'ALL'
+  function buildGrid(category = 'ALL') {
+    const items = category === 'ALL'
       ? birthdayData.memories
-      : birthdayData.memories.filter(m => m.category === cat);
+      : birthdayData.memories.filter(m => m.category === category);
 
-    grid.innerHTML = filtered.map((mem, idx) => {
+    grid.innerHTML = items.map((mem, idx) => {
       return `
-        <div class="memory-card reveal" data-index="${idx}" data-category="${mem.category}">
-          <span class="memory-category">${mem.category}</span>
-          <h4 class="memory-title font-serif">${mem.title}</h4>
-          <p class="memory-preview">${mem.preview}</p>
-          <div class="memory-card-footer">
-            <span class="memory-read-btn">READ KEEPSAKE →</span>
-          </div>
+        <div class="memory-box reveal" data-index="${idx}" data-category="${mem.category}">
+          <span class="memory-tag">${mem.category}</span>
+          <h4 class="memory-box-title font-serif">${mem.title}</h4>
+          <p class="memory-box-text">${mem.text.length > 110 ? mem.text.substring(0, 110) + '...' : mem.text}</p>
+          <span class="memory-link">READ KEEPSAKE →</span>
         </div>
       `;
     }).join('');
 
-    // Re-attach scroll reveal observer to new items
-    initScrollAnimations();
-    attachMemoryCardListeners();
+    initIntersectionObserver();
+    attachMemoryClickEvents();
   }
 
-  renderGrid('ALL');
+  buildGrid('ALL');
 
-  filterBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      filterBtns.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      const category = btn.getAttribute('data-category');
-      renderGrid(category);
+  filterPills.forEach(pill => {
+    pill.addEventListener('click', () => {
+      filterPills.forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      const cat = pill.getAttribute('data-category');
+      buildGrid(cat);
     });
   });
 }
 
-/* 9. Render Editorial Quote Conversations */
-function initRenderConversations() {
-  const container = document.getElementById('conversationsContainer');
+/* 8. Render Quotes */
+function renderConversations() {
+  const container = document.getElementById('quotesContainer');
   if (!container || !Array.isArray(birthdayData.conversations)) return;
 
-  container.innerHTML = birthdayData.conversations.map((item) => {
+  container.innerHTML = birthdayData.conversations.map(item => {
     return `
-      <blockquote class="quote-card">
-        <span class="quote-mark">“</span>
-        <p class="quote-text font-serif">${item.quote}</p>
-        <cite class="quote-date">${item.date}</cite>
-      </blockquote>
+      <div class="quote-item">
+        <p class="quote-body font-serif">"${item.quote.replace(/^"|"$/g, '')}"</p>
+        <span class="quote-date">— ${item.date}</span>
+      </div>
     `;
   }).join('');
 }
 
-/* 10. Scroll Reveal Observer */
-function initScrollAnimations() {
+/* 9. Scroll Intersection Observer */
+function initIntersectionObserver() {
   const reveals = document.querySelectorAll('.reveal');
   const observerOptions = {
-    threshold: 0.15,
-    rootMargin: "0px 0px -50px 0px"
+    threshold: 0.1,
+    rootMargin: "0px 0px -40px 0px"
   };
 
   const observer = new IntersectionObserver((entries) => {
@@ -494,27 +439,25 @@ function initScrollAnimations() {
   reveals.forEach(el => observer.observe(el));
 }
 
-/* 11. Lightbox Fullscreen Image Viewer */
+/* 10. Lightbox Modal */
 function initLightboxModal() {
   const modal = document.getElementById('lightboxModal');
   const closeBtn = document.getElementById('lightboxClose');
   const img = document.getElementById('lightboxImg');
   const indexEl = document.getElementById('lightboxIndex');
-  const titleEl = document.getElementById('lightboxTitle');
-  const descEl = document.getElementById('lightboxDesc');
+  const captionEl = document.getElementById('lightboxCaption');
 
   if (!modal) return;
 
   document.addEventListener('click', (e) => {
-    const archiveItem = e.target.closest('.archive-item');
-    if (archiveItem) {
-      const idx = parseInt(archiveItem.getAttribute('data-index'), 10);
+    const galleryItem = e.target.closest('.gallery-item');
+    if (galleryItem) {
+      const idx = parseInt(galleryItem.getAttribute('data-index'), 10);
       const photo = birthdayData.photos[idx];
       if (photo) {
-        img.src = photo.url;
+        img.src = photo.image;
         indexEl.textContent = `${(idx + 1).toString().padStart(2, '0')} / ${birthdayData.photos.length.toString().padStart(2, '0')}`;
-        titleEl.textContent = photo.title;
-        descEl.textContent = photo.subtitle || '';
+        captionEl.textContent = photo.caption || '';
         modal.classList.add('active');
         document.body.style.overflow = 'hidden';
       }
@@ -535,29 +478,28 @@ function initLightboxModal() {
   });
 }
 
-/* 12. Memory Modal Reader */
+/* 11. Keepsake Memory Reader Modal */
 function initMemoryModal() {
   const modal = document.getElementById('memoryModal');
   const closeBtn = document.getElementById('memoryClose');
   const catEl = document.getElementById('memoryModalCategory');
   const titleEl = document.getElementById('memoryModalTitle');
-  const textEl = document.getElementById('memoryModalText');
+  const bodyEl = document.getElementById('memoryModalBody');
   const imgWrap = document.getElementById('memoryModalImgWrap');
   const img = document.getElementById('memoryModalImg');
 
   if (!modal) return;
 
-  window.attachMemoryCardListeners = function() {
-    document.querySelectorAll('.memory-card').forEach(card => {
-      card.addEventListener('click', () => {
-        const cat = card.getAttribute('data-category');
-        const title = card.querySelector('.memory-title').textContent;
+  window.attachMemoryClickEvents = function() {
+    document.querySelectorAll('.memory-box').forEach(box => {
+      box.addEventListener('click', () => {
+        const title = box.querySelector('.memory-box-title').textContent;
         const memory = birthdayData.memories.find(m => m.title === title);
 
         if (memory) {
           catEl.textContent = memory.category;
           titleEl.textContent = memory.title;
-          textEl.innerHTML = `<p>${memory.text}</p>`;
+          bodyEl.innerHTML = `<p>${memory.text}</p>`;
 
           if (memory.image) {
             img.src = memory.image;
@@ -573,7 +515,7 @@ function initMemoryModal() {
     });
   };
 
-  attachMemoryCardListeners();
+  attachMemoryClickEvents();
 
   function closeModal() {
     modal.classList.remove('active');
@@ -586,13 +528,13 @@ function initMemoryModal() {
   });
 }
 
-/* 13. Private Letter Reveal Toggle */
+/* 12. Letter Reveal Toggle */
 function initLetterToggle() {
   const openBtn = document.getElementById('openLetterBtn');
   const closeBtn = document.getElementById('closeLetterBtn');
   const teaser = document.getElementById('letterTeaser');
   const paper = document.getElementById('letterPaper');
-  const body = document.getElementById('letterBody');
+  const bodyEl = document.getElementById('letterBody');
   const dateEl = document.getElementById('letterDate');
   const sigEl = document.getElementById('letterSignature');
 
@@ -604,29 +546,23 @@ function initLetterToggle() {
   if (dateEl && birthdayData.letterDate) dateEl.textContent = birthdayData.letterDate;
   if (sigEl) sigEl.textContent = yName;
 
-  let formattedLetter = birthdayData.letter;
-  if (formattedLetter) {
-    formattedLetter = formattedLetter.replace(/\${"HER NAME"}/g, gName);
-    formattedLetter = formattedLetter.replace(/HER NAME/g, gName);
-    if (body) body.innerHTML = formattedLetter;
+  if (bodyEl && birthdayData.letter) {
+    let text = birthdayData.letter;
+    text = text.replace(/HER_NAME/g, gName).replace(/HER NAME/g, gName);
+    bodyEl.innerHTML = text;
   }
 
   openBtn.addEventListener('click', () => {
-    teaser.classList.add('fade-out');
-    setTimeout(() => {
-      teaser.classList.add('hidden');
-      paper.classList.remove('hidden');
-      paper.classList.add('active');
-    }, 400);
+    teaser.classList.add('hidden');
+    paper.classList.remove('hidden');
+    paper.classList.add('active');
   });
 
   if (closeBtn) {
     closeBtn.addEventListener('click', () => {
       paper.classList.remove('active');
-      setTimeout(() => {
-        paper.classList.add('hidden');
-        teaser.classList.remove('hidden', 'fade-out');
-      }, 400);
+      paper.classList.add('hidden');
+      teaser.classList.remove('hidden');
     });
   }
 }
