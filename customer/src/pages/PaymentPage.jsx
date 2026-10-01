@@ -114,12 +114,16 @@ export const PaymentPage = () => {
     );
   }
 
-  const orderIdDisplay = orderIdParam || orderData?.orderNumber || orderData?.orderId || 'N/A';
-  const currentStatus = paymentData?.status || orderData?.paymentInfo?.status || orderData?.orderStatus || 'PENDING';
+  const orderIdDisplay = orderIdParam || paymentData?.orderId || paymentData?.cashfreeOrderId || orderData?.orderNumber || orderData?.orderId || 'N/A';
+  const currentStatus = (paymentData?.status || orderData?.paymentInfo?.status || orderData?.orderStatus || 'PENDING').toUpperCase();
   const isPaid = currentStatus === 'PAID' || currentStatus === 'ORDER_CONFIRMED' || currentStatus === 'SUCCESS';
-  const isFailed = currentStatus === 'FAILED' || currentStatus === 'CANCELLED' || currentStatus === 'EXPIRED';
-  const totalAmount = orderData?.totalAmount || orderData?.pricing?.totalAmount || 0;
+  const isFailed = currentStatus === 'FAILED' || currentStatus === 'REJECTED';
+  const isCancelled = currentStatus === 'CANCELLED' || currentStatus === 'EXPIRED';
+  
+  const totalAmount = paymentData?.amount || paymentData?.pricing?.totalAmount || orderData?.totalAmount || orderData?.pricing?.totalAmount || 0;
+  const displayItems = (paymentData?.items && paymentData.items.length > 0) ? paymentData.items : (orderData?.items || []);
   const transactionId = paymentData?.transactionId || orderData?.paymentInfo?.transactionId || '';
+  const firstProductName = displayItems[0]?.productSnapshot?.name || displayItems[0]?.name || 'DD Mystery Box';
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8 sm:py-12 space-y-8">
@@ -133,7 +137,7 @@ export const PaymentPage = () => {
           Payment Status
         </h1>
         <p className="text-slate-400 text-xs sm:text-sm">
-          Order Reference ID: <span className="text-white font-mono font-bold">{orderIdDisplay}</span>
+          Order Reference ID: <span className="text-white font-mono font-bold">#{orderIdDisplay}</span>
         </p>
       </div>
 
@@ -143,12 +147,16 @@ export const PaymentPage = () => {
         {isPaid ? (
           <div className="p-6 rounded-2xl bg-emerald-950/50 border border-emerald-500/40 text-emerald-200 space-y-3 text-center">
             <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto" />
-            <h3 className="text-xl font-bold text-white">Payment Confirmed & Verified!</h3>
+            <span className="text-xs font-black uppercase tracking-widest text-emerald-400 block">✓ Payment Received</span>
+            <h3 className="text-2xl font-black text-white font-display">PAYMENT SUCCESSFUL</h3>
             <p className="text-xs text-emerald-300">
-              Your payment of ₹{totalAmount} was processed successfully via Cashfree Gateway.
+              Order Confirmed • Total Paid: <strong className="text-white font-bold">₹{totalAmount}</strong>
+            </p>
+            <p className="text-xs text-slate-300">
+              Product: <strong className="text-pink-300 font-bold">{firstProductName}</strong>
             </p>
             {transactionId && (
-              <p className="text-[11px] font-mono bg-emerald-900/60 py-1 px-3 rounded-lg inline-block">
+              <p className="text-[11px] font-mono bg-emerald-900/60 py-1 px-3 rounded-lg inline-block text-emerald-200">
                 Cashfree Ref: {transactionId}
               </p>
             )}
@@ -156,9 +164,17 @@ export const PaymentPage = () => {
         ) : isFailed ? (
           <div className="p-6 rounded-2xl bg-rose-950/50 border border-rose-500/40 text-rose-200 space-y-3 text-center">
             <AlertTriangle className="w-12 h-12 text-rose-400 mx-auto" />
-            <h3 className="text-xl font-bold text-white">Payment Unsuccessful</h3>
+            <h3 className="text-xl font-bold text-white">Payment Failed</h3>
             <p className="text-xs text-rose-300">
-              The payment was not completed or was cancelled. Please click below to try again.
+              Your payment could not be processed. No final order was created. Please try again.
+            </p>
+          </div>
+        ) : isCancelled ? (
+          <div className="p-6 rounded-2xl bg-amber-950/50 border border-amber-500/40 text-amber-200 space-y-3 text-center">
+            <AlertTriangle className="w-12 h-12 text-amber-400 mx-auto" />
+            <h3 className="text-xl font-bold text-white">Payment Cancelled</h3>
+            <p className="text-xs text-amber-300">
+              You cancelled or closed the Cashfree payment window. You can retry anytime below.
             </p>
           </div>
         ) : (
@@ -177,16 +193,23 @@ export const PaymentPage = () => {
             Order Summary
           </h4>
           <div className="space-y-2 text-xs text-slate-300">
-            {orderData?.items?.map((item, idx) => (
-              <div key={idx} className="flex justify-between items-center">
-                <span className="font-medium text-slate-200 truncate max-w-[200px] sm:max-w-xs">
-                  {item.productSnapshot?.name || item.name || 'DD Mystery Box'} x {item.quantity}
-                </span>
-                <span className="font-bold text-white">
-                  ₹{(item.unitPrice || 0) * item.quantity}
-                </span>
+            {displayItems.length > 0 ? (
+              displayItems.map((item, idx) => (
+                <div key={idx} className="flex justify-between items-center">
+                  <span className="font-medium text-slate-200 truncate max-w-[200px] sm:max-w-xs">
+                    {item.productSnapshot?.name || item.name || 'DD Mystery Box'} x {item.quantity}
+                  </span>
+                  <span className="font-bold text-white">
+                    ₹{(item.unitPrice || item.productSnapshot?.price || 0) * item.quantity}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <div className="flex justify-between items-center">
+                <span className="font-medium text-slate-200">DD Mystery Box</span>
+                <span className="font-bold text-white">₹{totalAmount}</span>
               </div>
-            ))}
+            )}
 
             <div className="pt-2 border-t border-slate-800 flex justify-between items-center text-sm font-bold text-white">
               <span>Total Payable Amount</span>
@@ -206,34 +229,54 @@ export const PaymentPage = () => {
               {payingWithCashfree ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  <span>Processing...</span>
+                  <span>Opening Gateway...</span>
                 </>
               ) : (
                 <>
                   <CreditCard className="w-5 h-5" />
-                  <span>{isFailed ? `Retry Payment (₹${totalAmount})` : `PAY ₹${totalAmount} NOW (CASHFREE)`}</span>
+                  <span>{isFailed || isCancelled ? `TRY AGAIN (₹${totalAmount})` : `PAY ₹${totalAmount} NOW (CASHFREE)`}</span>
                 </>
               )}
             </button>
           )}
 
           <div className="flex gap-3">
-            <button
-              onClick={() => fetchPaymentDetails(false)}
-              disabled={verifying}
-              className="flex-1 py-3 px-4 rounded-xl bg-slate-900 border border-purple-500/30 text-slate-200 hover:text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-colors"
-            >
-              <RefreshCw className={`w-4 h-4 text-purple-400 ${verifying ? 'animate-spin' : ''}`} />
-              <span>{verifying ? 'Verifying...' : 'Check Status'}</span>
-            </button>
+            {isPaid ? (
+              <>
+                <Link
+                  to={`/order-success/${orderIdDisplay}`}
+                  className="flex-1 py-3.5 px-4 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 text-white font-bold text-xs uppercase tracking-wider text-center flex items-center justify-center gap-2 shadow-lg shadow-pink-500/20"
+                >
+                  <span>View My Order</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+                <Link
+                  to="/shop"
+                  className="flex-1 py-3.5 px-4 rounded-xl bg-slate-900 border border-purple-500/30 text-slate-200 hover:text-white font-bold text-xs uppercase tracking-wider text-center flex items-center justify-center gap-2"
+                >
+                  <span>Continue Shopping</span>
+                </Link>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => fetchPaymentDetails(false)}
+                  disabled={verifying}
+                  className="flex-1 py-3 px-4 rounded-xl bg-slate-900 border border-purple-500/30 text-slate-200 hover:text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-colors"
+                >
+                  <RefreshCw className={`w-4 h-4 text-purple-400 ${verifying ? 'animate-spin' : ''}`} />
+                  <span>{verifying ? 'Verifying...' : 'Check Status'}</span>
+                </button>
 
-            <Link
-              to="/my-orders"
-              className="flex-1 py-3 px-4 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white font-bold text-xs uppercase tracking-wider text-center flex items-center justify-center gap-1.5 transition-colors"
-            >
-              <span>My Orders</span>
-              <ArrowRight className="w-4 h-4" />
-            </Link>
+                <Link
+                  to="/my-orders"
+                  className="flex-1 py-3 px-4 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white font-bold text-xs uppercase tracking-wider text-center flex items-center justify-center gap-1.5 transition-colors"
+                >
+                  <span>My Orders</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </>
+            )}
           </div>
         </div>
 

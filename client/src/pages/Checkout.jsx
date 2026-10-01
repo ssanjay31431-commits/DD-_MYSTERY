@@ -102,19 +102,45 @@ export const Checkout = () => {
 
       const { data } = await API.post('/payments/create-order', checkoutData);
 
-      if (!data || (!data.order_id && !data.order?.orderId)) {
-        throw new Error(data?.message || 'Failed to create order');
+      if (!data || (!data.order_id && !data.orderId && !data.order?.orderId)) {
+        throw new Error(data?.message || 'Failed to create Cashfree order');
       }
 
-      const targetOrderId = data.order_id || data.order?.orderId || data.order?.orderNumber;
+      const targetOrderId = data.order_id || data.orderId || data.order?.orderId || data.order?.orderNumber;
 
       if (isBuyNowFlow) {
         safeRemoveSessionItem('dd_buynow_item');
       }
 
       clearCart();
-      addToast('Order registered! Redirecting to payment page...');
-      navigate(`/payment?orderId=${targetOrderId}`, { replace: true });
+
+      // Launch official Cashfree JS SDK Checkout
+      try {
+        if (data.paymentSessionId) {
+          const cashfree = await loadCashfreeSDK();
+          addToast('Opening Cashfree Gateway...', 'info');
+
+          const checkoutOptions = {
+            paymentSessionId: data.paymentSessionId,
+            redirectTarget: '_modal'
+          };
+
+          cashfree.checkout(checkoutOptions).then(async (result) => {
+            if (result.error) {
+              console.error('[Cashfree Checkout Error]', result.error);
+              navigate(`/payment?order_id=${targetOrderId}`, { replace: true });
+            } else {
+              await verifyOrderPaymentStatus(targetOrderId);
+            }
+          });
+          return;
+        }
+      } catch (sdkErr) {
+        console.warn('[SDK Direct Checkout Notice, redirecting]:', sdkErr);
+      }
+
+      addToast('Order registered! Redirecting to Cashfree Payment Gateway...');
+      navigate(`/payment?order_id=${targetOrderId}`, { replace: true });
 
     } catch (error) {
       console.error('Checkout error:', error);
