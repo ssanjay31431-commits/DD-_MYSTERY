@@ -21,6 +21,7 @@ export const Dashboard = () => {
   const [stats, setStats] = useState(EMPTY_ADMIN_STATS);
   const [loading, setLoading] = useState(true);
   const [dateFilter, setDateFilter] = useState('7Days');
+  const [dashboardOrderTab, setDashboardOrderTab] = useState('TODAY'); // 'TODAY', 'RECENT', 'ALL'
   const [recoveringId, setRecoveringId] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
@@ -290,7 +291,7 @@ export const Dashboard = () => {
         )}
 
         {/* Analytics Cards Grid */}
-        <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6">
           
           <div className="glass-panel p-6 rounded-3xl border border-purple-500/30 space-y-2">
             <div className="flex justify-between items-center">
@@ -307,7 +308,7 @@ export const Dashboard = () => {
 
           <div className="glass-panel p-6 rounded-3xl border border-purple-500/30 space-y-2">
             <div className="flex justify-between items-center">
-              <span className="text-xs font-extrabold uppercase text-slate-400">Advance Paid Online</span>
+              <span className="text-xs font-extrabold uppercase text-slate-400">Advance Paid</span>
               <CreditCard className="w-5 h-5 text-pink-400" />
             </div>
             <span className="text-3xl font-black text-pink-400 font-display block">
@@ -340,17 +341,68 @@ export const Dashboard = () => {
             </span>
           </div>
 
+          <div className="glass-panel p-6 rounded-3xl border border-emerald-500/30 space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-extrabold uppercase text-slate-400">Today's Orders</span>
+              <Calendar className="w-5 h-5 text-emerald-400" />
+            </div>
+            <span className="text-3xl font-black text-emerald-400 font-display block">
+              {currentStats.todayOrders || 0}
+            </span>
+            <span className="text-[11px] text-emerald-300 font-bold block">
+              Revenue: ₹{(currentStats.todayRevenue || 0).toLocaleString()}
+            </span>
+          </div>
+
         </div>
 
-        {/* Recent Orders Table (Requirement 19) */}
+        {/* Customer Orders Table with Today / Recent Filter Tabs */}
         <div className="glass-panel p-6 rounded-3xl border border-purple-500/20 space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-bold text-white font-display">🔔 NEW & RECENT CUSTOMER ORDERS</h3>
-            <span className="text-xs font-mono text-purple-400">Synced with MongoDB</span>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h3 className="text-lg font-bold text-white font-display">🔔 CUSTOMER ORDERS LOG</h3>
+              <p className="text-xs text-slate-400">Live verified customer orders direct from MongoDB.</p>
+            </div>
+
+            <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-900 border border-purple-500/20">
+              <button
+                type="button"
+                onClick={() => setDashboardOrderTab('TODAY')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition-all ${
+                  dashboardOrderTab === 'TODAY'
+                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/20'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Today's ({currentStats.todayOrders || 0})
+              </button>
+              <button
+                type="button"
+                onClick={() => setDashboardOrderTab('RECENT')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition-all ${
+                  dashboardOrderTab === 'RECENT'
+                    ? 'bg-purple-600 text-white shadow-md shadow-purple-500/20'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Recent (10)
+              </button>
+              <button
+                type="button"
+                onClick={() => setDashboardOrderTab('ALL')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition-all ${
+                  dashboardOrderTab === 'ALL'
+                    ? 'bg-pink-600 text-white shadow-md shadow-pink-500/20'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                All
+              </button>
+            </div>
           </div>
           
           <div className="overflow-x-auto w-full">
-            <table className="w-full text-left text-xs text-slate-300 min-w-[600px]">
+            <table className="w-full text-left text-xs text-slate-300 min-w-[650px]">
               <thead className="bg-slate-900/90 text-slate-400 font-extrabold uppercase tracking-wider">
                 <tr className="border-b border-slate-800 text-[10px] text-slate-400 uppercase font-black">
                   <th className="p-3">Order ID</th>
@@ -365,14 +417,30 @@ export const Dashboard = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
-                {recentOrders.length === 0 ? (
-                  <tr>
-                    <td colSpan="9" className="p-8 text-center text-slate-400 font-semibold">
-                      No orders placed yet. New customer orders will appear here automatically!
-                    </td>
-                  </tr>
-                ) : (
-                  recentOrders.map((ord) => {
+                {(() => {
+                  const todayStartObj = new Date();
+                  todayStartObj.setHours(0, 0, 0, 0);
+
+                  let displayedOrders = recentOrders;
+                  if (dashboardOrderTab === 'TODAY') {
+                    displayedOrders = recentOrders.filter(
+                      (ord) => ord.createdAt && new Date(ord.createdAt) >= todayStartObj
+                    );
+                  }
+
+                  if (displayedOrders.length === 0) {
+                    return (
+                      <tr>
+                        <td colSpan="9" className="p-8 text-center text-slate-400 font-semibold">
+                          {dashboardOrderTab === 'TODAY'
+                            ? "No customer orders placed today yet. New today's orders will appear here automatically after payment!"
+                            : 'No orders placed yet. New customer orders will appear here automatically!'}
+                        </td>
+                      </tr>
+                    );
+                  }
+
+                  return displayedOrders.map((ord) => {
                     const ordNum = ord.orderNumber || ord.orderId || 'DM1001';
                     const firstItem = ord.items?.[0] || {};
                     const productName = firstItem.productSnapshot?.name || firstItem.product?.name || 'DD Mystery Box';
@@ -380,10 +448,20 @@ export const Dashboard = () => {
                     const paid = ord.pricing?.amountPaid !== undefined ? ord.pricing.amountPaid : (ord.amountPaid || ord.advancePaid || 0);
                     const rem = ord.pricing?.remainingBalance !== undefined ? ord.pricing.remainingBalance : (ord.remainingBalance !== undefined ? ord.remainingBalance : (ord.remainingCodAmount || 0));
                     const method = ord.paymentInfo?.method === 'FULL' || ord.paymentMethod === 'FULL' || ord.paymentMethod === 'full_online' ? 'Full Online' : 'Advance Payment';
+                    const isTodayOrd = ord.createdAt && new Date(ord.createdAt) >= todayStartObj;
 
                     return (
                       <tr key={ord._id || ordNum} className="hover:bg-slate-900/50 transition-colors">
-                        <td className="p-3 font-mono font-bold text-amber-300">#{ordNum}</td>
+                        <td className="p-3 font-mono font-bold text-amber-300">
+                          <div className="flex items-center gap-1.5">
+                            <span>#{ordNum}</span>
+                            {isTodayOrd && (
+                              <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                TODAY
+                              </span>
+                            )}
+                          </div>
+                        </td>
                         <td className="p-3 font-bold text-white">{ord.user?.name || ord.deliveryAddressSnapshot?.fullName || 'Customer'}</td>
                         <td className="p-3 text-slate-200">{productName}</td>
                         <td className="p-3 font-bold text-white">₹{total}</td>
@@ -415,8 +493,8 @@ export const Dashboard = () => {
                         </td>
                       </tr>
                     );
-                  })
-                )}
+                  });
+                })()}
               </tbody>
             </table>
           </div>
