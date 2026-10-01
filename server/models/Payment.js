@@ -21,21 +21,33 @@ const paymentSchema = new mongoose.Schema(
       type: Number,
       required: true
     },
-    upiId: {
+    currency: {
       type: String,
-      default: 'CASHFREE'
+      default: 'INR'
     },
-    upiName: {
+    cashfreeOrderId: {
       type: String,
-      default: 'Cashfree'
+      default: ''
+    },
+    cashfreePaymentId: {
+      type: String,
+      default: ''
+    },
+    paymentSessionId: {
+      type: String,
+      default: ''
+    },
+    transactionId: {
+      type: String,
+      default: ''
     },
     paymentReference: {
       type: String,
       required: true
     },
-    screenshotUrl: {
+    paymentMethod: {
       type: String,
-      default: ''
+      default: 'CASHFREE'
     },
     status: {
       type: String,
@@ -44,23 +56,18 @@ const paymentSchema = new mongoose.Schema(
         'PENDING',
         'SUCCESS',
         'PAID',
-        'SCREENSHOT_SUBMITTED',
-        'PAYMENT_VERIFICATION',
         'PAYMENT_COMPLETED',
-        'REJECTED',
-        'FAILED'
+        'FAILED',
+        'CANCELLED',
+        'EXPIRED'
       ],
       default: 'PENDING_PAYMENT'
     },
-    submittedAt: {
+    paidAt: {
       type: Date
     },
-    verifiedAt: {
-      type: Date
-    },
-    verifiedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
+    rawResponse: {
+      type: mongoose.Schema.Types.Mixed
     }
   },
   { timestamps: true }

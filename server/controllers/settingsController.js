@@ -13,11 +13,9 @@ const getSettings = async (req, res) => {
         codAdvanceValue: 100,
         deliveryCharge: 0,
         freeDeliveryMinAmount: 199,
-        instagramLink: 'https://www.instagram.com/',
-        whatsappNumber: '+91 00000 00000',
-        upiId: 'david468468@airtel',
-        upiName: 'Sagariya David S',
-        paymentMethodName: 'Manual UPI'
+        instagramLink: 'https://www.instagram.com/david_op468/',
+        whatsappNumber: '+91 79042 79655',
+        paymentMethodName: 'Cashfree Payment Gateway'
       });
     }
     res.json(settings);
@@ -44,8 +42,6 @@ const updateSettings = async (req, res) => {
       freeDeliveryMinAmount,
       instagramLink,
       whatsappNumber,
-      upiId,
-      upiName,
       paymentMethodName
     } = req.body;
 
@@ -57,8 +53,6 @@ const updateSettings = async (req, res) => {
     if (freeDeliveryMinAmount !== undefined) settings.freeDeliveryMinAmount = Number(freeDeliveryMinAmount);
     if (instagramLink !== undefined) settings.instagramLink = instagramLink;
     if (whatsappNumber !== undefined) settings.whatsappNumber = whatsappNumber;
-    if (upiId !== undefined) settings.upiId = upiId;
-    if (upiName !== undefined) settings.upiName = upiName;
     if (paymentMethodName !== undefined) settings.paymentMethodName = paymentMethodName;
 
     const updated = await settings.save();

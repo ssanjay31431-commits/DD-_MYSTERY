@@ -102,19 +102,45 @@ export const Checkout = () => {
 
       const { data } = await API.post('/payments/create-order', checkoutData);
 
-      if (!data || (!data.order_id && !data.order?.orderId)) {
-        throw new Error(data?.message || 'Failed to create order');
+      if (!data || (!data.order_id && !data.orderId && !data.order?.orderId)) {
+        throw new Error(data?.message || 'Failed to create Cashfree order');
       }
 
-      const targetOrderId = data.order_id || data.order?.orderId || data.order?.orderNumber;
+      const targetOrderId = data.order_id || data.orderId || data.order?.orderId || data.order?.orderNumber;
 
       if (isBuyNowFlow) {
         safeRemoveSessionItem('dd_buynow_item');
       }
 
       clearCart();
-      addToast('Order registered! Redirecting to payment page...');
-      navigate(`/payment?orderId=${targetOrderId}`, { replace: true });
+
+      // Launch official Cashfree JS SDK Checkout
+      try {
+        if (data.paymentSessionId) {
+          const cashfree = await loadCashfreeSDK();
+          addToast('Opening Cashfree Gateway...', 'info');
+
+          const checkoutOptions = {
+            paymentSessionId: data.paymentSessionId,
+            redirectTarget: '_modal'
+          };
+
+          cashfree.checkout(checkoutOptions).then(async (result) => {
+            if (result.error) {
+              console.error('[Cashfree Checkout Error]', result.error);
+              navigate(`/payment?order_id=${targetOrderId}`, { replace: true });
+            } else {
+              await verifyOrderPaymentStatus(targetOrderId);
+            }
+          });
+          return;
+        }
+      } catch (sdkErr) {
+        console.warn('[SDK Direct Checkout Notice, redirecting]:', sdkErr);
+      }
+
+      addToast('Order registered! Redirecting to Cashfree Payment Gateway...');
+      navigate(`/payment?order_id=${targetOrderId}`, { replace: true });
 
     } catch (error) {
       console.error('Checkout error:', error);
@@ -584,19 +610,19 @@ export const Checkout = () => {
               </div>
             </div>
 
-            {/* Manual UPI Payment Info Box */}
+            {/* Cashfree Payment Info Box */}
             <div className="space-y-3 pt-2 border-t border-slate-800">
               <h4 className="text-xs font-extrabold uppercase tracking-wider text-pink-400 flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4" /> PAYMENT
+                <ShieldCheck className="w-4 h-4 text-emerald-400" /> SECURE ONLINE PAYMENT
               </h4>
 
               <div className="p-4 rounded-2xl bg-purple-950/40 border border-purple-500/30 space-y-2">
                 <p className="text-xs text-slate-300 flex items-center gap-2 font-semibold">
                   <CreditCard className="w-4 h-4 text-emerald-400" />
-                  Manual UPI Payment (GPay, PhonePe, Paytm, QR Code)
+                  Instant Cashfree Payment (UPI, Cards, Net Banking, Wallets)
                 </p>
                 <p className="text-[11px] text-slate-400 leading-relaxed">
-                  After clicking Pay Now, scan the dynamic QR code on the payment page & upload your payment screenshot for instant admin confirmation.
+                  After clicking PAY NOW, complete your payment securely via Cashfree Gateway for instant automated order confirmation.
                 </p>
               </div>
             </div>

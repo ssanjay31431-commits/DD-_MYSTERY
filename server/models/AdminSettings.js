@@ -36,17 +36,9 @@ const adminSettingsSchema = new mongoose.Schema(
       type: String,
       default: '+91 00000 00000'
     },
-    upiId: {
-      type: String,
-      default: 'david468468@airtel'
-    },
-    upiName: {
-      type: String,
-      default: 'Sagariya David S'
-    },
     paymentMethodName: {
       type: String,
-      default: 'Manual UPI'
+      default: 'Cashfree Payment Gateway'
     }
   },
   { timestamps: true }

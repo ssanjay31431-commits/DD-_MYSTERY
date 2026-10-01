@@ -293,7 +293,7 @@ export const OrderDetailsView = () => {
 
             <div className="p-3.5 rounded-2xl bg-slate-900 border border-purple-500/30">
               <span className="text-[10px] text-purple-400 uppercase font-bold block">Payment Method</span>
-              <span className="text-xs font-bold text-white block mt-1">{isFull ? 'Full Online Payment' : 'Advance Payment'}</span>
+              <span className="text-xs font-bold text-white block mt-1">Cashfree Payment Gateway</span>
               <span className="text-[10px] font-mono text-slate-400 block break-all">Ref: {cashfreeRef}</span>
             </div>
           </div>

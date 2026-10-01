@@ -4,7 +4,7 @@ const CASHFREE_APP_ID = process.env.CASHFREE_APP_ID || process.env.CASHFREE_CLIE
 const CASHFREE_SECRET_KEY = process.env.CASHFREE_SECRET_KEY || process.env.CASHFREE_CLIENT_SECRET;
 const CASHFREE_ENV = (process.env.CASHFREE_ENV || 'TEST').toUpperCase();
 
-const BASE_URL = CASHFREE_ENV === 'PRODUCTION'
+const BASE_URL = (CASHFREE_ENV === 'PRODUCTION' || CASHFREE_ENV === 'PROD')
   ? 'https://api.cashfree.com/pg'
   : 'https://sandbox.cashfree.com/pg';
 
@@ -69,19 +69,29 @@ const createOrderSession = async ({ orderId, amount, currency = 'INR', customer,
   }
 };
 
+const crypto = require('crypto');
+
+const verifyWebhookSignature = (signature, rawPayload, timestamp) => {
+  if (!signature || !timestamp || !CASHFREE_SECRET_KEY) return false;
+  try {
+    const data = timestamp + (typeof rawPayload === 'string' ? rawPayload : JSON.stringify(rawPayload));
+    const expectedSignature = crypto
+      .createHmac('sha256', CASHFREE_SECRET_KEY)
+      .update(data)
+      .digest('base64');
+    return signature === expectedSignature;
+  } catch (err) {
+    console.error('[Cashfree Webhook Signature Error]:', err.message);
+    return false;
+  }
+};
+
 /**
  * Verify Cashfree Order Payment Status Server-Side
  */
 const verifyOrderPayment = async (paymentOrderId) => {
-  if (!isConfigured() || paymentOrderId.startsWith('CF_MOCK_') || paymentOrderId.startsWith('CF_TEST_')) {
-    console.log(`[CASHFREE (MOCK VERIFY)] Verified order ${paymentOrderId} as PAID`);
-    return {
-      isPaid: true,
-      status: 'PAID',
-      paymentOrderId,
-      transactionId: `cf_tx_mock_${Date.now()}`,
-      isMockMode: true
-    };
+  if (!isConfigured()) {
+    throw new Error('Cashfree credentials are not configured in environment variables');
   }
 
   try {
@@ -100,19 +110,6 @@ const verifyOrderPayment = async (paymentOrderId) => {
   } catch (error) {
     const errorMsg = error.response?.data?.message || error.message || 'Failed to verify Cashfree order payment';
     console.error('[CASHFREE VERIFY ERROR]', errorMsg);
-    
-    // In test/dev environment, fallback safely to mock verify if Cashfree sandbox throws 404 or connection error
-    if (process.env.NODE_ENV !== 'production') {
-      console.log(`[CASHFREE DEV FALLBACK] Auto-verifying ${paymentOrderId} for dev testing`);
-      return {
-        isPaid: true,
-        status: 'PAID',
-        paymentOrderId,
-        transactionId: `cf_tx_dev_${Date.now()}`,
-        isMockMode: true
-      };
-    }
-
     throw new Error(errorMsg);
   }
 };
@@ -120,5 +117,6 @@ const verifyOrderPayment = async (paymentOrderId) => {
 module.exports = {
   createOrderSession,
   verifyOrderPayment,
+  verifyWebhookSignature,
   isConfigured
 };

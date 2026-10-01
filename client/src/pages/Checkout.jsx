@@ -584,19 +584,19 @@ export const Checkout = () => {
               </div>
             </div>
 
-            {/* Manual UPI Payment Info Box */}
+            {/* Cashfree Payment Info Box */}
             <div className="space-y-3 pt-2 border-t border-slate-800">
               <h4 className="text-xs font-extrabold uppercase tracking-wider text-pink-400 flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4" /> PAYMENT
+                <ShieldCheck className="w-4 h-4 text-emerald-400" /> SECURE ONLINE PAYMENT
               </h4>
 
               <div className="p-4 rounded-2xl bg-purple-950/40 border border-purple-500/30 space-y-2">
                 <p className="text-xs text-slate-300 flex items-center gap-2 font-semibold">
                   <CreditCard className="w-4 h-4 text-emerald-400" />
-                  Manual UPI Payment (GPay, PhonePe, Paytm, QR Code)
+                  Instant Cashfree Payment (UPI, Cards, Net Banking, Wallets)
                 </p>
                 <p className="text-[11px] text-slate-400 leading-relaxed">
-                  After clicking Pay Now, scan the dynamic QR code on the payment page & upload your payment screenshot for instant admin confirmation.
+                  After clicking PAY NOW, complete your payment securely via Cashfree Gateway for instant automated order confirmation.
                 </p>
               </div>
             </div>

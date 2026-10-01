@@ -43,11 +43,6 @@ const createOrder = async (req, res) => {
 
     const customOrderId = await generateOrderId();
 
-    // Fetch Admin Settings for UPI details
-    const settings = await AdminSettings.findOne() || {};
-    const upiId = settings.upiId || 'david468468@airtel';
-    const upiName = settings.upiName || 'Sagariya David S';
-
     // Calculate expected delivery date (4 days from now)
     const expectedDelivery = new Date();
     expectedDelivery.setDate(expectedDelivery.getDate() + 4);
@@ -117,8 +112,7 @@ const createOrder = async (req, res) => {
         orderId: customOrderId,
         customer: req.user._id,
         amount: totalAmount,
-        upiId,
-        upiName,
+        cashfreeOrderId: customOrderId,
         paymentReference: customOrderId,
         status: 'PENDING_PAYMENT'
       });
