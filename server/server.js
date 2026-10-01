@@ -99,4 +99,11 @@ process.on('uncaughtException', (err) => {
 
 app.listen(PORT, () => {
   console.log(`[DD Mystery Box Server] Running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+  
+  // Trigger immediate & hourly automated 24-hour cleanup of unpaid pending checkout records
+  const { cleanupExpiredPendingPayments } = require('./controllers/paymentController');
+  cleanupExpiredPendingPayments().catch(() => {});
+  setInterval(() => {
+    cleanupExpiredPendingPayments().catch(() => {});
+  }, 60 * 60 * 1000);
 });

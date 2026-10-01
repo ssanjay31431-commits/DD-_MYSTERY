@@ -404,6 +404,26 @@ const handleCashfreeWebhook = async (req, res) => {
 };
 
 /**
+ * Helper: Automatically delete unpaid pending checkout records older than 24 hours (1 day)
+ */
+const cleanupExpiredPendingPayments = async () => {
+  try {
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const result = await Payment.deleteMany({
+      status: { $in: ['PENDING', 'PENDING_PAYMENT', 'FAILED', 'CANCELLED', 'EXPIRED'] },
+      createdAt: { $lt: oneDayAgo }
+    });
+    if (result.deletedCount > 0) {
+      console.log(`[Auto Cleanup] Deleted ${result.deletedCount} unpaid pending checkout records older than 24 hours.`);
+    }
+    return result.deletedCount || 0;
+  } catch (err) {
+    console.error('[Auto Cleanup Pending Payments Error]:', err.message);
+    return 0;
+  }
+};
+
+/**
  * @desc Admin Get Payments List (Audit Log for all checkout attempts)
  * @route GET /api/payments/admin/pending
  * @route GET /api/payments/admin/list
@@ -411,6 +431,9 @@ const handleCashfreeWebhook = async (req, res) => {
  */
 const adminGetPendingPayments = async (req, res) => {
   try {
+    // Automatically purge unpaid checkout attempts older than 24 hours
+    await cleanupExpiredPendingPayments();
+
     const payments = await Payment.find()
       .populate('customer', 'name email phone')
       .populate({
@@ -427,6 +450,25 @@ const adminGetPendingPayments = async (req, res) => {
   }
 };
 
+/**
+ * @desc Admin Manual Purge Expired Pending Payments (>24h)
+ * @route DELETE /api/payments/admin/cleanup-expired
+ * @access Admin
+ */
+const cleanupExpiredPendingPaymentsApi = async (req, res) => {
+  try {
+    const count = await cleanupExpiredPendingPayments();
+    res.json({
+      success: true,
+      deletedCount: count,
+      message: `Cleaned up ${count} unpaid pending checkout records older than 24 hours.`
+    });
+  } catch (error) {
+    console.error('[Cleanup Expired API Error]', error);
+    res.status(500).json({ message: error.message || 'Failed to clean expired payments' });
+  }
+};
+
 module.exports = {
   confirmPaymentAndCreateOrder: createCashfreeOrder,
   createCashfreeOrder,
@@ -436,5 +478,7 @@ module.exports = {
   adminGetPendingPayments,
   adminGetPaymentsList: adminGetPendingPayments,
   createPaymentSession: createCashfreeOrder,
-  finalizePaidOrder
+  finalizePaidOrder,
+  cleanupExpiredPendingPayments,
+  cleanupExpiredPendingPaymentsApi
 };

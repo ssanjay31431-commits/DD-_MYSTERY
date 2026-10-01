@@ -10,7 +10,8 @@ import {
   Mail,
   Clock,
   Search,
-  ExternalLink
+  ExternalLink,
+  Trash2
 } from 'lucide-react';
 import API from '../services/api';
 import { AdminSidebar } from '../components/AdminSidebar';
@@ -37,6 +38,20 @@ export const AdminPaymentVerification = () => {
       addToast('Failed to fetch Cashfree payments list', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCleanupExpired = async () => {
+    if (!window.confirm('Purge all unpaid pending payment attempts older than 24 hours (1 day)? Paid orders will NOT be affected.')) {
+      return;
+    }
+    try {
+      const { data } = await API.delete('/payments/admin/cleanup-expired');
+      addToast(data?.message || 'Expired pending payments cleaned up!');
+      fetchPaymentsList();
+    } catch (err) {
+      console.error('[Cleanup Expired Error]', err);
+      addToast(err.response?.data?.message || 'Failed to cleanup expired payments', 'error');
     }
   };
 
@@ -106,12 +121,21 @@ export const AdminPaymentVerification = () => {
             </p>
           </div>
 
-          <button
-            onClick={fetchPaymentsList}
-            className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs uppercase flex items-center gap-2 shadow-lg shadow-purple-500/20 transition-all"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh Log
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleCleanupExpired}
+              title="Purge unpaid pending checkout attempts older than 24 hours"
+              className="px-4 py-2.5 rounded-xl bg-red-950/60 hover:bg-red-900/80 border border-red-500/40 text-red-300 font-bold text-xs uppercase flex items-center gap-2 shadow-lg shadow-red-500/10 transition-all"
+            >
+              <Trash2 className="w-4 h-4 text-red-400" /> Purge Expired (&gt;24h)
+            </button>
+            <button
+              onClick={fetchPaymentsList}
+              className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs uppercase flex items-center gap-2 shadow-lg shadow-purple-500/20 transition-all"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh Log
+            </button>
+          </div>
         </div>
 
         {/* Filter & Search Controls */}

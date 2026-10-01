@@ -4,7 +4,8 @@ const {
   createCashfreeOrder,
   verifyCashfreePayment,
   handleCashfreeWebhook,
-  adminGetPendingPayments
+  adminGetPendingPayments,
+  cleanupExpiredPendingPaymentsApi
 } = require('../controllers/paymentController');
 const { protect, admin } = require('../middleware/authMiddleware');
 
@@ -21,5 +22,6 @@ router.get('/verify/:orderId', protect, verifyCashfreePayment);
 // Protected Admin payment routes
 router.get('/admin/pending', protect, admin, adminGetPendingPayments);
 router.get('/admin/list', protect, admin, adminGetPendingPayments);
+router.delete('/admin/cleanup-expired', protect, admin, cleanupExpiredPendingPaymentsApi);
 
 module.exports = router;
