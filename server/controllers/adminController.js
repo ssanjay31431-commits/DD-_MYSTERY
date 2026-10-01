@@ -97,8 +97,13 @@ const getAllAdminOrders = async (req, res) => {
       filter.$or = [
         { orderNumber: { $regex: search, $options: 'i' } },
         { orderId: { $regex: search, $options: 'i' } },
+        { 'paymentInfo.cashfreeOrderId': { $regex: search, $options: 'i' } },
+        { 'paymentInfo.paymentOrderId': { $regex: search, $options: 'i' } },
+        { 'paymentInfo.transactionId': { $regex: search, $options: 'i' } },
         { 'deliveryAddressSnapshot.fullName': { $regex: search, $options: 'i' } },
-        { 'deliveryAddressSnapshot.mobileNumber': { $regex: search, $options: 'i' } }
+        { 'deliveryAddressSnapshot.email': { $regex: search, $options: 'i' } },
+        { 'deliveryAddressSnapshot.mobileNumber': { $regex: search, $options: 'i' } },
+        { 'items.productSnapshot.name': { $regex: search, $options: 'i' } }
       ];
     }
 

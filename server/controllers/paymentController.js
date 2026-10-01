@@ -15,7 +15,122 @@ const {
 } = require('../services/cashfreeService');
 
 /**
- * @desc Create Order & Initialize Cashfree Payment Session
+ * Helper: Finalize Paid Order in MongoDB
+ * ONLY called after server-side verification confirms payment status is PAID.
+ * Creates ONE final Order document safely and idempotently.
+ */
+const finalizePaidOrder = async (orderIdOrCashfreeId, transactionId = '', rawData = null) => {
+  let payment = await Payment.findOne({
+    $or: [{ cashfreeOrderId: orderIdOrCashfreeId }, { orderId: orderIdOrCashfreeId }]
+  });
+
+  if (!payment) {
+    throw new Error(`Temporary payment checkout record not found for ID: ${orderIdOrCashfreeId}`);
+  }
+
+  // IDEMPOTENCY CHECK: If already finalized & Order created, return existing order
+  if (payment.status === 'PAID' && payment.order) {
+    const existingOrder = await Order.findById(payment.order).populate('user', 'name email phone');
+    if (existingOrder) return existingOrder;
+  }
+
+  const customOrderId = payment.orderId;
+  const expectedDelivery = new Date();
+  expectedDelivery.setDate(expectedDelivery.getDate() + 4);
+
+  const fullPricing = {
+    subtotal: payment.pricing?.subtotal || payment.amount || 0,
+    deliveryFee: payment.pricing?.deliveryFee || 0,
+    couponDiscount: payment.pricing?.couponDiscount || 0,
+    totalAmount: payment.pricing?.totalAmount || payment.amount || 0,
+    advanceAmount: 0,
+    amountPaid: payment.pricing?.totalAmount || payment.amount || 0,
+    remainingBalance: 0
+  };
+
+  // CREATE FINAL ORDER DOCUMENT IN MONGODB
+  const order = new Order({
+    orderNumber: customOrderId,
+    orderId: customOrderId,
+    user: payment.customer,
+    items: payment.items,
+    deliveryAddressSnapshot: payment.deliveryAddressSnapshot,
+    pricing: fullPricing,
+    subtotal: fullPricing.subtotal,
+    deliveryFee: fullPricing.deliveryFee,
+    couponDiscount: fullPricing.couponDiscount,
+    couponCode: payment.couponCode,
+    totalAmount: fullPricing.totalAmount,
+    amountPaid: fullPricing.amountPaid,
+    remainingBalance: 0,
+    paymentInfo: {
+      method: 'Cashfree',
+      provider: 'CASHFREE',
+      status: 'PAID',
+      paymentOrderId: customOrderId,
+      cashfreeOrderId: payment.cashfreeOrderId,
+      paymentSessionId: payment.paymentSessionId,
+      transactionId: transactionId || payment.transactionId || `cf_tx_${Date.now()}`
+    },
+    orderStatus: 'ORDER_CONFIRMED',
+    trackingHistory: [
+      {
+        status: 'ORDER_CONFIRMED',
+        comment: `Online payment verified successfully via Cashfree. Ref: ${transactionId || customOrderId}`,
+        timestamp: new Date()
+      }
+    ],
+    expectedDeliveryDate: expectedDelivery,
+    luckyRewardUnlocked: payment.pricing.totalAmount >= 199
+  });
+
+  const createdOrder = await order.save();
+
+  // Update Payment record link
+  payment.order = createdOrder._id;
+  payment.status = 'PAID';
+  payment.transactionId = transactionId || payment.transactionId || `cf_tx_${Date.now()}`;
+  payment.paidAt = new Date();
+  if (rawData) payment.rawResponse = rawData;
+  await payment.save();
+
+  // Clear customer cart in MongoDB
+  if (payment.customer) {
+    await Cart.findOneAndUpdate(
+      { user: payment.customer },
+      { items: [], couponApplied: { code: '', discountAmount: 0 } }
+    ).catch(() => {});
+  }
+
+  // Send Email / SMS Notifications
+  sendNotification({
+    type: 'ORDER_CONFIRMATION',
+    order: createdOrder,
+    orderId: createdOrder.orderNumber || createdOrder.orderId,
+    recipientEmail: payment.customerDetails?.email || payment.deliveryAddressSnapshot?.email,
+    recipientPhone: payment.customerDetails?.phone || payment.deliveryAddressSnapshot?.mobileNumber
+  }).catch((e) => console.error('[Notification Dispatch Warning]', e.message));
+
+  // Admin Notification Log
+  NotificationLog.create({
+    orderId: createdOrder.orderId,
+    userId: createdOrder.user || null,
+    customerName: payment.customerDetails?.name || 'Customer',
+    recipient: 'ADMIN',
+    channel: 'Email',
+    type: 'NEW_ORDER',
+    event: 'NEW_ORDER',
+    status: 'Sent',
+    provider: 'System',
+    subject: `Order Paid & Confirmed #${createdOrder.orderId}`,
+    content: `Payment of ₹${createdOrder.totalAmount} verified via Cashfree. Order #${createdOrder.orderId} confirmed.`
+  }).catch(() => {});
+
+  return createdOrder;
+};
+
+/**
+ * @desc Step 1: Create Cashfree Checkout Session & Temporary Payment Record
  * @route POST /api/payments/create-order
  * @access Protected (User)
  */
@@ -24,14 +139,14 @@ const createCashfreeOrder = async (req, res) => {
     const { items, deliveryAddress, couponCode = '' } = req.body;
 
     if (!items || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ message: 'No items in order' });
+      return res.status(400).json({ message: 'No items in checkout' });
     }
 
     if (!deliveryAddress) {
       return res.status(400).json({ message: 'Delivery address is required' });
     }
 
-    // SERVER-SIDE PRICE VALIDATION: Recalculate prices directly from DB models
+    // SERVER-SIDE PRICE VALIDATION: Recalculate prices directly from DB Product models
     let calculatedSubtotal = 0;
     const orderItems = [];
 
@@ -43,7 +158,6 @@ const createCashfreeOrder = async (req, res) => {
         dbProduct = await Product.findById(productId);
       }
 
-      // If product found in DB use DB price, otherwise fallback to item price with sanity check
       const unitPrice = dbProduct?.price || item.unitPrice || item.price || 499;
       const quantity = Math.max(1, parseInt(item.quantity) || 1);
       calculatedSubtotal += unitPrice * quantity;
@@ -102,7 +216,6 @@ const createCashfreeOrder = async (req, res) => {
     const customOrderId = await generateOrderId();
 
     const customerDetails = {
-      id: req.user._id ? String(req.user._id) : `cust_${Date.now()}`,
       name: deliveryAddress.fullName || req.user.name || 'Customer',
       email: deliveryAddress.email || req.user.email || 'customer@example.com',
       phone: deliveryAddress.mobileNumber || req.user.phone || '9999999999'
@@ -110,12 +223,15 @@ const createCashfreeOrder = async (req, res) => {
 
     const returnUrl = `${process.env.CLIENT_URL || 'https://dd-mystery.vercel.app'}/payment?order_id=${customOrderId}`;
 
-    // Create Payment Order Session via Cashfree SDK/API
+    // Create Cashfree Payment Order Session
     const cashfreeSession = await createOrderSession({
       orderId: customOrderId,
       amount: totalAmount,
       currency: 'INR',
-      customer: customerDetails,
+      customer: {
+        id: String(req.user._id),
+        ...customerDetails
+      },
       returnUrl
     });
 
@@ -123,80 +239,28 @@ const createCashfreeOrder = async (req, res) => {
       throw new Error('Failed to obtain Cashfree payment session');
     }
 
-    const expectedDelivery = new Date();
-    expectedDelivery.setDate(expectedDelivery.getDate() + 4);
-
-    // Create Order Document in MongoDB
-    const order = new Order({
-      orderNumber: customOrderId,
+    // CREATE TEMPORARY CHECKOUT / PAYMENT RECORD (DO NOT CREATE ORDER DOC YET)
+    const payment = await Payment.create({
       orderId: customOrderId,
-      user: req.user._id,
-      items: orderItems,
+      cashfreeOrderId: customOrderId,
+      customer: req.user._id,
+      customerDetails,
       deliveryAddressSnapshot: deliveryAddress,
+      items: orderItems,
       pricing: {
         subtotal: calculatedSubtotal,
         deliveryFee,
         couponDiscount,
-        totalAmount,
-        advanceAmount: 0,
-        amountPaid: 0,
-        remainingBalance: totalAmount
+        totalAmount
       },
-      subtotal: calculatedSubtotal,
-      deliveryFee,
-      couponDiscount,
       couponCode: validatedCouponCode,
-      totalAmount,
-      amountPaid: 0,
-      remainingBalance: totalAmount,
-      paymentInfo: {
-        method: 'Cashfree',
-        provider: 'CASHFREE',
-        status: 'PENDING_PAYMENT',
-        paymentOrderId: customOrderId,
-        paymentSessionId: cashfreeSession.paymentSessionId
-      },
-      orderStatus: 'PENDING_PAYMENT',
-      trackingHistory: [
-        {
-          status: 'PENDING_PAYMENT',
-          comment: 'Order registered. Awaiting online payment via Cashfree Gateway.',
-          timestamp: new Date()
-        }
-      ],
-      expectedDeliveryDate: expectedDelivery,
-      luckyRewardUnlocked: totalAmount >= 199
-    });
-
-    const createdOrder = await order.save();
-
-    // Create linked Payment document in MongoDB
-    await Payment.create({
-      order: createdOrder._id,
-      orderId: customOrderId,
-      customer: req.user._id,
       amount: totalAmount,
-      cashfreeOrderId: customOrderId,
+      currency: 'INR',
       paymentSessionId: cashfreeSession.paymentSessionId,
       paymentReference: customOrderId,
       paymentMethod: 'CASHFREE',
       status: 'PENDING_PAYMENT'
-    }).catch((err) => console.error('[Payment Document Creation Warning]', err.message));
-
-    // Admin Notification Log
-    NotificationLog.create({
-      orderId: createdOrder.orderId,
-      userId: createdOrder.user || null,
-      customerName: customerDetails.name,
-      recipient: 'ADMIN',
-      channel: 'Email',
-      type: 'NEW_ORDER',
-      event: 'NEW_ORDER',
-      status: 'Sent',
-      provider: 'System',
-      subject: `New Online Order Placed #${createdOrder.orderId}`,
-      content: `New Cashfree payment order registered for ₹${totalAmount}. Order ID: ${createdOrder.orderId}`
-    }).catch(() => {});
+    });
 
     res.status(201).json({
       success: true,
@@ -205,16 +269,16 @@ const createCashfreeOrder = async (req, res) => {
       paymentSessionId: cashfreeSession.paymentSessionId,
       amount: totalAmount,
       currency: 'INR',
-      order: createdOrder
+      paymentId: payment._id
     });
   } catch (error) {
     console.error('[Create Cashfree Order Error]', error);
-    res.status(500).json({ message: error.message || 'Failed to initialize Cashfree payment' });
+    res.status(500).json({ message: error.message || 'Failed to initialize Cashfree checkout' });
   }
 };
 
 /**
- * @desc Verify Cashfree Payment Status Server-Side
+ * @desc Step 2: Verify Cashfree Payment Status Server-Side & Create Order if PAID
  * @route GET /api/payments/status/:orderId
  * @route GET /api/payments/order/:orderId
  * @access Protected (User)
@@ -226,21 +290,11 @@ const verifyCashfreePayment = async (req, res) => {
       return res.status(400).json({ message: 'Order ID parameter is required' });
     }
 
-    let order;
-    if (param.match(/^[0-9a-fA-F]{24}$/)) {
-      order = await Order.findById(param).populate('user', 'name email phone');
-    } else {
-      order = await Order.findOne({ $or: [{ orderId: param }, { orderNumber: param }] }).populate('user', 'name email phone');
-    }
+    // Check if Order already exists in DB
+    let order = await Order.findOne({ $or: [{ orderId: param }, { orderNumber: param }] }).populate('user', 'name email phone');
+    let payment = await Payment.findOne({ $or: [{ cashfreeOrderId: param }, { orderId: param }] });
 
-    if (!order) {
-      return res.status(404).json({ message: 'Order not found' });
-    }
-
-    let payment = await Payment.findOne({ order: order._id });
-
-    // If order is already confirmed in DB, return current status
-    if (order.paymentInfo?.status === 'PAID' && order.orderStatus === 'ORDER_CONFIRMED') {
+    if (order && order.paymentInfo?.status === 'PAID') {
       return res.json({
         success: true,
         paymentStatus: 'PAID',
@@ -250,86 +304,34 @@ const verifyCashfreePayment = async (req, res) => {
       });
     }
 
-    // Verify payment status with Cashfree Server-Side REST API
+    // Call Cashfree REST API to verify payment status
     try {
-      const cashfreeResult = await verifyOrderPayment(order.orderNumber || order.orderId);
+      const cashfreeResult = await verifyOrderPayment(param);
 
       if (cashfreeResult.isPaid) {
-        order.orderStatus = 'ORDER_CONFIRMED';
-        order.paymentInfo = {
-          ...order.paymentInfo,
-          method: 'Cashfree',
-          provider: 'CASHFREE',
-          status: 'PAID',
-          transactionId: cashfreeResult.transactionId || `cf_tx_${Date.now()}`
-        };
-
-        if (order.pricing) {
-          order.pricing.amountPaid = order.totalAmount;
-          order.pricing.remainingBalance = 0;
-        }
-        order.amountPaid = order.totalAmount;
-        order.remainingBalance = 0;
-
-        if (!order.trackingHistory.some((t) => t.status === 'ORDER_CONFIRMED')) {
-          order.trackingHistory.push({
-            status: 'ORDER_CONFIRMED',
-            comment: `Online payment verified successfully via Cashfree. Ref: ${cashfreeResult.transactionId}`,
-            timestamp: new Date()
-          });
-        }
-
-        const updatedOrder = await order.save();
-
-        if (payment) {
-          payment.status = 'PAID';
-          payment.transactionId = cashfreeResult.transactionId;
-          payment.paidAt = new Date();
-          payment.rawResponse = cashfreeResult;
-          await payment.save();
-        }
-
-        // Clear user cart upon successful payment
-        if (order.user?._id) {
-          await Cart.findOneAndUpdate(
-            { user: order.user._id },
-            { items: [], couponApplied: { code: '', discountAmount: 0 } }
-          ).catch(() => {});
-        }
-
-        // Send order confirmation email / SMS
-        sendNotification({
-          type: 'ORDER_CONFIRMATION',
-          order: updatedOrder,
-          orderId: updatedOrder.orderNumber || updatedOrder.orderId,
-          recipientEmail: order.user?.email || order.deliveryAddressSnapshot?.email,
-          recipientPhone: order.user?.phone || order.deliveryAddressSnapshot?.mobileNumber
-        }).catch((e) => console.error('[Notification Warning]', e.message));
+        // PAYMENT VERIFIED: Create final Order document safely
+        order = await finalizePaidOrder(param, cashfreeResult.transactionId, cashfreeResult);
+        payment = await Payment.findOne({ $or: [{ cashfreeOrderId: param }, { orderId: param }] });
 
         return res.json({
           success: true,
           paymentStatus: 'PAID',
           orderStatus: 'ORDER_CONFIRMED',
-          message: 'Payment verified successfully!',
-          order: updatedOrder,
+          message: 'Payment verified and order confirmed successfully!',
+          order,
           payment
         });
       } else if (cashfreeResult.status === 'FAILED' || cashfreeResult.status === 'CANCELLED' || cashfreeResult.status === 'EXPIRED') {
-        order.paymentInfo.status = 'FAILED';
-        order.orderStatus = 'FAILED';
-        await order.save();
-
         if (payment) {
-          payment.status = 'FAILED';
+          payment.status = cashfreeResult.status;
           await payment.save();
         }
 
         return res.json({
           success: false,
-          paymentStatus: 'FAILED',
-          orderStatus: 'FAILED',
-          message: `Payment was ${cashfreeResult.status.toLowerCase()}. Please try again.`,
-          order,
+          paymentStatus: cashfreeResult.status,
+          orderStatus: 'NONE',
+          message: `Payment was ${cashfreeResult.status.toLowerCase()}. Order was not placed.`,
           payment
         });
       }
@@ -339,8 +341,8 @@ const verifyCashfreePayment = async (req, res) => {
 
     res.json({
       success: true,
-      paymentStatus: order.paymentInfo?.status || 'PENDING_PAYMENT',
-      orderStatus: order.orderStatus,
+      paymentStatus: payment?.status || 'PENDING_PAYMENT',
+      orderStatus: order?.orderStatus || 'PENDING_PAYMENT',
       order,
       payment
     });
@@ -361,11 +363,10 @@ const handleCashfreeWebhook = async (req, res) => {
     const timestamp = req.headers['x-webhook-timestamp'];
     const payload = req.body;
 
-    // Verify webhook signature if in production mode
     if (process.env.CASHFREE_ENV === 'PRODUCTION' && signature && timestamp) {
       const isValid = verifyWebhookSignature(signature, payload, timestamp);
       if (!isValid) {
-        console.error('[Cashfree Webhook] Invalid signature received!');
+        console.error('[Cashfree Webhook] Invalid signature');
         return res.status(400).json({ message: 'Invalid webhook signature' });
       }
     }
@@ -377,61 +378,17 @@ const handleCashfreeWebhook = async (req, res) => {
     const paymentStatus = paymentData.payment_status || orderData.order_status;
 
     if (!orderId) {
-      return res.status(200).json({ status: 'OK', message: 'No order_id in webhook payload' });
-    }
-
-    let order = await Order.findOne({ $or: [{ orderId }, { orderNumber: orderId }] });
-    if (!order) {
-      return res.status(200).json({ status: 'OK', message: 'Order not found for webhook' });
-    }
-
-    // IDEMPOTENT PROTECTION: If order already PAID, acknowledge immediately
-    if (order.paymentInfo?.status === 'PAID' && order.orderStatus === 'ORDER_CONFIRMED') {
-      return res.status(200).json({ status: 'OK', message: 'Order already marked PAID' });
+      return res.status(200).json({ status: 'OK', message: 'No order_id in webhook' });
     }
 
     if (paymentStatus === 'SUCCESS' || paymentStatus === 'PAID' || eventType === 'PAYMENT_SUCCESS_WEBHOOK') {
-      order.orderStatus = 'ORDER_CONFIRMED';
-      order.paymentInfo = {
-        ...order.paymentInfo,
-        method: 'Cashfree',
-        provider: 'CASHFREE',
-        status: 'PAID',
-        transactionId: paymentData.cf_payment_id || `cf_wh_${Date.now()}`
-      };
-
-      if (order.pricing) {
-        order.pricing.amountPaid = order.totalAmount;
-        order.pricing.remainingBalance = 0;
-      }
-      order.amountPaid = order.totalAmount;
-      order.remainingBalance = 0;
-
-      if (!order.trackingHistory.some((t) => t.status === 'ORDER_CONFIRMED')) {
-        order.trackingHistory.push({
-          status: 'ORDER_CONFIRMED',
-          comment: `Webhook: Payment confirmed via Cashfree. Ref: ${paymentData.cf_payment_id || orderId}`,
-          timestamp: new Date()
-        });
-      }
-
-      await order.save();
-
-      let payment = await Payment.findOne({ order: order._id });
-      if (payment) {
-        payment.status = 'PAID';
-        payment.transactionId = paymentData.cf_payment_id || `cf_wh_${Date.now()}`;
-        payment.paidAt = new Date();
-        payment.rawResponse = payload;
-        await payment.save();
-      }
-
-      if (order.user) {
-        await Cart.findOneAndUpdate(
-          { user: order.user },
-          { items: [], couponApplied: { code: '', discountAmount: 0 } }
-        ).catch(() => {});
-      }
+      const transactionId = paymentData.cf_payment_id || `cf_wh_${Date.now()}`;
+      await finalizePaidOrder(orderId, transactionId, payload);
+    } else if (paymentStatus === 'FAILED' || paymentStatus === 'CANCELLED' || paymentStatus === 'EXPIRED') {
+      await Payment.findOneAndUpdate(
+        { $or: [{ cashfreeOrderId: orderId }, { orderId }] },
+        { status: paymentStatus }
+      ).catch(() => {});
     }
 
     res.status(200).json({ status: 'OK' });
@@ -442,7 +399,7 @@ const handleCashfreeWebhook = async (req, res) => {
 };
 
 /**
- * @desc Get List of Payments for Admin Dashboard
+ * @desc Admin Get Payments List (Audit Log for all checkout attempts)
  * @route GET /api/payments/admin/pending
  * @route GET /api/payments/admin/list
  * @access Admin
@@ -473,5 +430,6 @@ module.exports = {
   handleCashfreeWebhook,
   adminGetPendingPayments,
   adminGetPaymentsList: adminGetPendingPayments,
-  createPaymentSession: createCashfreeOrder
+  createPaymentSession: createCashfreeOrder,
+  finalizePaidOrder
 };
