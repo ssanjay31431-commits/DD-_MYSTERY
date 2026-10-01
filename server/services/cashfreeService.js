@@ -39,7 +39,7 @@ const isConfigured = () => {
  * Create Official Cashfree PG Order Session
  */
 const createOrderSession = async ({ orderId, amount, currency = 'INR', customer = {}, returnUrl }) => {
-  const { baseUrl, appId, secretKey } = getCashfreeCredentials();
+  const { baseUrl, appId, secretKey, env, isProd } = getCashfreeCredentials();
 
   if (!appId || !secretKey || appId.includes('your_') || secretKey.includes('your_')) {
     console.error('[Cashfree Error] CASHFREE_CLIENT_ID or CASHFREE_CLIENT_SECRET credentials are missing or unconfigured.');
