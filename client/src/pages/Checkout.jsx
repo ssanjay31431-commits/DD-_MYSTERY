@@ -115,26 +115,35 @@ export const Checkout = () => {
       clearCart();
 
       // Launch official Cashfree JS SDK Checkout
+      const targetSessionId = data.paymentSessionId || data.payment_session_id;
+
+      if (!targetSessionId || typeof targetSessionId !== 'string' || !targetSessionId.trim() || targetSessionId.startsWith('session_mock_')) {
+        console.error('[Cashfree Validation Error] Invalid paymentSessionId received:', targetSessionId);
+        addToast('Unable to start payment. Please try again.', 'error');
+        setSubmittingPayment(false);
+        return;
+      }
+
+      console.log('[Cashfree] Payment session received:', true);
+
       try {
-        if (data.paymentSessionId) {
-          const cashfree = await loadCashfreeSDK();
-          addToast('Opening Cashfree Gateway...', 'info');
+        const cashfree = await loadCashfreeSDK();
+        addToast('Opening Cashfree Gateway...', 'info');
 
-          const checkoutOptions = {
-            paymentSessionId: data.paymentSessionId,
-            redirectTarget: '_modal'
-          };
+        const checkoutOptions = {
+          paymentSessionId: targetSessionId.trim(),
+          redirectTarget: '_modal'
+        };
 
-          cashfree.checkout(checkoutOptions).then(async (result) => {
-            if (result.error) {
-              console.error('[Cashfree Checkout Error]', result.error);
-              navigate(`/payment?order_id=${targetOrderId}`, { replace: true });
-            } else {
-              await verifyOrderPaymentStatus(targetOrderId);
-            }
-          });
-          return;
-        }
+        cashfree.checkout(checkoutOptions).then(async (result) => {
+          if (result && result.error) {
+            console.error('[Cashfree Checkout Error]', result.error);
+            navigate(`/payment?order_id=${targetOrderId}`, { replace: true });
+          } else {
+            await verifyOrderPaymentStatus(targetOrderId);
+          }
+        });
+        return;
       } catch (sdkErr) {
         console.warn('[SDK Direct Checkout Notice, redirecting]:', sdkErr);
       }

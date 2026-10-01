@@ -67,14 +67,19 @@ export const PaymentPage = () => {
   }, [orderIdParam]);
 
   const handlePayNowWithCashfree = async () => {
-    const targetSessionId = orderData?.paymentInfo?.paymentSessionId || paymentData?.paymentSessionId;
-    const targetOrderId = orderIdParam || orderData?.orderNumber || orderData?.orderId;
+    const rawSessionId = paymentData?.paymentSessionId || orderData?.paymentInfo?.paymentSessionId;
+    const targetOrderId = orderIdParam || paymentData?.orderId || orderData?.orderNumber || orderData?.orderId;
 
-    if (!targetSessionId) {
-      addToast('Payment session expired. Please create a new checkout.', 'error');
+    if (!rawSessionId || typeof rawSessionId !== 'string' || !rawSessionId.trim() || rawSessionId.startsWith('session_mock_')) {
+      console.error('[Cashfree Validation Error] Invalid session ID on payment page:', rawSessionId);
+      addToast('Unable to start payment. Please try again.', 'error');
       navigate('/checkout');
       return;
     }
+
+    const targetSessionId = rawSessionId.trim();
+
+    console.log('[Cashfree] Payment session received:', true);
 
     setPayingWithCashfree(true);
     try {
@@ -88,7 +93,7 @@ export const PaymentPage = () => {
 
       const result = await cashfree.checkout(checkoutOptions);
 
-      if (result.error) {
+      if (result && result.error) {
         console.error('[Cashfree Checkout Error]', result.error);
         addToast(result.error.message || 'Payment cancelled or failed', 'error');
       } else {
