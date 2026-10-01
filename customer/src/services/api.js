@@ -11,12 +11,10 @@ const getBaseURL = () => {
     return clean.endsWith('/api') ? clean : `${clean}/api`;
   }
 
-  // If running in browser on production domain (e.g. vercel.app), default directly to Render backend
   if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
     return `${RENDER_BACKEND_URL}/api`;
   }
 
-  // Local development fallback
   return '/api';
 };
 
@@ -29,37 +27,53 @@ const API = axios.create({
 });
 
 // Interceptor to attach JWT Token to requests automatically
-API.interceptors.request.use((config) => {
-  const rawToken = localStorage.getItem('dd_token');
-  const token = typeof rawToken === 'string' && rawToken !== 'undefined' && rawToken !== 'null' && rawToken !== '[object Object]' ? rawToken.trim() : '';
+API.interceptors.request.use(
+  (config) => {
+    const rawToken = localStorage.getItem('dd_token');
+    const token = typeof rawToken === 'string' && rawToken !== 'undefined' && rawToken !== 'null' && rawToken !== '[object Object]' ? rawToken.trim() : '';
 
-  if (token) {
-    config.headers = config.headers || {};
-    config.headers.Authorization = `Bearer ${token}`;
-  } else {
-    delete config.headers?.Authorization;
+    if (token) {
+      config.headers = config.headers || {};
+      config.headers.Authorization = `Bearer ${token}`;
+    } else if (config.headers && config.headers.Authorization) {
+      delete config.headers.Authorization;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
   }
-  return config;
-}, (error) => {
-  return Promise.reject(error);
-});
+);
 
-// Response interceptor to handle token expiration and helpful 405 error diagnostics
+// Response interceptor to handle token expiration & 401 unauthorized cleanly
 API.interceptors.response.use(
   (response) => response,
   (error) => {
     const status = error.response?.status;
     const requestUrl = error.config?.url || '';
-    const fullTarget = `${error.config?.baseURL || ''}${requestUrl}`;
 
-    if (status === 405) {
-      console.error(`[API 405 Error] 405 Method Not Allowed when sending to ${fullTarget}. Verify VITE_API_URL or backend CORS routing.`);
-    }
+    if (status === 401) {
+      const isAuthRoute = requestUrl.includes('/auth/login') || requestUrl.includes('/auth/register') || requestUrl.includes('/auth/google');
 
-    if (status === 401 && localStorage.getItem('dd_token')) {
+      // Clear expired token & user state if 401 occurs on protected endpoints
+      const hadToken = Boolean(localStorage.getItem('dd_token'));
       localStorage.removeItem('dd_token');
       localStorage.removeItem('dd_user');
-      window.dispatchEvent(new Event('auth_logout'));
+
+      if (hadToken && !isAuthRoute) {
+        const msg = error.response?.data?.message || 'Your session expired. Please login again.';
+        const code = error.response?.data?.code || 'TOKEN_EXPIRED';
+
+        window.dispatchEvent(
+          new CustomEvent('auth_session_expired', {
+            detail: { message: msg, code }
+          })
+        );
+      }
+    }
+
+    if (status === 405) {
+      console.error(`[API 405 Error] 405 Method Not Allowed when sending to ${requestUrl}. Verify CORS & VITE_API_URL.`);
     }
 
     return Promise.reject(error);

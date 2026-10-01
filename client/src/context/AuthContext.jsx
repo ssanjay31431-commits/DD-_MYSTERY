@@ -20,6 +20,23 @@ const decodeGoogleJwt = (token) => {
   }
 };
 
+const isJwtExpired = (token) => {
+  if (!token || typeof token !== 'string') return true;
+  try {
+    const parts = token.split('.');
+    if (parts.length < 2) return true;
+    const base64Url = parts[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const payload = JSON.parse(atob(base64));
+    if (payload && payload.exp) {
+      return payload.exp * 1000 < Date.now();
+    }
+    return false;
+  } catch (e) {
+    return false;
+  }
+};
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -30,12 +47,19 @@ export const AuthProvider = ({ children }) => {
     const token = localStorage.getItem('dd_token');
 
     if (storedUser && token) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (err) {
+      if (isJwtExpired(token)) {
+        console.warn('[AuthInit] Stored JWT token has expired. Clearing session.');
         localStorage.removeItem('dd_user');
         localStorage.removeItem('dd_token');
         setUser(null);
+      } else {
+        try {
+          setUser(JSON.parse(storedUser));
+        } catch (err) {
+          localStorage.removeItem('dd_user');
+          localStorage.removeItem('dd_token');
+          setUser(null);
+        }
       }
     } else {
       localStorage.removeItem('dd_user');
@@ -48,8 +72,26 @@ export const AuthProvider = ({ children }) => {
       setUser(null);
     };
 
+    const handleSessionExpired = (e) => {
+      setUser(null);
+      const msg = e.detail?.message || 'Your session expired. Please login again.';
+      addToast(msg, 'error');
+
+      if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+        try {
+          sessionStorage.setItem('dd_redirect_after_login', window.location.pathname + window.location.search);
+        } catch (storageErr) {}
+        window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+      }
+    };
+
     window.addEventListener('auth_logout', handleAuthLogout);
-    return () => window.removeEventListener('auth_logout', handleAuthLogout);
+    window.addEventListener('auth_session_expired', handleSessionExpired);
+
+    return () => {
+      window.removeEventListener('auth_logout', handleAuthLogout);
+      window.removeEventListener('auth_session_expired', handleSessionExpired);
+    };
   }, []);
 
   const login = async (email, password) => {
@@ -120,7 +162,7 @@ export const AuthProvider = ({ children }) => {
       addToast(`Welcome to DD Mystery Box, ${data.name}! 🎁`);
       return data;
     } catch (error) {
-      console.warn('Backend Google auth endpoint error, executing client-side credential decoding:', error.message);
+      console.warn('Backend Google auth endpoint notice, executing client-side credential decoding:', error.message);
       const decoded = decodeGoogleJwt(credential);
       if (decoded && decoded.email) {
         const googleUser = {

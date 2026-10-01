@@ -15,13 +15,16 @@ export const Login = () => {
   const { addToast } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const redirect = searchParams.get('redirect') || '/';
+  const redirectParam = searchParams.get('redirect');
+  const savedRedirect = sessionStorage.getItem('dd_redirect_after_login');
+  const redirect = redirectParam || savedRedirect || '/';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
       await login(email, password);
+      sessionStorage.removeItem('dd_redirect_after_login');
       navigate(redirect.startsWith('/') ? redirect : `/${redirect}`);
     } catch (err) {
       console.error(err);
@@ -34,6 +37,7 @@ export const Login = () => {
     if (!credentialResponse.credential) return;
     try {
       await googleLogin(credentialResponse.credential);
+      sessionStorage.removeItem('dd_redirect_after_login');
       navigate(redirect.startsWith('/') ? redirect : `/${redirect}`);
     } catch (err) {
       console.error(err);
