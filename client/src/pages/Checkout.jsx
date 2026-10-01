@@ -127,7 +127,7 @@ export const Checkout = () => {
       console.log('[Cashfree] Payment session received:', true);
 
       try {
-        const cashfree = await loadCashfreeSDK();
+        const cashfree = await loadCashfreeSDK(data.mode || data.environment);
         addToast('Opening Cashfree Gateway...', 'info');
 
         const checkoutOptions = {

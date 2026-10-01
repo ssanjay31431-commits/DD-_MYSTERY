@@ -267,6 +267,9 @@ const createCashfreeOrder = async (req, res) => {
       order_id: customOrderId,
       orderId: customOrderId,
       paymentSessionId: cashfreeSession.paymentSessionId,
+      payment_session_id: cashfreeSession.paymentSessionId,
+      mode: cashfreeSession.mode || 'production',
+      environment: cashfreeSession.environment || 'PRODUCTION',
       amount: totalAmount,
       currency: 'INR',
       paymentId: payment._id

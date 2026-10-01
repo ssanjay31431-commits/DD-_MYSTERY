@@ -84,7 +84,9 @@ const createOrderSession = async ({ orderId, amount, currency = 'INR', customer 
       payment_session_id: paymentSessionId.trim(),
       paymentOrderId: responseData.order_id || orderId,
       orderAmount: responseData.order_amount || amount,
-      orderCurrency: responseData.order_currency || currency
+      orderCurrency: responseData.order_currency || currency,
+      environment: env,
+      mode: isProd ? 'production' : 'sandbox'
     };
   } catch (error) {
     const errorData = error.response?.data || {};

@@ -1,16 +1,24 @@
 import { load } from '@cashfreepayments/cashfree-js';
 
-let cashfreeInstance = null;
-
-export const loadCashfreeSDK = async () => {
-  if (cashfreeInstance) return cashfreeInstance;
-
+export const loadCashfreeSDK = async (overrideMode = null) => {
   try {
-    const isProduction = import.meta.env.VITE_CASHFREE_ENV === 'PRODUCTION' || import.meta.env.VITE_CASHFREE_ENV === 'PROD';
-    cashfreeInstance = await load({
-      mode: isProduction ? 'production' : 'sandbox'
+    const envVal = (import.meta.env.VITE_CASHFREE_ENV || 'PRODUCTION').toUpperCase().trim();
+    const defaultIsProd = envVal === 'PRODUCTION' || envVal === 'PROD';
+    
+    let targetMode = defaultIsProd ? 'production' : 'sandbox';
+    if (overrideMode) {
+      const cleanMode = String(overrideMode).toLowerCase().trim();
+      if (cleanMode === 'production' || cleanMode === 'prod') {
+        targetMode = 'production';
+      } else if (cleanMode === 'sandbox' || cleanMode === 'test') {
+        targetMode = 'sandbox';
+      }
+    }
+
+    const cashfree = await load({
+      mode: targetMode
     });
-    return cashfreeInstance;
+    return cashfree;
   } catch (error) {
     console.error('[Cashfree SDK Load Error]', error);
     throw error;
