@@ -64,36 +64,58 @@ const createOrderSession = async ({ orderId, amount, currency = 'INR', customer 
     }
   };
 
-  try {
-    const response = await axios.post(`${baseUrl}/orders`, payload, { headers: getHeaders() });
-    const responseData = response.data || {};
-    const paymentSessionId = responseData.payment_session_id || responseData.paymentSessionId;
+  let currentOrderId = String(orderId);
+  let responseData = null;
+  let attempts = 0;
 
-    if (!paymentSessionId || typeof paymentSessionId !== 'string' || !paymentSessionId.trim()) {
-      console.error('[Cashfree Invalid Session Response]:', responseData);
-      throw new Error('Cashfree API response did not contain a valid payment_session_id.');
+  while (attempts < 3) {
+    attempts++;
+    payload.order_id = currentOrderId;
+
+    try {
+      const response = await axios.post(`${baseUrl}/orders`, payload, { headers: getHeaders() });
+      responseData = response.data || {};
+      break;
+    } catch (error) {
+      const errorData = error.response?.data || {};
+      const errorMsg = (errorData.message || error.message || '').toLowerCase();
+      
+      if (
+        (errorMsg.includes('already present') || errorMsg.includes('already exists') || errorData.code === 'order_already_exists') &&
+        attempts < 3
+      ) {
+        const uniqueSuffix = Math.floor(1000 + Math.random() * 9000);
+        console.warn(`[Cashfree Collision Warning] Order ID ${currentOrderId} already exists on Cashfree. Retrying with suffix ${uniqueSuffix}...`);
+        currentOrderId = `${orderId}-${uniqueSuffix}`;
+      } else {
+        const finalMsg = errorData.message || errorData.details || error.message || 'Failed to create Cashfree order session';
+        console.error('[CASHFREE CREATE ORDER ERROR]:', errorData);
+        throw new Error(finalMsg);
+      }
     }
-
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('[Cashfree] Payment session received:', true);
-    }
-
-    return {
-      success: true,
-      paymentSessionId: paymentSessionId.trim(),
-      payment_session_id: paymentSessionId.trim(),
-      paymentOrderId: responseData.order_id || orderId,
-      orderAmount: responseData.order_amount || amount,
-      orderCurrency: responseData.order_currency || currency,
-      environment: env,
-      mode: isProd ? 'production' : 'sandbox'
-    };
-  } catch (error) {
-    const errorData = error.response?.data || {};
-    const errorMsg = errorData.message || errorData.details || error.message || 'Failed to create Cashfree order session';
-    console.error('[CASHFREE CREATE ORDER ERROR]:', errorData);
-    throw new Error(errorMsg);
   }
+
+  const paymentSessionId = responseData?.payment_session_id || responseData?.paymentSessionId;
+
+  if (!paymentSessionId || typeof paymentSessionId !== 'string' || !paymentSessionId.trim()) {
+    console.error('[Cashfree Invalid Session Response]:', responseData);
+    throw new Error('Cashfree API response did not contain a valid payment_session_id.');
+  }
+
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('[Cashfree] Payment session received:', true);
+  }
+
+  return {
+    success: true,
+    paymentSessionId: paymentSessionId.trim(),
+    payment_session_id: paymentSessionId.trim(),
+    paymentOrderId: responseData.order_id || currentOrderId,
+    orderAmount: responseData.order_amount || amount,
+    orderCurrency: responseData.order_currency || currency,
+    environment: env,
+    mode: isProd ? 'production' : 'sandbox'
+  };
 };
 
 const verifyWebhookSignature = (signature, rawPayload, timestamp) => {

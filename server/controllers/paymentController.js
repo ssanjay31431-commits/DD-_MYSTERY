@@ -239,10 +239,12 @@ const createCashfreeOrder = async (req, res) => {
       throw new Error('Failed to obtain Cashfree payment session');
     }
 
+    const finalOrderId = cashfreeSession.paymentOrderId || customOrderId;
+
     // CREATE TEMPORARY CHECKOUT / PAYMENT RECORD (DO NOT CREATE ORDER DOC YET)
     const payment = await Payment.create({
-      orderId: customOrderId,
-      cashfreeOrderId: customOrderId,
+      orderId: finalOrderId,
+      cashfreeOrderId: finalOrderId,
       customer: req.user._id,
       customerDetails,
       deliveryAddressSnapshot: deliveryAddress,
@@ -257,15 +259,15 @@ const createCashfreeOrder = async (req, res) => {
       amount: totalAmount,
       currency: 'INR',
       paymentSessionId: cashfreeSession.paymentSessionId,
-      paymentReference: customOrderId,
+      paymentReference: finalOrderId,
       paymentMethod: 'CASHFREE',
       status: 'PENDING_PAYMENT'
     });
 
     res.status(201).json({
       success: true,
-      order_id: customOrderId,
-      orderId: customOrderId,
+      order_id: finalOrderId,
+      orderId: finalOrderId,
       paymentSessionId: cashfreeSession.paymentSessionId,
       payment_session_id: cashfreeSession.paymentSessionId,
       mode: cashfreeSession.mode || 'production',
