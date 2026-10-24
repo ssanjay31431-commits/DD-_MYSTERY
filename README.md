@@ -69,26 +69,22 @@ dd mystery box/
 
 ### 2. Environment Setup
 
-Copy `.env.example` to `.env` in the `/server` folder:
+For local development, copy `server/.env.example` to `server/.env`. For Railway, use `server/.env.railway.example` as a key checklist and enter real values in Railway's backend service Variables. Do not commit `server/.env` or production credentials.
 
 ```env
 PORT=5000
 MONGO_URI=mongodb://127.0.0.1:27017/dd_mystery_box
-JWT_SECRET=dd_mystery_box_super_secret_jwt_key_2026
+JWT_SECRET=replace_with_a_random_local_development_secret
 CLIENT_URL=http://localhost:5173
-SERVER_URL=http://localhost:5000
-
-# Razorpay Credentials (Mock Mode auto-activates if test keys are used)
-RAZORPAY_KEY_ID=rzp_test_ddmysterybox123
-RAZORPAY_KEY_SECRET=rzp_test_secretkey12345
-
-# Admin Seed Account Credentials
 ADMIN_NAME=DD Mystery Admin
-ADMIN_EMAIL=admin@ddmysterybox.com
-ADMIN_PASSWORD=Admin@123456
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=replace_with_a_local_development_password
+ALLOW_DESTRUCTIVE_SEED=true
 ```
 
 ### 3. Backend Setup & Seeding
+
+Only run the destructive seed command against a disposable local development database. Never enable `ALLOW_DESTRUCTIVE_SEED` in production.
 
 ```bash
 cd server
