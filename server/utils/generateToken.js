@@ -1,7 +1,10 @@
 const jwt = require('jsonwebtoken');
 
 const generateToken = (id) => {
-  const secret = process.env.JWT_SECRET || 'dd_mystery_box_jwt_secret_key_change_in_production_2026';
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('JWT_SECRET is required');
+  }
   const expiresIn = process.env.JWT_EXPIRES_IN || '30d';
 
   return jwt.sign({ id }, secret, {

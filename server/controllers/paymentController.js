@@ -369,7 +369,7 @@ const handleCashfreeWebhook = async (req, res) => {
     const payload = req.body;
 
     if (process.env.CASHFREE_ENV === 'PRODUCTION' && signature && timestamp) {
-      const isValid = verifyWebhookSignature(signature, payload, timestamp);
+      const isValid = verifyWebhookSignature(signature, req.rawBody || payload, timestamp);
       if (!isValid) {
         console.error('[Cashfree Webhook] Invalid signature');
         return res.status(400).json({ message: 'Invalid webhook signature' });

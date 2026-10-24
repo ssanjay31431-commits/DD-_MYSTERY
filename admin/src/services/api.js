@@ -1,8 +1,5 @@
 import axios from 'axios';
 
-// Default Production Render Express Backend
-const RENDER_BACKEND_URL = 'https://dd-mystery.onrender.com';
-
 const getBaseURL = () => {
   const envUrl = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_API_URL : '';
 
@@ -11,12 +8,6 @@ const getBaseURL = () => {
     return clean.endsWith('/api') ? clean : `${clean}/api`;
   }
 
-  // If running in browser on production domain (e.g. vercel.app), default directly to Render backend
-  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-    return `${RENDER_BACKEND_URL}/api`;
-  }
-
-  // Local development fallback
   return '/api';
 };
 
@@ -68,7 +59,7 @@ API.interceptors.response.use(
     if (error.response && (error.response.status === 502 || error.response.status === 503 || error.response.status === 504)) {
       error.response.data = {
         success: false,
-        message: `Backend server is offline or unreachable (${error.response.status} Bad Gateway). Make sure Node server is running on Render (https://dd-mystery.onrender.com).`
+        message: `Backend server is offline or unreachable (${error.response.status} Bad Gateway). Check the backend deployment and VITE_API_URL configuration.`
       };
     }
     return Promise.reject(error);

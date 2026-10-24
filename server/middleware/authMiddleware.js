@@ -2,7 +2,10 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
 const getJwtSecret = () => {
-  return process.env.JWT_SECRET || 'dd_mystery_box_jwt_secret_key_change_in_production_2026';
+  if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET is required');
+  }
+  return process.env.JWT_SECRET;
 };
 
 const protect = async (req, res, next) => {

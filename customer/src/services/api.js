@@ -1,18 +1,11 @@
 import axios from 'axios';
 
-// Default Production Render Express Backend
-const RENDER_BACKEND_URL = 'https://dd-mystery.onrender.com';
-
 const getBaseURL = () => {
   const envUrl = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_API_URL : '';
 
   if (envUrl && typeof envUrl === 'string' && envUrl.trim() !== '') {
     const clean = envUrl.trim().replace(/\/$/, '');
     return clean.endsWith('/api') ? clean : `${clean}/api`;
-  }
-
-  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-    return `${RENDER_BACKEND_URL}/api`;
   }
 
   return '/api';

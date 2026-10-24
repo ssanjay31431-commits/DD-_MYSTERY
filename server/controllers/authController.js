@@ -81,23 +81,25 @@ const loginUser = async (req, res) => {
     const { email, password } = req.body;
     const normalizedEmail = email?.toLowerCase().trim();
 
-    // Auto-ensure ddmarket130@gmail.com admin account
-    if (normalizedEmail === 'ddmarket130@gmail.com' && password === 'ddmarket468') {
-      let adminAccount = await User.findOne({ email: 'ddmarket130@gmail.com' });
+    const configuredAdminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+    const configuredAdminPassword = process.env.ADMIN_PASSWORD;
+    if (
+      configuredAdminEmail &&
+      configuredAdminPassword &&
+      normalizedEmail === configuredAdminEmail &&
+      password === configuredAdminPassword
+    ) {
+      const adminAccount = await User.findOne({ email: configuredAdminEmail });
       if (!adminAccount) {
         await User.create({
-          name: 'DD Mystery Admin',
-          email: 'ddmarket130@gmail.com',
-          phone: '+91 79042 79655',
-          password: 'ddmarket468',
+          name: process.env.ADMIN_NAME || 'DD Mystery Admin',
+          email: configuredAdminEmail,
+          phone: '',
+          password: configuredAdminPassword,
           role: 'admin',
           profileImage: 'https://ui-avatars.com/api/?name=DD+Admin&background=8b5cf6&color=fff',
-          authProviders: [{ provider: 'email', providerId: 'ddmarket130@gmail.com' }]
+          authProviders: [{ provider: 'email', providerId: configuredAdminEmail }]
         });
-      } else {
-        adminAccount.password = 'ddmarket468';
-        adminAccount.role = 'admin';
-        await adminAccount.save();
       }
     }
 
@@ -150,7 +152,7 @@ const googleAuth = async (req, res) => {
     try {
       const ticket = await googleClient.verifyIdToken({
         idToken: tokenToVerify,
-        audience: [process.env.GOOGLE_CLIENT_ID, '637646427248-vqdpama7cu5e8tn0q91od64h8j2e46cu.apps.googleusercontent.com']
+        audience: process.env.GOOGLE_CLIENT_ID
       });
       payload = ticket.getPayload();
     } catch (err) {

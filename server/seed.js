@@ -11,7 +11,17 @@ const AdminSettings = require('./models/AdminSettings');
 
 const seedData = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/dd_mystery_box');
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('Refusing to run the destructive seed script in production');
+    }
+    if (process.env.ALLOW_DESTRUCTIVE_SEED !== 'true') {
+      throw new Error('Set ALLOW_DESTRUCTIVE_SEED=true only for a disposable development database');
+    }
+    if (!process.env.MONGO_URI || !process.env.ADMIN_EMAIL || !process.env.ADMIN_PASSWORD) {
+      throw new Error('MONGO_URI, ADMIN_EMAIL, and ADMIN_PASSWORD are required to seed');
+    }
+
+    const conn = await mongoose.connect(process.env.MONGO_URI);
     console.log(`[Seed Script] Connected to MongoDB: ${conn.connection.host}`);
 
     // Clear existing collections
@@ -36,9 +46,9 @@ const seedData = async () => {
     // 2. Create Default Users
     const adminUser = await User.create({
       name: process.env.ADMIN_NAME || 'DD Mystery Admin',
-      email: (process.env.ADMIN_EMAIL || 'ddmarket130@gmail.com').toLowerCase(),
+      email: process.env.ADMIN_EMAIL.toLowerCase(),
       phone: '+91 79042 79655',
-      password: process.env.ADMIN_PASSWORD || 'ddmarket468',
+      password: process.env.ADMIN_PASSWORD,
       role: 'admin',
       profileImage: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
       authProviders: [{ provider: 'email', providerId: 'ddmarket130@gmail.com' }]

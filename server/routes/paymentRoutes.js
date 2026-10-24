@@ -23,5 +23,12 @@ router.get('/verify/:orderId', protect, verifyCashfreePayment);
 router.get('/admin/pending', protect, admin, adminGetPendingPayments);
 router.get('/admin/list', protect, admin, adminGetPendingPayments);
 router.delete('/admin/cleanup-expired', protect, admin, cleanupExpiredPendingPaymentsApi);
+router.get('/cron-cleanup', (req, res, next) => {
+  const secret = process.env.CRON_SECRET;
+  if (!secret || req.headers.authorization !== `Bearer ${secret}`) {
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
+  next();
+}, cleanupExpiredPendingPaymentsApi);
 
 module.exports = router;
