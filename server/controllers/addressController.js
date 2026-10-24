@@ -2,7 +2,7 @@ const Address = require('../models/Address');
 
 // @desc Get user saved addresses
 // @route GET /api/addresses
-const getAddresses = async (req, res) => {
+const getAddresses = async (req, res, next) => {
   try {
     if (!req.user || (!req.user._id && !req.user.id && !req.user.userId)) {
       return res.status(401).json({ success: false, message: 'Please login again' });
@@ -12,8 +12,7 @@ const getAddresses = async (req, res) => {
     const addresses = await Address.find({ user: userId }).sort({ isDefault: -1, createdAt: -1 });
     res.json(addresses);
   } catch (error) {
-    console.error('Get addresses error:', error);
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
 

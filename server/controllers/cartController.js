@@ -3,7 +3,7 @@ const Product = require('../models/Product');
 
 // @desc Get user cart
 // @route GET /api/cart
-const getCart = async (req, res) => {
+const getCart = async (req, res, next) => {
   try {
     let cart = await Cart.findOne({ user: req.user._id }).populate('items.product');
     if (!cart) {
@@ -11,7 +11,7 @@ const getCart = async (req, res) => {
     }
     res.json(cart);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
 

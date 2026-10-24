@@ -21,7 +21,7 @@ const sendNotification = async ({ type, recipientEmail, recipientPhone, orderId,
         targetOrder = await Order.findById(orderId).populate('user');
       }
     } catch (err) {
-      console.error('[Notification Orchestrator Error] Order lookup failed:', err.message);
+      console.error('[Notification Orchestrator Error] Order lookup failed.', { name: err.name || 'Error' });
       return { success: false, error: 'Order not found' };
     }
   }
@@ -49,7 +49,7 @@ const sendNotification = async ({ type, recipientEmail, recipientPhone, orderId,
       // Check for duplicate automatic event notification
       const existingLog = await NotificationLog.findOne({ idempotencyKey: emailIdempotencyKey, status: 'Sent' });
       if (existingLog && !requestedChannel) {
-        console.log(`[Idempotency] Email for ${emailIdempotencyKey} already sent. Skipping duplicate dispatch.`);
+        console.log('[Idempotency] Duplicate email notification skipped.');
         emailResult = { success: true, duplicate: true, providerMessageId: existingLog.providerMessageId };
       } else {
         switch (type) {
@@ -121,7 +121,7 @@ const sendNotification = async ({ type, recipientEmail, recipientPhone, orderId,
         });
       }
     } catch (err) {
-      console.error('[Notification Orchestrator Email Error]', err.message);
+      console.error('[Notification Orchestrator Email Error]', { name: err.name || 'Error' });
       emailResult = { success: false, error: err.message };
     }
   }
@@ -133,7 +133,7 @@ const sendNotification = async ({ type, recipientEmail, recipientPhone, orderId,
     try {
       const existingLog = await NotificationLog.findOne({ idempotencyKey: smsIdempotencyKey, status: 'Sent' });
       if (existingLog && !requestedChannel) {
-        console.log(`[Idempotency] SMS for ${smsIdempotencyKey} already sent. Skipping duplicate dispatch.`);
+        console.log('[Idempotency] Duplicate SMS notification skipped.');
         smsResult = { success: true, duplicate: true, providerMessageId: existingLog.providerMessageId };
       } else {
         switch (type) {
@@ -207,7 +207,7 @@ const sendNotification = async ({ type, recipientEmail, recipientPhone, orderId,
         });
       }
     } catch (err) {
-      console.error('[Notification Orchestrator SMS Error]', err.message);
+      console.error('[Notification Orchestrator SMS Error]', { name: err.name || 'Error' });
       smsResult = { success: false, error: err.message };
     }
   }
@@ -223,7 +223,7 @@ const sendNotification = async ({ type, recipientEmail, recipientPhone, orderId,
         type: type || 'ORDER_UPDATE'
       });
     } catch (err) {
-      console.error('[Notification Orchestrator In-App Error]', err.message);
+      console.error('[Notification Orchestrator In-App Error]', { name: err.name || 'Error' });
     }
   }
 

@@ -81,6 +81,16 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
 });
 
+app.get('/ready', async (req, res, next) => {
+  try {
+    await connectDB();
+    res.json({ status: 'ready', database: 'connected' });
+  } catch (error) {
+    error.status = 503;
+    next(error);
+  }
+});
+
 app.use('/api', async (req, res, next) => {
   try {
     await connectDB();
@@ -114,11 +124,16 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
 
 process.on('unhandledRejection', (reason) => {
-  console.error('[Unhandled Rejection Intercepted]:', reason);
+  console.error('[Unhandled Rejection Intercepted]', {
+    name: reason instanceof Error ? reason.name : typeof reason
+  });
 });
 
 process.on('uncaughtException', (err) => {
-  console.error('[Uncaught Exception Intercepted]:', err.message || err);
+  console.error('[Uncaught Exception Intercepted]', {
+    name: err.name || 'Error',
+    code: typeof err.code === 'number' || /^[A-Z0-9_-]+$/i.test(String(err.code || '')) ? err.code : undefined
+  });
 });
 
 if (require.main === module) {

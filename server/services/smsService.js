@@ -26,7 +26,7 @@ const sendSmsMessage = async ({ recipientPhone, message, type, orderId }) => {
   
   if (!phoneInfo.isValid) {
     const errorMsg = `Invalid 10-digit Indian mobile number: "${recipientPhone}"`;
-    console.error(`[SMS ERROR] To: ${recipientPhone} | Error: ${errorMsg}`);
+    console.error('[SMS ERROR]', { provider: 'Fast2SMS', reason: 'INVALID_RECIPIENT' });
     return {
       success: false,
       error: errorMsg,
@@ -64,12 +64,12 @@ const sendSmsMessage = async ({ recipientPhone, message, type, orderId }) => {
       const requestId = resData.request_id || resData.message_id || resData.id;
 
       if (isProviderSuccess) {
-        console.log('\n[SMS]');
-        console.log(`To: ${phoneInfo.formatted}`);
-        console.log(`Provider: Fast2SMS`);
-        console.log(`HTTP: ${response.status}`);
-        console.log(`Request ID: ${requestId || 'N/A'}`);
-        console.log(`Status: accepted\n`);
+        console.log('[SMS DISPATCH]', {
+          provider: 'Fast2SMS',
+          status: response.status,
+          requestId: requestId || 'N/A',
+          result: 'accepted'
+        });
 
         return {
           success: true,
@@ -78,11 +78,11 @@ const sendSmsMessage = async ({ recipientPhone, message, type, orderId }) => {
         };
       } else {
         const errorMsg = Array.isArray(resData.message) ? resData.message.join(', ') : (resData.message || 'Fast2SMS dispatch rejected by provider');
-        console.error('\n[SMS ERROR]');
-        console.error(`To: ${phoneInfo.formatted}`);
-        console.error(`Provider: Fast2SMS`);
-        console.error(`HTTP: ${response.status}`);
-        console.error(`Error: ${errorMsg}\n`);
+        console.error('[SMS ERROR]', {
+          provider: 'Fast2SMS',
+          status: response.status,
+          result: 'rejected'
+        });
 
         return {
           success: false,
@@ -94,11 +94,7 @@ const sendSmsMessage = async ({ recipientPhone, message, type, orderId }) => {
 
     if (isMockMode) {
       const mockId = `sms_mock_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-      console.log('\n[SMS (MOCK)]');
-      console.log(`To: ${phoneInfo.formatted}`);
-      console.log(`Provider: Mock Gateway`);
-      console.log(`Message: ${message}`);
-      console.log(`Mock Request ID: ${mockId}\n`);
+      console.log('[SMS MOCK DISPATCH]', { provider: 'Mock Gateway', requestId: mockId });
 
       return {
         success: true,
@@ -109,10 +105,7 @@ const sendSmsMessage = async ({ recipientPhone, message, type, orderId }) => {
 
     // If not mock mode and no valid API key is present
     const errorMsg = 'SMS_API_KEY / FAST2SMS_API_KEY missing in backend environment variables';
-    console.error('\n[SMS ERROR]');
-    console.error(`To: ${phoneInfo.formatted}`);
-    console.error(`Provider: Fast2SMS`);
-    console.error(`Error: ${errorMsg}\n`);
+    console.error('[SMS ERROR]', { provider: 'Fast2SMS', reason: 'CREDENTIALS_MISSING' });
 
     return {
       success: false,
@@ -126,16 +119,12 @@ const sendSmsMessage = async ({ recipientPhone, message, type, orderId }) => {
       : (error.message || 'SMS dispatch failed');
     const httpStatus = error.response?.status || 'N/A';
 
-    console.error('\n[SMS ERROR]');
-    console.error(`To: ${phoneInfo.formatted}`);
-    console.error(`Provider: Fast2SMS`);
-    console.error(`HTTP: ${httpStatus}`);
-    console.error(`Error: ${errorMsg}\n`);
+    console.error('[SMS ERROR]', { provider: 'Fast2SMS', status: httpStatus });
 
     // Smart fallback for Fast2SMS API restriction (e.g. 100 INR account minimum) in Dev/Demo mode
     if (process.env.NODE_ENV !== 'production' || process.env.SMS_MOCK === 'true' || String(errorMsg).includes('100 INR')) {
       const mockId = `sms_demo_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-      console.log(`[SMS DEMO FALLBACK] Simulated SMS dispatch to ${phoneInfo.formatted} (Provider note: ${errorMsg})`);
+      console.log('[SMS DEMO FALLBACK] Simulated dispatch due to provider restriction.');
       return {
         success: true,
         isMock: true,

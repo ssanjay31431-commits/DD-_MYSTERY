@@ -2,7 +2,7 @@ const AdminSettings = require('../models/AdminSettings');
 
 // @desc Get current admin settings (Public)
 // @route GET /api/settings
-const getSettings = async (req, res) => {
+const getSettings = async (req, res, next) => {
   try {
     let settings = await AdminSettings.findOne();
     if (!settings) {
@@ -20,7 +20,7 @@ const getSettings = async (req, res) => {
     }
     res.json(settings);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
 

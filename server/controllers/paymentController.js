@@ -14,6 +14,15 @@ const {
   isConfigured
 } = require('../services/cashfreeService');
 
+const logPaymentError = (operation, error) => {
+  const code = error?.code;
+  console.error(`[${operation}]`, {
+    name: error?.name || 'Error',
+    status: error?.status || error?.response?.status,
+    code: typeof code === 'number' || /^[A-Z0-9_-]+$/i.test(String(code || '')) ? code : undefined
+  });
+};
+
 /**
  * Helper: Finalize Paid Order in MongoDB
  * ONLY called after server-side verification confirms payment status is PAID.
@@ -109,7 +118,7 @@ const finalizePaidOrder = async (orderIdOrCashfreeId, transactionId = '', rawDat
     orderId: createdOrder.orderNumber || createdOrder.orderId,
     recipientEmail: payment.customerDetails?.email || payment.deliveryAddressSnapshot?.email,
     recipientPhone: payment.customerDetails?.phone || payment.deliveryAddressSnapshot?.mobileNumber
-  }).catch((e) => console.error('[Notification Dispatch Warning]', e.message));
+  }).catch((error) => logPaymentError('Notification Dispatch Warning', error));
 
   // Admin Notification Log
   NotificationLog.create({
@@ -134,7 +143,7 @@ const finalizePaidOrder = async (orderIdOrCashfreeId, transactionId = '', rawDat
  * @route POST /api/payments/create-order
  * @access Protected (User)
  */
-const createCashfreeOrder = async (req, res) => {
+const createCashfreeOrder = async (req, res, next) => {
   try {
     const { items, deliveryAddress, couponCode = '' } = req.body;
 
@@ -202,7 +211,7 @@ const createCashfreeOrder = async (req, res) => {
           validatedCouponCode = 'DD100';
         }
       } catch (cErr) {
-        console.warn('[Coupon Validation Warning]', cErr.message);
+        logPaymentError('Coupon Validation Warning', cErr);
       }
     }
 
@@ -277,8 +286,7 @@ const createCashfreeOrder = async (req, res) => {
       paymentId: payment._id
     });
   } catch (error) {
-    console.error('[Create Cashfree Order Error]', error);
-    res.status(500).json({ message: error.message || 'Failed to initialize Cashfree checkout' });
+    next(error);
   }
 };
 
@@ -341,7 +349,7 @@ const verifyCashfreePayment = async (req, res) => {
         });
       }
     } catch (cfErr) {
-      console.error('[Cashfree Verification Warning]', cfErr.message);
+      logPaymentError('Cashfree Verification Warning', cfErr);
     }
 
     res.json({
@@ -352,7 +360,7 @@ const verifyCashfreePayment = async (req, res) => {
       payment
     });
   } catch (error) {
-    console.error('[Verify Cashfree Payment Error]', error);
+    logPaymentError('Verify Cashfree Payment Error', error);
     res.status(500).json({ message: error.message || 'Failed to verify payment' });
   }
 };
@@ -398,7 +406,7 @@ const handleCashfreeWebhook = async (req, res) => {
 
     res.status(200).json({ status: 'OK' });
   } catch (error) {
-    console.error('[Cashfree Webhook Error]', error);
+    logPaymentError('Cashfree Webhook Error', error);
     res.status(500).json({ status: 'ERROR', message: error.message });
   }
 };
@@ -418,7 +426,7 @@ const cleanupExpiredPendingPayments = async () => {
     }
     return result.deletedCount || 0;
   } catch (err) {
-    console.error('[Auto Cleanup Pending Payments Error]:', err.message);
+    logPaymentError('Auto Cleanup Pending Payments Error', err);
     return 0;
   }
 };
@@ -445,7 +453,7 @@ const adminGetPendingPayments = async (req, res) => {
 
     res.json(payments);
   } catch (error) {
-    console.error('[Admin Get Payments Error]', error);
+    logPaymentError('Admin Get Payments Error', error);
     res.status(500).json({ message: error.message || 'Failed to fetch payments list' });
   }
 };
@@ -464,7 +472,7 @@ const cleanupExpiredPendingPaymentsApi = async (req, res) => {
       message: `Cleaned up ${count} unpaid pending checkout records older than 24 hours.`
     });
   } catch (error) {
-    console.error('[Cleanup Expired API Error]', error);
+    logPaymentError('Cleanup Expired API Error', error);
     res.status(500).json({ message: error.message || 'Failed to clean expired payments' });
   }
 };

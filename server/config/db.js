@@ -7,18 +7,25 @@ const connectDB = async () => {
     return mongoose.connection;
   }
 
-  if (connectionPromise) {
+  if (mongoose.connection.readyState === 2 && connectionPromise) {
     return connectionPromise;
   }
+
+  connectionPromise = null;
 
   if (!process.env.MONGO_URI) {
     throw new Error('MONGO_URI is required');
   }
 
   const configuredUri = process.env.MONGO_URI.trim();
-  const mongoUri = configuredUri.replace(/^(['"])(.*)\1$/, '$2');
+  const mongoUri = configuredUri
+    .replace(/^MONGO_URI\s*=\s*/i, '')
+    .replace(/^(['"])([\s\S]*)\1$/, '$2')
+    .trim();
   if (!/^mongodb(?:\+srv)?:\/\//.test(mongoUri)) {
-    throw new Error('MONGO_URI must start with mongodb:// or mongodb+srv://; remove any surrounding quotes');
+    const error = new Error('MONGO_URI must contain only a mongodb:// or mongodb+srv:// connection string');
+    error.code = 'INVALID_MONGO_URI';
+    throw error;
   }
 
   connectionPromise = mongoose.connect(mongoUri)
@@ -28,7 +35,12 @@ const connectDB = async () => {
     })
     .catch((error) => {
       connectionPromise = null;
-      console.error(`[MongoDB Connection Error] ${error.message}`);
+      console.error('[MongoDB Connection Error]', {
+        name: error.name || 'Error',
+        code: typeof error.code === 'number' || /^[A-Z0-9_-]+$/i.test(String(error.code || ''))
+          ? error.code
+          : undefined
+      });
       throw error;
     });
 

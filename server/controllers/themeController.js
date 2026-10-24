@@ -2,12 +2,12 @@ const Theme = require('../models/Theme');
 
 // @desc Get all themes
 // @route GET /api/themes
-const getThemes = async (req, res) => {
+const getThemes = async (req, res, next) => {
   try {
     const themes = await Theme.find({ isActive: true }).sort({ isPopular: -1, name: 1 });
     res.json(themes);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
 

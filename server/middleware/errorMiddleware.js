@@ -6,8 +6,23 @@ const notFound = (req, res, next) => {
 
 const errorHandler = (err, req, res, next) => {
   const statusCode = err.status || err.statusCode || (res.statusCode === 200 ? 500 : res.statusCode);
+  if (statusCode >= 500) {
+    const routeGroup = req.path.split('/').filter(Boolean).slice(0, 2).join('/') || 'root';
+    const route = req.route?.path ? `${req.baseUrl}${req.route.path}` : `/${routeGroup}`;
+    console.error('[API Error]', {
+      operation: `${req.method} ${route}`,
+      statusCode,
+      name: err.name || 'Error',
+      code: typeof err.code === 'number' || /^[A-Z0-9_-]+$/i.test(String(err.code || ''))
+        ? err.code
+        : undefined
+    });
+  }
+
   res.status(statusCode).json({
-    message: err.message,
+    message: process.env.NODE_ENV === 'production' && statusCode >= 500
+      ? 'The server could not complete the request'
+      : err.message,
     stack: process.env.NODE_ENV === 'production' ? null : err.stack
   });
 };

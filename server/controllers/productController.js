@@ -76,7 +76,7 @@ const DEFAULT_MYSTERY_BOXES = [
 
 // @desc Get all products (Filter ACTIVE for customer, All for admin)
 // @route GET /api/products
-const getProducts = async (req, res) => {
+const getProducts = async (req, res, next) => {
   try {
     const { status, category, search, includeInactive } = req.query;
     let filter = {};
@@ -101,8 +101,8 @@ const getProducts = async (req, res) => {
 
     let products = await Product.find(filter).sort({ createdAt: -1 }).lean();
 
-    // Auto-seed default initial products if MongoDB collection is empty
-    if (products.length === 0) {
+    // Keep the development catalog convenient without writing defaults in production.
+    if (products.length === 0 && process.env.NODE_ENV !== 'production') {
       const totalCount = await Product.countDocuments();
       if (totalCount === 0) {
         try {
@@ -116,7 +116,7 @@ const getProducts = async (req, res) => {
 
     res.json(products);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
 

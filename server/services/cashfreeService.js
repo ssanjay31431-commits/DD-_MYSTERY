@@ -85,11 +85,16 @@ const createOrderSession = async ({ orderId, amount, currency = 'INR', customer 
         attempts < 3
       ) {
         const uniqueSuffix = Math.floor(1000 + Math.random() * 9000);
-        console.warn(`[Cashfree Collision Warning] Order ID ${currentOrderId} already exists on Cashfree. Retrying with suffix ${uniqueSuffix}...`);
+        console.warn('[Cashfree Collision Warning] Duplicate provider order ID; retrying with a new suffix.');
         currentOrderId = `${orderId}-${uniqueSuffix}`;
       } else {
         const finalMsg = errorData.message || errorData.details || error.message || 'Failed to create Cashfree order session';
-        console.error('[CASHFREE CREATE ORDER ERROR]:', errorData);
+        console.error('[CASHFREE CREATE ORDER ERROR]', {
+          status: error.response?.status || 502,
+          code: typeof errorData.code === 'string' && /^[A-Z0-9_-]+$/i.test(errorData.code)
+            ? errorData.code
+            : undefined
+        });
         throw new Error(finalMsg);
       }
     }
@@ -98,7 +103,10 @@ const createOrderSession = async ({ orderId, amount, currency = 'INR', customer 
   const paymentSessionId = responseData?.payment_session_id || responseData?.paymentSessionId;
 
   if (!paymentSessionId || typeof paymentSessionId !== 'string' || !paymentSessionId.trim()) {
-    console.error('[Cashfree Invalid Session Response]:', responseData);
+    console.error('[Cashfree Invalid Session Response]', {
+      hasOrderId: Boolean(responseData?.order_id),
+      hasPaymentSessionId: Boolean(paymentSessionId)
+    });
     throw new Error('Cashfree API response did not contain a valid payment_session_id.');
   }
 
@@ -129,7 +137,7 @@ const verifyWebhookSignature = (signature, rawPayload, timestamp) => {
       .digest('base64');
     return signature === expectedSignature;
   } catch (err) {
-    console.error('[Cashfree Webhook Signature Error]:', err.message);
+    console.error('[Cashfree Webhook Signature Error]', { name: err.name || 'Error' });
     return false;
   }
 };
@@ -159,7 +167,12 @@ const verifyOrderPayment = async (paymentOrderId) => {
   } catch (error) {
     const errorData = error.response?.data || {};
     const errorMsg = errorData.message || errorData.details || error.message || 'Failed to verify Cashfree order payment';
-    console.error('[CASHFREE VERIFY ERROR]:', errorData);
+    console.error('[CASHFREE VERIFY ERROR]', {
+      status: error.response?.status || 502,
+      code: typeof errorData.code === 'string' && /^[A-Z0-9_-]+$/i.test(errorData.code)
+        ? errorData.code
+        : undefined
+    });
     throw new Error(errorMsg);
   }
 };

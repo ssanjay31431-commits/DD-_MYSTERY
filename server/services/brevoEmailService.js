@@ -25,25 +25,17 @@ const getSender = () => {
   };
 };
 
-// Mirrors the successful VibeForge dispatch record while keeping credentials
-// and raw provider objects out of application logs.
-const logBrevoDispatch = ({ stage, recipient, sender, subject, provider, response, error }) => {
+// Keep customer details, credentials, and raw provider objects out of logs.
+const logBrevoDispatch = ({ stage, provider, response, error }) => {
   const messageId = response?.messageId || response?.id || 'N/A';
-  console.log(`\n[BREVO EMAIL DISPATCH: ${stage}]`);
-  console.log(`Recipient: ${recipient}`);
-  console.log(`Sender: ${sender}`);
-  console.log(`Subject: ${subject}`);
-  console.log(`Provider: ${provider}`);
-  console.log(`Message ID: ${messageId}`);
-
-  if (stage === 'SUCCESS') {
-    console.log(`SMTP/API response: ${JSON.stringify({
-      accepted: response?.accepted || [],
-      response: response?.response || response?.status || 'ACCEPTED'
-    })}`);
-    console.log('Status: ACCEPTED');
-  } else {
-    console.error(`Error: ${error?.message || 'Brevo rejected the message'}`);
+  console.log('[BREVO EMAIL DISPATCH]', {
+    stage,
+    provider,
+    messageId,
+    status: response?.status || response?.httpStatus || (stage === 'SUCCESS' ? 'ACCEPTED' : 'FAILED')
+  });
+  if (stage !== 'SUCCESS') {
+    console.error('[BREVO EMAIL DISPATCH FAILED]', { name: error?.name || 'EmailDeliveryError' });
   }
 };
 
@@ -76,7 +68,7 @@ const sendViaSmtp = async ({ recipientEmail, recipientName, subject, htmlContent
 
   if (!smtpHost || !smtpUser || !smtpPass) {
     const errorMsg = 'SMTP settings are not configured (SMTP_HOST, SMTP_USER, SMTP_PASS)';
-    console.error('[EMAIL ERROR] To:', recipientEmail, '| Provider: Brevo SMTP | Error:', errorMsg);
+    console.error('[EMAIL ERROR]', { provider: 'Brevo SMTP', reason: 'SMTP_NOT_CONFIGURED' });
     return { success: false, error: errorMsg };
   }
 
@@ -108,11 +100,11 @@ const sendViaSmtp = async ({ recipientEmail, recipientName, subject, htmlContent
     const messageId = response.messageId || '';
     if (!accepted && !messageId) {
       const errorMsg = 'Brevo SMTP returned neither an accepted recipient nor a message ID';
-      logBrevoDispatch({ stage: 'FAILED', recipient: recipientEmail, sender: sender.email, subject, provider: 'Brevo SMTP', response, error: { message: errorMsg } });
+      logBrevoDispatch({ stage: 'FAILED', provider: 'Brevo SMTP', response, error: { name: 'MissingMessageIdError' } });
       return { success: false, error: errorMsg };
     }
 
-    logBrevoDispatch({ stage: 'SUCCESS', recipient: recipientEmail, sender: sender.email, subject, provider: 'Brevo SMTP', response });
+    logBrevoDispatch({ stage: 'SUCCESS', provider: 'Brevo SMTP', response });
 
     return {
       success: true,
@@ -122,7 +114,7 @@ const sendViaSmtp = async ({ recipientEmail, recipientName, subject, htmlContent
     };
   } catch (error) {
     const errorText = error?.response?.body || error?.message || 'SMTP send failed';
-    logBrevoDispatch({ stage: 'FAILED', recipient: recipientEmail, sender: sender.email, subject, provider: 'Brevo SMTP', error: { message: errorText } });
+    logBrevoDispatch({ stage: 'FAILED', provider: 'Brevo SMTP', error });
 
     return {
       success: false,
@@ -308,14 +300,14 @@ const generateEmailTemplate = ({ title, bannerColor = '#ec4899', customerName, o
 const sendBrevoEmail = async ({ recipientEmail, recipientName, subject, htmlContent }) => {
   if (!recipientEmail || !recipientEmail.includes('@')) {
     const errorMsg = `Invalid recipient email address: "${recipientEmail}"`;
-    console.error('[EMAIL ERROR] To:', recipientEmail, '| Provider: Brevo | Error:', errorMsg);
+    console.error('[EMAIL ERROR]', { provider: 'Brevo', reason: 'INVALID_RECIPIENT' });
     return { success: false, error: errorMsg };
   }
 
   const sender = getSender();
   if (!sender.email || !sender.email.includes('@')) {
     const errorMsg = `Invalid sender email address: "${sender.email}". Set BREVO_SENDER_EMAIL or FROM_EMAIL to a verified Brevo sender.`;
-    console.error('[EMAIL ERROR] To:', recipientEmail, '| Provider: Brevo | Error:', errorMsg);
+    console.error('[EMAIL ERROR]', { provider: 'Brevo', reason: 'INVALID_SENDER' });
     return { success: false, error: errorMsg };
   }
 
@@ -324,7 +316,7 @@ const sendBrevoEmail = async ({ recipientEmail, recipientName, subject, htmlCont
 
   if (!apiKey && !hasSmtpConfig) {
     const errorMsg = 'BREVO_API_KEY and SMTP credentials are not configured in the backend environment';
-    console.error('[EMAIL ERROR] To:', recipientEmail, '| Provider: Brevo | Error:', errorMsg);
+    console.error('[EMAIL ERROR]', { provider: 'Brevo', reason: 'CREDENTIALS_MISSING' });
     return { success: false, error: errorMsg };
   }
 
@@ -347,9 +339,6 @@ const sendBrevoEmail = async ({ recipientEmail, recipientName, subject, htmlCont
       if ((response.status === 201 || response.status === 200) && messageId) {
         logBrevoDispatch({
           stage: 'SUCCESS',
-          recipient: recipientEmail,
-          sender: sender.email,
-          subject,
           provider: 'Brevo REST API',
           response: { ...response.data, status: response.status }
         });
@@ -367,7 +356,7 @@ const sendBrevoEmail = async ({ recipientEmail, recipientName, subject, htmlCont
       const providerResponse = error.response?.data || null;
       const errorMsg = providerResponse?.message || providerResponse?.code || error.message || 'Brevo API call failed';
 
-      logBrevoDispatch({ stage: 'FAILED', recipient: recipientEmail, sender: sender.email, subject, provider: 'Brevo REST API', error: { message: errorMsg } });
+      logBrevoDispatch({ stage: 'FAILED', provider: 'Brevo REST API', error });
 
       if (hasSmtpConfig) {
         console.warn('[EMAIL WARN] Brevo API rejected the message. Falling back to Brevo SMTP with configured SMTP credentials.');

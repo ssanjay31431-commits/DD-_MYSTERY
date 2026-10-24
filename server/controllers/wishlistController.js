@@ -2,7 +2,7 @@ const Wishlist = require('../models/Wishlist');
 
 // @desc Get user wishlist
 // @route GET /api/wishlist
-const getWishlist = async (req, res) => {
+const getWishlist = async (req, res, next) => {
   try {
     let wishlist = await Wishlist.findOne({ user: req.user._id }).populate('products');
     if (!wishlist) {
@@ -10,7 +10,7 @@ const getWishlist = async (req, res) => {
     }
     res.json(wishlist);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
 
