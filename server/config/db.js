@@ -15,7 +15,13 @@ const connectDB = async () => {
     throw new Error('MONGO_URI is required');
   }
 
-  connectionPromise = mongoose.connect(process.env.MONGO_URI)
+  const configuredUri = process.env.MONGO_URI.trim();
+  const mongoUri = configuredUri.replace(/^(['"])(.*)\1$/, '$2');
+  if (!/^mongodb(?:\+srv)?:\/\//.test(mongoUri)) {
+    throw new Error('MONGO_URI must start with mongodb:// or mongodb+srv://; remove any surrounding quotes');
+  }
+
+  connectionPromise = mongoose.connect(mongoUri)
     .then((conn) => {
       console.log(`[MongoDB Connected] Host: ${conn.connection.host}`);
       return conn.connection;
