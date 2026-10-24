@@ -1,12 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Mail, MessageSquare, CheckCircle, XCircle, Clock, RefreshCw, Search, Filter, Send, AlertCircle } from 'lucide-react';
 import API from '../services/api';
 
 export const AdminNotificationLogs = () => {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [filterChannel, setFilterChannel] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalLogs, setTotalLogs] = useState(0);
+  const logsRequestRef = useRef({ id: 0, controller: null });
 
   // Demo Notification Testing States
   const [testEmail, setTestEmail] = useState('');
@@ -15,21 +21,58 @@ export const AdminNotificationLogs = () => {
   const [sendingSms, setSendingSms] = useState(false);
   const [testStatus, setTestStatus] = useState(null);
 
-  const fetchLogs = async () => {
-    setLoading(true);
+  const fetchLogs = useCallback(async (showLoading = true) => {
+    if (logsRequestRef.current.controller && !showLoading) return;
+    logsRequestRef.current.controller?.abort();
+    const controller = new AbortController();
+    const requestId = logsRequestRef.current.id + 1;
+    logsRequestRef.current = { id: requestId, controller };
+    if (showLoading) setLoading(true);
     try {
-      const { data } = await API.get('/admin/notifications/logs');
-      setLogs(data || []);
+      const { data } = await API.get('/admin/notifications/logs', {
+        params: { page, limit: 50, channel: filterChannel, search: debouncedSearch },
+        signal: controller.signal
+      });
+      if (requestId === logsRequestRef.current.id) {
+        setLogs(Array.isArray(data) ? data : data.logs || []);
+        if (!Array.isArray(data)) {
+          setTotalLogs(data.total || 0);
+          setTotalPages(Math.max(1, data.pages || 1));
+        }
+        setError('');
+      }
     } catch (error) {
-      console.error('Error fetching notification logs:', error);
+      if (!controller.signal.aborted && requestId === logsRequestRef.current.id) {
+        console.error('Error fetching notification logs:', error);
+        setLogs([]);
+        setError('Notification logs are unavailable. Check your connection and try again.');
+      }
     } finally {
-      setLoading(false);
+      if (requestId === logsRequestRef.current.id) {
+        logsRequestRef.current = { id: requestId, controller: null };
+        if (showLoading) setLoading(false);
+      }
     }
-  };
+  }, [page, filterChannel, debouncedSearch]);
 
   useEffect(() => {
     fetchLogs();
-  }, []);
+    const interval = setInterval(() => {
+      if (!document.hidden) fetchLogs(false);
+    }, 30000);
+    return () => {
+      clearInterval(interval);
+      logsRequestRef.current.controller?.abort();
+    };
+  }, [fetchLogs]);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedSearch(searchQuery.trim());
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [searchQuery]);
 
   const handleTestEmail = async (e) => {
     e.preventDefault();
@@ -81,14 +124,7 @@ export const AdminNotificationLogs = () => {
     }
   };
 
-  const filteredLogs = logs.filter(log => {
-    const matchesChannel = filterChannel === 'ALL' || log.channel?.toUpperCase() === filterChannel;
-    const matchesSearch = !searchQuery || 
-      log.orderId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      log.recipient?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      log.customerName?.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesChannel && matchesSearch;
-  });
+  const filteredLogs = logs;
 
   return (
     <div className="flex flex-col lg:flex-row min-h-screen bg-[#0c0a17] w-full max-w-full overflow-x-clip">
@@ -176,7 +212,10 @@ export const AdminNotificationLogs = () => {
           {['ALL', 'EMAIL', 'SMS'].map(channel => (
             <button
               key={channel}
-              onClick={() => setFilterChannel(channel)}
+              onClick={() => {
+                setPage(1);
+                setFilterChannel(channel);
+              }}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
                 filterChannel === channel
                   ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-lg'
@@ -223,6 +262,12 @@ export const AdminNotificationLogs = () => {
                 <tr>
                   <td colSpan="10" className="p-8 text-center text-slate-400">Loading notification logs...</td>
                 </tr>
+              ) : error ? (
+                <tr>
+                  <td colSpan="10" className="p-8 text-center text-rose-300">
+                    {error} <button type="button" onClick={() => fetchLogs()} className="ml-2 font-bold underline">Retry</button>
+                  </td>
+                </tr>
               ) : filteredLogs.length === 0 ? (
                 <tr>
                   <td colSpan="10" className="p-8 text-center text-slate-400">No notification logs recorded yet.</td>
@@ -265,6 +310,29 @@ export const AdminNotificationLogs = () => {
               )}
             </tbody>
           </table>
+        </div>
+        <div className="flex items-center justify-between gap-4 border-t border-slate-800 px-3 py-4 text-xs text-slate-400">
+          <span>
+            {totalLogs} logs · Page {page} of {totalPages}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+              disabled={page <= 1 || loading}
+              className="rounded-lg border border-slate-700 px-3 py-2 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Previous
+            </button>
+            <button
+              type="button"
+              onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+              disabled={page >= totalPages || loading}
+              className="rounded-lg border border-slate-700 px-3 py-2 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Next
+            </button>
+          </div>
         </div>
       </div>
       </main>

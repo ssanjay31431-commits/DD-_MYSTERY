@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingBag, Search, Eye, Filter, RefreshCw, Trash2, CheckCircle2, ShieldCheck, Calendar, Clock, DollarSign, Sparkles } from 'lucide-react';
 import API from '../services/api';
@@ -7,23 +7,61 @@ import { AdminSidebar } from '../components/AdminSidebar';
 export const AdminOrders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [dateTab, setDateTab] = useState('ALL'); // 'ALL', 'TODAY', 'RECENT'
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [summary, setSummary] = useState({
+    totalOrders: 0,
+    todayOrders: 0,
+    recentOrders: 0,
+    todayRevenue: 0
+  });
+  const ordersRequestRef = useRef({ id: 0, controller: null });
 
-  const fetchOrders = async (showLoading = true) => {
+  const fetchOrders = useCallback(async (showLoading = true) => {
+    if (ordersRequestRef.current.controller && !showLoading) return;
+
+    ordersRequestRef.current.controller?.abort();
+    const controller = new AbortController();
+    const requestId = ordersRequestRef.current.id + 1;
+    ordersRequestRef.current = { id: requestId, controller };
     if (showLoading) setLoading(true);
     try {
-      const { data } = await API.get('/admin/orders');
-      if (Array.isArray(data)) {
-        setOrders(data);
+      const { data } = await API.get('/admin/orders', {
+        params: { page, limit: 50, status: statusFilter, search: debouncedSearch, dateTab },
+        signal: controller.signal
+      });
+      if (requestId === ordersRequestRef.current.id) {
+        setOrders(Array.isArray(data) ? data : data.orders || []);
+        setError('');
+        if (!Array.isArray(data)) {
+          setSummary(data.summary || {
+            totalOrders: 0,
+            todayOrders: 0,
+            recentOrders: 0,
+            todayRevenue: 0
+          });
+          const nextTotalPages = Math.max(1, data.pages || 1);
+          setTotalPages(nextTotalPages);
+          if (page > nextTotalPages) setPage(nextTotalPages);
+        }
       }
     } catch (err) {
-      console.error('Failed to fetch admin orders from MongoDB:', err);
+      if (!controller.signal.aborted && requestId === ordersRequestRef.current.id) {
+        console.error('Failed to fetch admin orders from MongoDB:', err);
+        setError('Order data is unavailable. Check your connection and try again.');
+      }
     } finally {
-      if (showLoading) setLoading(false);
+      if (requestId === ordersRequestRef.current.id) {
+        ordersRequestRef.current = { id: requestId, controller: null };
+        if (showLoading) setLoading(false);
+      }
     }
-  };
+  }, [page, statusFilter, debouncedSearch, dateTab]);
 
   const handleDeleteOrder = async (targetId, orderNumber) => {
     if (!window.confirm(`Are you sure you want to delete order #${orderNumber}? This will remove the order document from the database.`)) {
@@ -49,57 +87,31 @@ export const AdminOrders = () => {
     const interval = setInterval(() => {
       if (document.hidden) return;
       fetchOrders(false);
-    }, 12000);
+    }, 30000);
 
-    return () => clearInterval(interval);
-  }, []);
+    return () => {
+      clearInterval(interval);
+      ordersRequestRef.current.controller?.abort();
+    };
+  }, [fetchOrders]);
 
   const safeOrders = Array.isArray(orders) ? orders : [];
+  const filteredOrders = safeOrders;
 
-  // Helper date benchmarks
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
-  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const handleDateTabChange = (nextDateTab) => {
+    setPage(1);
+    setDateTab(nextDateTab);
+  };
 
-  const todayOrdersList = safeOrders.filter((ord) => ord.createdAt && new Date(ord.createdAt) >= todayStart);
-  const recentOrdersList = safeOrders.filter((ord) => ord.createdAt && new Date(ord.createdAt) >= twentyFourHoursAgo);
-
-  const todayRevenueTotal = todayOrdersList.reduce((sum, ord) => sum + (ord.pricing?.totalAmount || ord.totalAmount || 0), 0);
-
-  const filteredOrders = safeOrders.filter((ord) => {
-    // 1. Status Filter
-    const ordStatus = (ord.orderStatus || '').toUpperCase();
-    const filterUpper = statusFilter.toUpperCase();
-    const matchesStatus = statusFilter === 'All' || ordStatus === filterUpper || ord.orderStatus === statusFilter;
-
-    // 2. Date Tab Filter
-    const ordCreated = ord.createdAt ? new Date(ord.createdAt) : null;
-    let matchesDate = true;
-    if (dateTab === 'TODAY') {
-      matchesDate = ordCreated && ordCreated >= todayStart;
-    } else if (dateTab === 'RECENT') {
-      matchesDate = ordCreated && ordCreated >= twentyFourHoursAgo;
-    }
-
-    // 3. Search Term
-    const ordNumber = (ord.orderNumber || ord.orderId || '').toLowerCase();
-    const custName = (ord.user?.name || ord.deliveryAddressSnapshot?.fullName || '').toLowerCase();
-    const custEmail = (ord.user?.email || ord.deliveryAddressSnapshot?.email || '').toLowerCase();
-    const custPhone = (ord.user?.phone || ord.deliveryAddressSnapshot?.mobileNumber || '').toLowerCase();
-    const cfOrderId = (ord.paymentInfo?.cashfreeOrderId || ord.paymentInfo?.paymentOrderId || '').toLowerCase();
-    const prodName = (ord.items?.[0]?.productSnapshot?.name || '').toLowerCase();
-    const searchLower = searchTerm.toLowerCase();
-
-    const matchesSearch =
-      ordNumber.includes(searchLower) ||
-      custName.includes(searchLower) ||
-      custEmail.includes(searchLower) ||
-      custPhone.includes(searchLower) ||
-      cfOrderId.includes(searchLower) ||
-      prodName.includes(searchLower);
-
-    return matchesStatus && matchesDate && matchesSearch;
-  });
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedSearch(searchTerm.trim());
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [searchTerm]);
 
   return (
     <div className="flex flex-col lg:flex-row min-h-screen bg-[#0c0a17] w-full max-w-full overflow-x-clip">
@@ -139,7 +151,10 @@ export const AdminOrders = () => {
 
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => {
+                setPage(1);
+                setStatusFilter(e.target.value);
+              }}
               className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs font-bold focus:outline-none"
             >
               <option value="All">All Statuses</option>
@@ -157,7 +172,7 @@ export const AdminOrders = () => {
         {/* Daily & Recent Metrics Overview Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div
-            onClick={() => setDateTab('ALL')}
+            onClick={() => handleDateTabChange('ALL')}
             className={`p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer ${
               dateTab === 'ALL'
                 ? 'bg-purple-950/40 border-purple-500/50 shadow-lg shadow-purple-500/10'
@@ -169,7 +184,7 @@ export const AdminOrders = () => {
               <ShoppingBag className="w-4 h-4 text-purple-400" />
             </div>
             <span className="text-2xl font-black text-white font-display block mt-1">
-              {safeOrders.length}
+              {summary.totalOrders}
             </span>
             <span className="text-[11px] text-purple-300 font-semibold block mt-0.5">
               Full MongoDB Confirmed History
@@ -177,7 +192,7 @@ export const AdminOrders = () => {
           </div>
 
           <div
-            onClick={() => setDateTab('TODAY')}
+            onClick={() => handleDateTabChange('TODAY')}
             className={`p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer ${
               dateTab === 'TODAY'
                 ? 'bg-emerald-950/40 border-emerald-500/50 shadow-lg shadow-emerald-500/10'
@@ -190,10 +205,10 @@ export const AdminOrders = () => {
             </div>
             <div className="flex items-baseline gap-2 mt-1">
               <span className="text-2xl font-black text-white font-display">
-                {todayOrdersList.length}
+                {summary.todayOrders}
               </span>
               <span className="text-xs font-bold text-emerald-400">
-                (₹{todayRevenueTotal.toLocaleString()})
+                (₹{summary.todayRevenue.toLocaleString()})
               </span>
             </div>
             <span className="text-[11px] text-emerald-300 font-semibold block mt-0.5">
@@ -202,7 +217,7 @@ export const AdminOrders = () => {
           </div>
 
           <div
-            onClick={() => setDateTab('RECENT')}
+            onClick={() => handleDateTabChange('RECENT')}
             className={`p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer ${
               dateTab === 'RECENT'
                 ? 'bg-pink-950/40 border-pink-500/50 shadow-lg shadow-pink-500/10'
@@ -214,7 +229,7 @@ export const AdminOrders = () => {
               <Clock className="w-4 h-4 text-pink-400" />
             </div>
             <span className="text-2xl font-black text-white font-display block mt-1">
-              {recentOrdersList.length}
+              {summary.recentOrders}
             </span>
             <span className="text-[11px] text-pink-300 font-semibold block mt-0.5">
               Last 24 Hours Completed Orders
@@ -226,36 +241,36 @@ export const AdminOrders = () => {
         <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-slate-900/80 border border-purple-500/20 w-full sm:w-fit overflow-x-auto">
           <button
             type="button"
-            onClick={() => setDateTab('ALL')}
+            onClick={() => handleDateTabChange('ALL')}
             className={`px-4 py-2 rounded-xl text-xs font-bold uppercase transition-all shrink-0 ${
               dateTab === 'ALL'
                 ? 'bg-purple-600 text-white shadow-md shadow-purple-500/20'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800'
             }`}
           >
-            All Orders ({safeOrders.length})
+            All Orders ({summary.totalOrders})
           </button>
           <button
             type="button"
-            onClick={() => setDateTab('TODAY')}
+            onClick={() => handleDateTabChange('TODAY')}
             className={`px-4 py-2 rounded-xl text-xs font-bold uppercase transition-all shrink-0 flex items-center gap-1.5 ${
               dateTab === 'TODAY'
                 ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/20'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800'
             }`}
           >
-            <Sparkles className="w-3.5 h-3.5 text-amber-300" /> Today's Orders ({todayOrdersList.length})
+            <Sparkles className="w-3.5 h-3.5 text-amber-300" /> Today's Orders ({summary.todayOrders})
           </button>
           <button
             type="button"
-            onClick={() => setDateTab('RECENT')}
+            onClick={() => handleDateTabChange('RECENT')}
             className={`px-4 py-2 rounded-xl text-xs font-bold uppercase transition-all shrink-0 ${
               dateTab === 'RECENT'
                 ? 'bg-pink-600 text-white shadow-md shadow-pink-500/20'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800'
             }`}
           >
-            Recent 24h ({recentOrdersList.length})
+            Recent 24h ({summary.recentOrders})
           </button>
         </div>
 
@@ -276,10 +291,14 @@ export const AdminOrders = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/80">
-              {filteredOrders.length === 0 ? (
+              {loading || error || filteredOrders.length === 0 ? (
                 <tr>
                   <td colSpan="9" className="p-8 text-center text-slate-400">
-                    {loading ? 'Fetching paid orders from database...' : 'No confirmed orders match selected criteria. New paid customer orders will appear here automatically!'}
+                    {loading
+                      ? 'Fetching paid orders from database...'
+                      : error
+                        ? <span>{error} <button type="button" onClick={() => fetchOrders()} className="ml-2 font-bold text-purple-300 underline">Retry</button></span>
+                        : 'No confirmed orders match selected criteria. New paid customer orders will appear here automatically!'}
                   </td>
                 </tr>
               ) : (
@@ -358,6 +377,29 @@ export const AdminOrders = () => {
               )}
             </tbody>
           </table>
+          <div className="flex items-center justify-between gap-4 border-t border-slate-800 px-3 py-4 text-xs text-slate-400">
+            <span>
+              Page {page} of {totalPages} · {filteredOrders.length} shown
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPage((current) => Math.max(1, current - 1))}
+                disabled={page <= 1 || loading}
+                className="rounded-lg border border-slate-700 px-3 py-2 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Previous
+              </button>
+              <button
+                type="button"
+                onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+                disabled={page >= totalPages || loading}
+                className="rounded-lg border border-slate-700 px-3 py-2 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
+          </div>
         </div>
       </main>
     </div>

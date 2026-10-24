@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingBag, Users, DollarSign, CreditCard, Clock, CheckCircle2, AlertTriangle, Calendar, RefreshCw, ShieldAlert, Trash2, Bell, X } from 'lucide-react';
 import API from '../services/api';
@@ -20,6 +20,7 @@ const EMPTY_ADMIN_STATS = {
 export const Dashboard = () => {
   const [stats, setStats] = useState(EMPTY_ADMIN_STATS);
   const [loading, setLoading] = useState(true);
+  const [hasLoadedStats, setHasLoadedStats] = useState(false);
   const [dashboardError, setDashboardError] = useState('');
   const [dateFilter, setDateFilter] = useState('7Days');
   const [dashboardOrderTab, setDashboardOrderTab] = useState('TODAY'); // 'TODAY', 'RECENT', 'ALL'
@@ -31,6 +32,7 @@ export const Dashboard = () => {
   const [notificationsCleared, setNotificationsCleared] = useState(() => {
     return Boolean(localStorage.getItem('dd_admin_notifs_cleared'));
   });
+  const dashboardRequestRef = useRef({ id: 0, controller: null });
 
   const handleClearNotifications = () => {
     setNotificationsCleared(true);
@@ -45,7 +47,7 @@ export const Dashboard = () => {
     try {
       const { data } = await API.delete(`/admin/orders/${targetId}`);
       if (data && data.success) {
-        fetchStats(true);
+        fetchStats(false, true);
       } else {
         alert(data?.message || 'Failed to delete order');
       }
@@ -55,15 +57,25 @@ export const Dashboard = () => {
     }
   };
 
-  const fetchStats = async (showLoading = true) => {
+  const fetchStats = useCallback(async (showLoading = true, force = false) => {
+    if (dashboardRequestRef.current.controller && !force) return;
+
+    dashboardRequestRef.current.controller?.abort();
+    const controller = new AbortController();
+    const requestId = dashboardRequestRef.current.id + 1;
+    dashboardRequestRef.current = { id: requestId, controller };
     if (showLoading) setLoading(true);
     try {
-      const { data } = await API.get(`/admin/dashboard?period=${dateFilter}`);
-      if (data && typeof data === 'object') {
+      const { data } = await API.get(`/admin/dashboard?period=${dateFilter}`, {
+        signal: controller.signal
+      });
+      if (requestId === dashboardRequestRef.current.id && data && typeof data === 'object') {
         setStats(data);
+        setHasLoadedStats(true);
         setDashboardError('');
       }
     } catch (err) {
+      if (controller.signal.aborted || requestId !== dashboardRequestRef.current.id) return;
       console.error('Failed to fetch admin stats from MongoDB:', err);
       setDashboardError(
         err.response?.status === 500
@@ -71,20 +83,32 @@ export const Dashboard = () => {
           : 'Dashboard data is unavailable. Check your connection and try again.'
       );
     } finally {
-      if (showLoading) setLoading(false);
+      if (requestId === dashboardRequestRef.current.id) {
+        dashboardRequestRef.current = { id: requestId, controller: null };
+        if (showLoading) setLoading(false);
+      }
     }
-  };
+  }, [dateFilter]);
 
   useEffect(() => {
     fetchStats(true);
 
-    // Automatic polling every 12 seconds for real-time order dashboard refresh
     const interval = setInterval(() => {
-      fetchStats(false);
-    }, 12000);
+      if (!document.hidden) fetchStats(false);
+    }, 30000);
+    const refreshWhenVisible = () => {
+      if (!document.hidden) fetchStats(false);
+    };
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    window.addEventListener('focus', refreshWhenVisible);
 
-    return () => clearInterval(interval);
-  }, [dateFilter]);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+      window.removeEventListener('focus', refreshWhenVisible);
+      dashboardRequestRef.current.controller?.abort();
+    };
+  }, [fetchStats]);
 
   const handleRecoverPayment = async (failedId) => {
     setRecoveringId(failedId);
@@ -92,7 +116,7 @@ export const Dashboard = () => {
       const { data } = await API.post(`/admin/recover-payment/${failedId}`);
       if (data.success) {
         alert(`Order ${data.order?.orderNumber || ''} created successfully from payment reference!`);
-        fetchStats(true);
+        fetchStats(false, true);
       }
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to recover payment order');
@@ -116,7 +140,7 @@ export const Dashboard = () => {
         alert('🚨 All store test orders, payments, screenshots & histories deleted successfully!');
         setShowDeleteModal(false);
         setDeleteConfirmText('');
-        fetchStats(true);
+        fetchStats(false, true);
       } else {
         alert(data?.message || 'Failed to clear data');
       }
@@ -198,6 +222,13 @@ export const Dashboard = () => {
                         </button>
                       </div>
                     </div>
+
+                    {loading && (
+                      <div role="status" className="flex items-center gap-2 text-xs font-semibold text-purple-300">
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                        Loading the latest dashboard data...
+                      </div>
+                    )}
 
                     <div className="max-h-64 overflow-y-auto space-y-2 text-xs">
                       {notificationsCleared || recentOrders.length === 0 ? (
@@ -314,7 +345,7 @@ export const Dashboard = () => {
         )}
 
         {/* Analytics Cards Grid */}
-        {!loading && !dashboardError && (
+        {(!loading || hasLoadedStats) && !dashboardError && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6">
           
           <div className="glass-panel p-6 rounded-3xl border border-purple-500/30 space-y-2">
@@ -382,7 +413,7 @@ export const Dashboard = () => {
         )}
 
         {/* Customer Orders Table with Today / Recent Filter Tabs */}
-        {!loading && !dashboardError && (
+        {(!loading || hasLoadedStats) && !dashboardError && (
           <div className="glass-panel p-6 rounded-3xl border border-purple-500/20 space-y-4">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>

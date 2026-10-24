@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Users, Search, Mail, ShieldCheck, ShoppingBag } from 'lucide-react';
 import API from '../services/api';
 import { AdminSidebar } from '../components/AdminSidebar';
@@ -6,71 +6,72 @@ import { AdminSidebar } from '../components/AdminSidebar';
 export const AdminCustomers = () => {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [filterMethod, setFilterMethod] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCustomers, setTotalCustomers] = useState(0);
+  const customersRequestRef = useRef({ id: 0, controller: null });
 
-  const getCustomersFromLocal = () => {
-    const orders = JSON.parse(localStorage.getItem('dd_orders') || '[]');
-    if (!Array.isArray(orders) || orders.length === 0) {
-      return [];
-    }
-    const map = {};
-    orders.forEach((ord) => {
-      const email = ord.user?.email || ord.deliveryAddressSnapshot?.email || 'customer@example.com';
-      if (!map[email]) {
-        map[email] = {
-          _id: `cust_${email}`,
-          name: ord.user?.name || ord.deliveryAddressSnapshot?.fullName || 'Customer',
-          email,
-          phone: ord.user?.phone || ord.deliveryAddressSnapshot?.mobileNumber || 'N/A',
-          googleId: email.includes('gmail.com'),
-          totalOrders: 0,
-          totalSpent: 0,
-          createdAt: ord.createdAt
-        };
-      }
-      map[email].totalOrders += 1;
-      map[email].totalSpent += (ord.totalAmount || 0);
-    });
-    return Object.values(map);
-  };
-
-  const fetchCustomers = async () => {
-    setLoading(true);
+  const fetchCustomers = useCallback(async (showLoading = true) => {
+    customersRequestRef.current.controller?.abort();
+    const controller = new AbortController();
+    const requestId = customersRequestRef.current.id + 1;
+    customersRequestRef.current = { id: requestId, controller };
+    if (showLoading) setLoading(true);
     try {
-      const { data } = await API.get('/admin/customers');
-      if (Array.isArray(data) && data.length > 0) {
-        setCustomers(data);
-      } else {
-        setCustomers(getCustomersFromLocal());
+      const { data } = await API.get('/admin/customers', {
+        params: {
+          page,
+          limit: 50,
+          search: debouncedSearch,
+          method: filterMethod === 'All' ? undefined : filterMethod
+        },
+        signal: controller.signal
+      });
+      if (requestId === customersRequestRef.current.id) {
+        if (!Array.isArray(data.customers)) throw new Error('Unexpected customer response');
+        setCustomers(data.customers);
+        setTotalCustomers(data.total || 0);
+        setTotalPages(Math.max(1, data.pages || 1));
+        setError('');
       }
     } catch (err) {
-      setCustomers(getCustomersFromLocal());
+      if (!controller.signal.aborted && requestId === customersRequestRef.current.id) {
+        console.error('[Fetch Admin Customers Error]', err);
+        setCustomers([]);
+        setError('Customer data is unavailable. Check your connection and try again.');
+      }
     } finally {
-      setLoading(false);
+      if (requestId === customersRequestRef.current.id) {
+        customersRequestRef.current = { id: requestId, controller: null };
+        if (showLoading) setLoading(false);
+      }
     }
-  };
+  }, [page, debouncedSearch, filterMethod]);
 
   useEffect(() => {
     fetchCustomers();
-  }, []);
+    const interval = setInterval(() => {
+      if (!document.hidden) fetchCustomers(false);
+    }, 30000);
+    return () => {
+      clearInterval(interval);
+      customersRequestRef.current.controller?.abort();
+    };
+  }, [fetchCustomers]);
 
-  const safeCustomers = Array.isArray(customers) ? customers : getCustomersFromLocal();
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedSearch(searchTerm.trim());
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [searchTerm]);
 
-  const filteredCustomers = safeCustomers.filter((cust) => {
-    const isGoogle = cust.authProviders?.some((p) => p.provider === 'google') || Boolean(cust.googleId);
-    const matchesMethod =
-      filterMethod === 'All' ||
-      (filterMethod === 'Google' && isGoogle) ||
-      (filterMethod === 'Email' && !isGoogle);
-
-    const matchesSearch =
-      cust.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      cust.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      cust.phone?.toLowerCase().includes(searchTerm.toLowerCase());
-
-    return matchesMethod && matchesSearch;
-  });
+  const filteredCustomers = Array.isArray(customers) ? customers : [];
 
   return (
     <div className="flex flex-col lg:flex-row min-h-screen bg-[#0c0a17] w-full max-w-full overflow-x-clip">
@@ -97,7 +98,10 @@ export const AdminCustomers = () => {
 
             <select
               value={filterMethod}
-              onChange={(e) => setFilterMethod(e.target.value)}
+              onChange={(e) => {
+                setPage(1);
+                setFilterMethod(e.target.value);
+              }}
               className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs font-bold"
             >
               <option value="All">All Auth Methods</option>
@@ -121,10 +125,14 @@ export const AdminCustomers = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/80">
-              {filteredCustomers.length === 0 ? (
+              {loading || error || filteredCustomers.length === 0 ? (
                 <tr>
                   <td colSpan="6" className="p-8 text-center text-slate-400">
-                    No registered customers yet. Real customers who place orders on the website will appear here!
+                    {loading
+                      ? 'Loading customer records...'
+                      : error
+                        ? <span>{error} <button type="button" onClick={() => fetchCustomers()} className="ml-2 font-bold text-purple-300 underline">Retry</button></span>
+                        : 'No registered customers yet. Real customers who place orders on the website will appear here!'}
                   </td>
                 </tr>
               ) : (
@@ -167,6 +175,29 @@ export const AdminCustomers = () => {
               )}
             </tbody>
           </table>
+          <div className="flex items-center justify-between gap-4 border-t border-slate-800 px-3 py-4 text-xs text-slate-400">
+            <span>
+              {totalCustomers} customers · Page {page} of {totalPages}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPage((current) => Math.max(1, current - 1))}
+                disabled={page <= 1 || loading}
+                className="rounded-lg border border-slate-700 px-3 py-2 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Previous
+              </button>
+              <button
+                type="button"
+                onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+                disabled={page >= totalPages || loading}
+                className="rounded-lg border border-slate-700 px-3 py-2 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
+          </div>
         </div>
 
       </main>

@@ -30,4 +30,6 @@ const failedPaymentSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+failedPaymentSchema.index({ status: 1, createdAt: -1 });
+
 module.exports = mongoose.model('FailedPayment', failedPaymentSchema);

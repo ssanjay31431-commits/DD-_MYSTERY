@@ -17,7 +17,7 @@ A full-stack, production-ready e-commerce web application designed for **DD MYST
 - **Comprehensive Account Suite (23 Views)**: Home, Shop, Product Details, Customize, Cart, Checkout, Razorpay Payment, Order Success, Track Order, Profile, My Orders, Saved Addresses, Wishlist, Reviews, FAQ, Contact Us, Privacy Policy, Terms & Conditions, Refund Policy.
 
 ### 🛡️ Admin Dashboard (`/admin`)
-- **Real-Time Analytics**: Total Revenue, Today's Revenue, Total Orders, Today's Orders, Pending Orders, Delivered Orders, Total Customers, Avg Order Value.
+- **Real-Time Analytics**: Total Revenue, Today's Revenue, Total Orders, Today's Orders, Pending Orders, Delivered Orders, Total Customers, Avg Order Value. Dashboard data refreshes automatically and admin order, customer, and notification directories are paginated.
 - **Order Management**: Inspect custom blueprints, update workshop packing status, attach shipping tracking numbers.
 - **Products & Themes CRUD**: Add/edit mystery box tiers and active birthday themes.
 - **Inventory Management**: Track chocolates, keychains, stickers, toys, greeting cards, and packaging stock with low-stock alerts.

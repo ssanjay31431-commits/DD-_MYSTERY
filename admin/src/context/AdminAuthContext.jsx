@@ -9,9 +9,22 @@ const AdminAuthContext = createContext({
   logoutAdmin: () => {}
 });
 
+const getCachedAdmin = () => {
+  if (!localStorage.getItem('dd_admin_token')) return null;
+
+  try {
+    const cachedAdmin = JSON.parse(localStorage.getItem('dd_admin_user') || 'null');
+    return cachedAdmin?.role === 'admin' ? cachedAdmin : null;
+  } catch {
+    return null;
+  }
+};
+
 export const AdminAuthProvider = ({ children }) => {
-  const [admin, setAdmin] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [admin, setAdmin] = useState(getCachedAdmin);
+  const [loading, setLoading] = useState(() => Boolean(
+    localStorage.getItem('dd_admin_token') && !getCachedAdmin()
+  ));
   const { addToast } = useToast();
 
   useEffect(() => {
@@ -56,8 +69,6 @@ export const AdminAuthProvider = ({ children }) => {
         if (!active) return;
         if (error.response?.status === 401 || error.response?.status === 403 || error.response?.status === 404) {
           clearAdminSession();
-        } else {
-          setAdmin(null);
         }
       })
       .finally(() => {

@@ -16,49 +16,96 @@ const getDashboardStats = async (req, res) => {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
-    // Only count orders where screenshot has been submitted / order progressed past PENDING_PAYMENT
-    const validOrderMatch = { orderStatus: { $nin: ['Cancelled', 'CANCELLED', 'PENDING_PAYMENT'] } };
+    const excludedRevenueStatuses = ['Cancelled', 'CANCELLED', 'PENDING_PAYMENT'];
+    const excludedOpenBalanceStatuses = [
+      'Cancelled', 'CANCELLED', 'Delivered', 'DELIVERED', 'PENDING_PAYMENT'
+    ];
+    const validRevenueOrder = {
+      $not: [{ $in: ['$orderStatus', excludedRevenueStatuses] }]
+    };
+    const validOpenBalanceOrder = {
+      $not: [{ $in: ['$orderStatus', excludedOpenBalanceStatuses] }]
+    };
+    const createdToday = { $gte: ['$createdAt', todayStart] };
 
-    const totalOrders = await Order.countDocuments(validOrderMatch);
-    const todayOrders = await Order.countDocuments({ createdAt: { $gte: todayStart }, ...validOrderMatch });
-    const pendingOrders = await Order.countDocuments({ orderStatus: { $nin: ['Delivered', 'DELIVERED', 'Cancelled', 'CANCELLED', 'PENDING_PAYMENT'] } });
-    const deliveredOrders = await Order.countDocuments({ orderStatus: { $in: ['Delivered', 'DELIVERED'] } });
-    const totalCustomers = await User.countDocuments({ role: 'customer' });
-
-    // Revenue Aggregations directly from MongoDB (Only count orders with submitted payment screenshots)
-    const totalRevenueData = await Order.aggregate([
-      { $match: validOrderMatch },
-      { $group: { _id: null, total: { $sum: '$totalAmount' } } }
+    const [metrics, totalCustomers, recentOrders, unresolvedFailedPayments] = await Promise.all([
+      Order.aggregate([
+        {
+          $group: {
+            _id: null,
+            totalOrders: { $sum: { $cond: [validRevenueOrder, 1, 0] } },
+            todayOrders: {
+              $sum: { $cond: [{ $and: [validRevenueOrder, createdToday] }, 1, 0] }
+            },
+            pendingOrders: {
+              $sum: {
+                $cond: [
+                  { $not: [{ $in: ['$orderStatus', ['Delivered', 'DELIVERED', ...excludedRevenueStatuses]] }] },
+                  1,
+                  0
+                ]
+              }
+            },
+            deliveredOrders: {
+              $sum: { $cond: [{ $in: ['$orderStatus', ['Delivered', 'DELIVERED']] }, 1, 0] }
+            },
+            totalRevenue: {
+              $sum: { $cond: [validRevenueOrder, { $ifNull: ['$totalAmount', 0] }, 0] }
+            },
+            advanceCollected: {
+              $sum: {
+                $cond: [
+                  validRevenueOrder,
+                  { $ifNull: ['$amountPaid', { $ifNull: ['$advancePaid', 0] }] },
+                  0
+                ]
+              }
+            },
+            remainingBalanceCollection: {
+              $sum: {
+                $cond: [
+                  validOpenBalanceOrder,
+                  { $ifNull: ['$remainingBalance', { $ifNull: ['$remainingCodAmount', 0] }] },
+                  0
+                ]
+              }
+            },
+            todayRevenue: {
+              $sum: {
+                $cond: [
+                  { $and: [validRevenueOrder, createdToday] },
+                  { $ifNull: ['$totalAmount', 0] },
+                  0
+                ]
+              }
+            }
+          }
+        }
+      ]),
+      User.countDocuments({ role: 'customer' }),
+      Order.find({ orderStatus: { $ne: 'PENDING_PAYMENT' } })
+        .select('orderNumber orderId user items.productSnapshot.name pricing.totalAmount pricing.amountPaid pricing.remainingBalance totalAmount amountPaid advancePaid remainingBalance remainingCodAmount paymentInfo.method orderStatus createdAt deliveryAddressSnapshot.fullName')
+        .sort({ createdAt: -1 })
+        .limit(10)
+        .populate('user', 'name email phone')
+        .lean(),
+      FailedPayment.find({ status: 'UNRESOLVED' })
+        .select('paymentOrderId userSnapshot.name userSnapshot.email pricing.amountPaid pricing.advanceAmount pricing.totalAmount createdAt')
+        .sort({ createdAt: -1 })
+        .lean()
     ]);
-    const totalRevenue = totalRevenueData[0]?.total || 0;
 
-    const advanceCollectedData = await Order.aggregate([
-      { $match: validOrderMatch },
-      { $group: { _id: null, total: { $sum: { $ifNull: ['$amountPaid', '$advancePaid'] } } } }
-    ]);
-    const advanceCollected = advanceCollectedData[0]?.total || 0;
-
-    const remainingBalanceData = await Order.aggregate([
-      { $match: { orderStatus: { $nin: ['Cancelled', 'CANCELLED', 'Delivered', 'DELIVERED', 'PENDING_PAYMENT'] } } },
-      { $group: { _id: null, total: { $sum: { $ifNull: ['$remainingBalance', '$remainingCodAmount'] } } } }
-    ]);
-    const remainingBalanceCollection = remainingBalanceData[0]?.total || 0;
-
-    const todayRevenueData = await Order.aggregate([
-      { $match: { createdAt: { $gte: todayStart }, ...validOrderMatch } },
-      { $group: { _id: null, total: { $sum: '$totalAmount' } } }
-    ]);
-    const todayRevenue = todayRevenueData[0]?.total || 0;
-
+    const {
+      totalOrders = 0,
+      todayOrders = 0,
+      pendingOrders = 0,
+      deliveredOrders = 0,
+      totalRevenue = 0,
+      advanceCollected = 0,
+      remainingBalanceCollection = 0,
+      todayRevenue = 0
+    } = metrics[0] || {};
     const averageOrderValue = totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0;
-
-    // Return recent orders that have submitted payment screenshots / progressed past PENDING_PAYMENT
-    const recentOrders = await Order.find({ orderStatus: { $ne: 'PENDING_PAYMENT' } })
-      .sort({ createdAt: -1 })
-      .limit(10)
-      .populate('user', 'name email phone')
-      .lean();
-    const unresolvedFailedPayments = await FailedPayment.find({ status: 'UNRESOLVED' }).sort({ createdAt: -1 }).lean();
 
     res.json({
       totalRevenue,
@@ -84,27 +131,95 @@ const getDashboardStats = async (req, res) => {
 // @route GET /api/admin/orders
 const getAllAdminOrders = async (req, res) => {
   try {
-    const { status, search } = req.query;
+    const { status, search, dateTab } = req.query;
     let filter = {};
 
     if (status && status !== 'All') {
-      filter.orderStatus = { $regex: new RegExp(`^${status}$`, 'i') };
+      const safeStatus = String(status).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      filter.orderStatus = { $regex: new RegExp(`^${safeStatus}$`, 'i') };
     } else {
       filter.orderStatus = { $ne: 'PENDING_PAYMENT' };
     }
 
     if (search) {
+      const safeSearch = String(search).trim().slice(0, 100).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       filter.$or = [
-        { orderNumber: { $regex: search, $options: 'i' } },
-        { orderId: { $regex: search, $options: 'i' } },
-        { 'paymentInfo.cashfreeOrderId': { $regex: search, $options: 'i' } },
-        { 'paymentInfo.paymentOrderId': { $regex: search, $options: 'i' } },
-        { 'paymentInfo.transactionId': { $regex: search, $options: 'i' } },
-        { 'deliveryAddressSnapshot.fullName': { $regex: search, $options: 'i' } },
-        { 'deliveryAddressSnapshot.email': { $regex: search, $options: 'i' } },
-        { 'deliveryAddressSnapshot.mobileNumber': { $regex: search, $options: 'i' } },
-        { 'items.productSnapshot.name': { $regex: search, $options: 'i' } }
+        { orderNumber: { $regex: safeSearch, $options: 'i' } },
+        { orderId: { $regex: safeSearch, $options: 'i' } },
+        { 'paymentInfo.cashfreeOrderId': { $regex: safeSearch, $options: 'i' } },
+        { 'paymentInfo.paymentOrderId': { $regex: safeSearch, $options: 'i' } },
+        { 'paymentInfo.transactionId': { $regex: safeSearch, $options: 'i' } },
+        { 'deliveryAddressSnapshot.fullName': { $regex: safeSearch, $options: 'i' } },
+        { 'deliveryAddressSnapshot.email': { $regex: safeSearch, $options: 'i' } },
+        { 'deliveryAddressSnapshot.mobileNumber': { $regex: safeSearch, $options: 'i' } },
+        { 'items.productSnapshot.name': { $regex: safeSearch, $options: 'i' } }
       ];
+    }
+
+    if (req.query.page !== undefined) {
+      const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
+      const limit = Math.min(100, Math.max(1, Number.parseInt(req.query.limit, 10) || 50));
+      const skip = (page - 1) * limit;
+      const paginatedFilter = { ...filter };
+
+      if (dateTab === 'TODAY' || dateTab === 'RECENT') {
+        const start = new Date();
+        if (dateTab === 'TODAY') {
+          start.setHours(0, 0, 0, 0);
+        } else {
+          start.setTime(Date.now() - 24 * 60 * 60 * 1000);
+        }
+        paginatedFilter.createdAt = { $gte: start };
+      }
+
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const recentStart = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const [orders, total, summaryData] = await Promise.all([
+        Order.find(paginatedFilter)
+          .select('orderNumber orderId user items.quantity items.productSnapshot.name pricing.totalAmount totalAmount paymentInfo.status orderStatus createdAt deliveryAddressSnapshot.fullName deliveryAddressSnapshot.email')
+          .populate('user', 'name email phone')
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(limit)
+          .lean(),
+        Order.countDocuments(paginatedFilter),
+        Order.aggregate([
+          { $match: { orderStatus: { $ne: 'PENDING_PAYMENT' } } },
+          {
+            $group: {
+              _id: null,
+              totalOrders: { $sum: 1 },
+              todayOrders: { $sum: { $cond: [{ $gte: ['$createdAt', todayStart] }, 1, 0] } },
+              recentOrders: { $sum: { $cond: [{ $gte: ['$createdAt', recentStart] }, 1, 0] } },
+              todayRevenue: {
+                $sum: {
+                  $cond: [
+                    { $gte: ['$createdAt', todayStart] },
+                    { $ifNull: ['$totalAmount', 0] },
+                    0
+                  ]
+                }
+              }
+            }
+          }
+        ])
+      ]);
+      const summary = summaryData[0] || {
+        totalOrders: 0,
+        todayOrders: 0,
+        recentOrders: 0,
+        todayRevenue: 0
+      };
+
+      return res.json({
+        orders,
+        total,
+        page,
+        limit,
+        pages: Math.ceil(total / limit),
+        summary
+      });
     }
 
     const orders = await Order.find(filter).populate('user', 'name email phone').sort({ createdAt: -1 }).lean();
@@ -287,6 +402,74 @@ const updateOrderStatus = async (req, res) => {
 // @route GET /api/admin/customers
 const getAdminCustomers = async (req, res) => {
   try {
+    if (req.query.page !== undefined) {
+      const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
+      const limit = Math.min(100, Math.max(1, Number.parseInt(req.query.limit, 10) || 50));
+      const filter = { role: 'customer' };
+
+      if (req.query.search) {
+        const search = String(req.query.search).trim().slice(0, 100).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        filter.$or = [
+          { name: { $regex: search, $options: 'i' } },
+          { email: { $regex: search, $options: 'i' } },
+          { phone: { $regex: search, $options: 'i' } }
+        ];
+      }
+
+      if (req.query.method === 'Google') {
+        filter.$and = [
+          { $or: [{ googleId: { $ne: null } }, { 'authProviders.provider': 'google' }] }
+        ];
+      } else if (req.query.method === 'Email') {
+        filter.$nor = [{ googleId: { $ne: null } }, { 'authProviders.provider': 'google' }];
+      }
+
+      const [customers, total] = await Promise.all([
+        User.find(filter)
+          .select('-password')
+          .sort({ createdAt: -1 })
+          .skip((page - 1) * limit)
+          .limit(limit)
+          .lean(),
+        User.countDocuments(filter)
+      ]);
+      const customerIds = customers.map((customer) => customer._id);
+      const stats = customerIds.length
+        ? await Order.aggregate([
+          {
+            $match: {
+              user: { $in: customerIds },
+              orderStatus: { $nin: ['Cancelled', 'CANCELLED'] }
+            }
+          },
+          {
+            $group: {
+              _id: '$user',
+              totalOrders: { $sum: 1 },
+              totalSpent: { $sum: '$totalAmount' }
+            }
+          }
+        ])
+        : [];
+      const statsMap = new Map(stats.map((stat) => [stat._id.toString(), stat]));
+      const results = customers.map((customer) => {
+        const customerStats = statsMap.get(customer._id.toString()) || {};
+        return {
+          ...customer,
+          totalOrders: customerStats.totalOrders || 0,
+          totalSpent: customerStats.totalSpent || 0
+        };
+      });
+
+      return res.json({
+        customers: results,
+        total,
+        page,
+        limit,
+        pages: Math.ceil(total / limit)
+      });
+    }
+
     const customers = await User.find({ role: 'customer' }).select('-password').sort({ createdAt: -1 }).lean();
 
     const stats = await Order.aggregate([
@@ -324,6 +507,36 @@ const getAdminCustomers = async (req, res) => {
 // @route GET /api/admin/notifications/logs
 const getNotificationLogs = async (req, res) => {
   try {
+    if (req.query.page !== undefined) {
+      const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
+      const limit = Math.min(100, Math.max(1, Number.parseInt(req.query.limit, 10) || 50));
+      const filter = {};
+
+      if (req.query.channel && req.query.channel !== 'ALL') {
+        filter.channel = { $regex: `^${String(req.query.channel).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' };
+      }
+      if (req.query.search) {
+        const search = String(req.query.search).trim().slice(0, 100).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        filter.$or = [
+          { orderId: { $regex: search, $options: 'i' } },
+          { recipient: { $regex: search, $options: 'i' } },
+          { customerName: { $regex: search, $options: 'i' } }
+        ];
+      }
+
+      const [logs, total] = await Promise.all([
+        NotificationLog.find(filter)
+          .select('orderId customerName channel recipient event type provider status providerMessageId sentAt createdAt error')
+          .sort({ sentAt: -1, createdAt: -1 })
+          .skip((page - 1) * limit)
+          .limit(limit)
+          .lean(),
+        NotificationLog.countDocuments(filter)
+      ]);
+
+      return res.json({ logs, total, page, limit, pages: Math.ceil(total / limit) });
+    }
+
     const logs = await NotificationLog.find().sort({ sentAt: -1, createdAt: -1 });
     res.json(logs);
   } catch (error) {

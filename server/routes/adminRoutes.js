@@ -19,6 +19,10 @@ const {
 const { getSettings, updateSettings } = require('../controllers/settingsController');
 const { protect, admin } = require('../middleware/authMiddleware');
 
+router.use((req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  next();
+});
 router.use(protect, admin);
 
 router.get('/dashboard', getDashboardStats);
