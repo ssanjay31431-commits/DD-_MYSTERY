@@ -17,6 +17,7 @@ const allowedOrigins = [
   'https://www.ddmarket.shop',
   'https://ddmarket.shop',
   'https://dd-mystery.vercel.app',
+  'https://dd-mystery-rvt6.vercel.app',
   'http://localhost:5173',
   'http://localhost:5174',
   'http://localhost:3000'

@@ -20,6 +20,7 @@ const EMPTY_ADMIN_STATS = {
 export const Dashboard = () => {
   const [stats, setStats] = useState(EMPTY_ADMIN_STATS);
   const [loading, setLoading] = useState(true);
+  const [dashboardError, setDashboardError] = useState('');
   const [dateFilter, setDateFilter] = useState('7Days');
   const [dashboardOrderTab, setDashboardOrderTab] = useState('TODAY'); // 'TODAY', 'RECENT', 'ALL'
   const [recoveringId, setRecoveringId] = useState(null);
@@ -60,9 +61,15 @@ export const Dashboard = () => {
       const { data } = await API.get(`/admin/dashboard?period=${dateFilter}`);
       if (data && typeof data === 'object') {
         setStats(data);
+        setDashboardError('');
       }
     } catch (err) {
       console.error('Failed to fetch admin stats from MongoDB:', err);
+      setDashboardError(
+        err.response?.status === 500
+          ? 'The server could not load dashboard data. Please try again.'
+          : 'Dashboard data is unavailable. Check your connection and try again.'
+      );
     } finally {
       if (showLoading) setLoading(false);
     }
@@ -253,8 +260,24 @@ export const Dashboard = () => {
           </div>
         </div>
 
+        {dashboardError && (
+          <div role="alert" className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-rose-950/60 border border-rose-500/40 text-rose-200">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0" />
+              <p className="text-sm font-semibold">{dashboardError}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => fetchStats(true)}
+              className="px-4 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-xs font-bold"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
         {/* Failed Payment Recovery Alert Banner (Requirement 18) */}
-        {failedPayments.length > 0 && (
+        {!loading && !dashboardError && failedPayments.length > 0 && (
           <div className="p-6 rounded-3xl bg-rose-950/80 border border-rose-500/50 space-y-4 shadow-xl">
             <div className="flex items-center gap-3">
               <ShieldAlert className="w-6 h-6 text-rose-400 animate-bounce" />
@@ -291,7 +314,8 @@ export const Dashboard = () => {
         )}
 
         {/* Analytics Cards Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6">
+        {!loading && !dashboardError && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6">
           
           <div className="glass-panel p-6 rounded-3xl border border-purple-500/30 space-y-2">
             <div className="flex justify-between items-center">
@@ -354,10 +378,12 @@ export const Dashboard = () => {
             </span>
           </div>
 
-        </div>
+          </div>
+        )}
 
         {/* Customer Orders Table with Today / Recent Filter Tabs */}
-        <div className="glass-panel p-6 rounded-3xl border border-purple-500/20 space-y-4">
+        {!loading && !dashboardError && (
+          <div className="glass-panel p-6 rounded-3xl border border-purple-500/20 space-y-4">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <h3 className="text-lg font-bold text-white font-display">🔔 CUSTOMER ORDERS LOG</h3>
@@ -499,6 +525,7 @@ export const Dashboard = () => {
             </table>
           </div>
         </div>
+        )}
 
         {/* DANGER ZONE: ALL DATA DELETE BUTTON */}
         <div className="p-6 rounded-3xl bg-rose-950/40 border border-rose-500/40 space-y-4">

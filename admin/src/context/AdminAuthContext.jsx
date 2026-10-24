@@ -15,55 +15,76 @@ export const AdminAuthProvider = ({ children }) => {
   const { addToast } = useToast();
 
   useEffect(() => {
-    const storedAdmin = localStorage.getItem('dd_admin_user');
+    let active = true;
     const token = localStorage.getItem('dd_admin_token');
 
-    if (storedAdmin && token) {
-      try {
-        const parsed = JSON.parse(storedAdmin);
-        if (parsed.role === 'admin') {
-          setAdmin(parsed);
-        } else {
-          localStorage.removeItem('dd_admin_user');
-          localStorage.removeItem('dd_admin_token');
-        }
-      } catch (err) {
-        localStorage.removeItem('dd_admin_user');
-        localStorage.removeItem('dd_admin_token');
-      }
+    const clearAdminSession = () => {
+      localStorage.removeItem('dd_admin_user');
+      localStorage.removeItem('dd_admin_token');
+      setAdmin(null);
+    };
+
+    const handleAuthLogout = () => setAdmin(null);
+    window.addEventListener('auth_logout', handleAuthLogout);
+
+    if (!token) {
+      localStorage.removeItem('dd_admin_user');
+      setLoading(false);
+      return () => window.removeEventListener('auth_logout', handleAuthLogout);
     }
-    setLoading(false);
+
+    API.get('/auth/profile')
+      .then(({ data }) => {
+        if (!active) return;
+        if (data?.role !== 'admin') {
+          clearAdminSession();
+          return;
+        }
+
+        const authenticatedAdmin = {
+          _id: data._id,
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          profileImage: data.profileImage,
+          role: data.role
+        };
+        setAdmin(authenticatedAdmin);
+        localStorage.setItem('dd_admin_user', JSON.stringify(authenticatedAdmin));
+      })
+      .catch((error) => {
+        if (!active) return;
+        if (error.response?.status === 401 || error.response?.status === 403 || error.response?.status === 404) {
+          clearAdminSession();
+        } else {
+          setAdmin(null);
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+      window.removeEventListener('auth_logout', handleAuthLogout);
+    };
   }, []);
 
   const loginAdmin = async (email, password) => {
     try {
       const { data } = await API.post('/auth/login', { email, password });
-      if (data.role !== 'admin') {
-        addToast('Access Denied: Customer accounts cannot access Admin Control Center', 'error');
-        throw new Error('Not authorized as admin');
+      if (data.role !== 'admin' || !data.token) {
+        throw new Error('This account does not have administrator access.');
       }
-      setAdmin(data);
-      localStorage.setItem('dd_admin_user', JSON.stringify(data));
+
+      const { token, ...authenticatedAdmin } = data;
+      setAdmin(authenticatedAdmin);
+      localStorage.setItem('dd_admin_user', JSON.stringify(authenticatedAdmin));
       localStorage.setItem('dd_admin_token', data.token);
-      addToast(`Welcome to Admin Control Center, ${data.name}! 🛡️`);
-      return data;
+
+      addToast(`Welcome to Admin Control Center, ${authenticatedAdmin.name}! 🛡️`);
+      return authenticatedAdmin;
     } catch (error) {
-      // Fallback for static frontend hosts like Vercel (405 Method Not Allowed / 404 Not Found)
-      if (!error.response || error.response.status === 405 || error.response.status === 404) {
-        console.warn('Backend login endpoint unavailable, executing client-side admin auth fallback:', error.message);
-        const adminObj = {
-          _id: 'admin_seeded_1',
-          name: 'DD Mystery Admin',
-          email: email || 'ddmarket130@gmail.com',
-          role: 'admin',
-          token: `mock_admin_jwt_token_${Date.now()}`
-        };
-        setAdmin(adminObj);
-        localStorage.setItem('dd_admin_user', JSON.stringify(adminObj));
-        localStorage.setItem('dd_admin_token', adminObj.token);
-        addToast(`Welcome to Admin Control Center, ${adminObj.name}! 🛡️`);
-        return adminObj;
-      }
       const msg = error.response?.data?.message || error.message || 'Admin login failed';
       addToast(msg, 'error');
       throw new Error(msg);
