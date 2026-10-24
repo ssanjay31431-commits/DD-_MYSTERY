@@ -1,14 +1,21 @@
 import axios from 'axios';
 
+const RAILWAY_API_URL = 'https://dd-mystery-production.up.railway.app';
+
 const getBaseURL = () => {
   const envUrl = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_API_URL : '';
 
   if (envUrl && typeof envUrl === 'string' && envUrl.trim() !== '') {
     const clean = envUrl.trim().replace(/\/$/, '');
-    return clean.endsWith('/api') ? clean : `${clean}/api`;
+    const apiUrl = /^https?:\/\/[^/]*\.onrender\.com(?:\/|$)/i.test(clean) ? RAILWAY_API_URL : clean;
+    return apiUrl.endsWith('/api') ? apiUrl : `${apiUrl}/api`;
   }
 
-  return '/api';
+  if (typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname)) {
+    return '/api';
+  }
+
+  return `${RAILWAY_API_URL}/api`;
 };
 
 const API = axios.create({
