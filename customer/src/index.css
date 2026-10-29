@@ -72,6 +72,159 @@
   z-index: 10;
 }
 
+.diwali-stage {
+  perspective: 900px;
+}
+
+.diwali-gift-box {
+  position: relative;
+  width: 190px;
+  height: 150px;
+  transform-style: preserve-3d;
+  animation: diwali-box-float 3.5s ease-in-out infinite;
+}
+
+.diwali-box-base {
+  position: absolute;
+  left: 0;
+  bottom: 8px;
+  width: 190px;
+  height: 112px;
+  border: 1px solid rgba(255, 220, 133, 0.75);
+  border-radius: 6px 6px 14px 14px;
+  background:
+    linear-gradient(90deg, transparent 43%, #ffd36b 43% 56%, transparent 56%),
+    linear-gradient(180deg, transparent 39%, #e8ad45 39% 47%, transparent 47%),
+    linear-gradient(140deg, #d13a36, #7d1429 70%);
+  box-shadow: 0 24px 35px rgba(0, 0, 0, 0.48), inset 0 0 24px rgba(255, 199, 86, 0.2);
+  transform: rotateX(8deg) rotateY(-10deg);
+}
+
+.diwali-box-base::after {
+  position: absolute;
+  top: 8px;
+  right: -28px;
+  width: 28px;
+  height: 100%;
+  border: 1px solid rgba(255, 220, 133, 0.45);
+  border-left: 0;
+  border-radius: 0 6px 12px 0;
+  background: linear-gradient(135deg, #8b1c2a, #4c1027);
+  content: '';
+  transform: skewY(-20deg);
+  transform-origin: left top;
+}
+
+.diwali-box-ribbon {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 43%;
+  width: 13%;
+  background: linear-gradient(90deg, #c17a21, #ffe49a, #d89c37);
+  box-shadow: 0 0 12px rgba(255, 209, 99, 0.38);
+}
+
+.diwali-box-lid {
+  position: absolute;
+  z-index: 2;
+  bottom: 111px;
+  left: -9px;
+  width: 208px;
+  height: 36px;
+  border: 1px solid #ffe6a4;
+  border-radius: 10px 10px 5px 5px;
+  background:
+    linear-gradient(90deg, transparent 44%, #ffe08b 44% 56%, transparent 56%),
+    linear-gradient(135deg, #f8c65c, #e59b35 72%, #bd6b25);
+  box-shadow: 0 9px 16px rgba(0, 0, 0, 0.35), 0 0 19px rgba(255, 198, 72, 0.34);
+  transform-origin: center bottom;
+  transform-style: preserve-3d;
+  animation: diwali-lid-open 5s ease-in-out infinite;
+}
+
+.diwali-lid-ribbon {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 44%;
+  width: 12%;
+  background: linear-gradient(90deg, #f0c264, #fff1bd, #d99a37);
+}
+
+.diwali-box-bow {
+  position: absolute;
+  top: -31px;
+  left: 50%;
+  font-size: 34px;
+  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.45));
+  transform: translateX(-50%);
+}
+
+.diwali-surprises {
+  position: absolute;
+  z-index: 3;
+  bottom: 55px;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  font-size: 28px;
+  filter: drop-shadow(0 0 12px rgba(255, 211, 106, 0.85));
+}
+
+.diwali-surprises span {
+  opacity: 0;
+  animation: diwali-surprise-rise 5s ease-in-out infinite;
+}
+
+.diwali-surprises span:nth-child(2) { animation-delay: 0.12s; }
+.diwali-surprises span:nth-child(3) { animation-delay: 0.24s; }
+.diwali-surprises span:nth-child(4) { animation-delay: 0.36s; }
+
+.diwali-spark {
+  position: absolute;
+  z-index: 4;
+  color: #ffe294;
+  text-shadow: 0 0 16px #ffae36;
+  animation: diwali-sparkle 1.5s ease-in-out infinite alternate;
+}
+
+.diwali-spark-one { top: 24px; left: 20%; font-size: 24px; }
+.diwali-spark-two { top: 48px; right: 18%; font-size: 30px; animation-delay: 0.4s; }
+.diwali-spark-three { top: 4px; right: 34%; font-size: 18px; animation-delay: 0.8s; }
+
+@keyframes diwali-lid-open {
+  0%, 15%, 100% { transform: rotateX(0deg) translateY(0); }
+  34%, 73% { transform: rotateX(-112deg) translateY(-20px); }
+}
+
+@keyframes diwali-surprise-rise {
+  0%, 20%, 100% { opacity: 0; transform: translateY(24px) scale(0.55); }
+  36%, 76% { opacity: 1; transform: translateY(-55px) scale(1); }
+}
+
+@keyframes diwali-box-float {
+  0%, 100% { transform: translateY(3px) rotateY(-5deg); }
+  50% { transform: translateY(-4px) rotateY(5deg); }
+}
+
+@keyframes diwali-sparkle {
+  from { opacity: 0.45; transform: scale(0.8) rotate(-12deg); }
+  to { opacity: 1; transform: scale(1.15) rotate(12deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .diwali-gift-box,
+  .diwali-box-lid,
+  .diwali-surprises span,
+  .diwali-spark {
+    animation: none;
+  }
+
+  .diwali-box-lid { transform: rotateX(-112deg) translateY(-20px); }
+  .diwali-surprises span { opacity: 1; transform: translateY(-55px); }
+}
+
 /* Smooth custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;

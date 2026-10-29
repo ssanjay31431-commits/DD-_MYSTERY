@@ -32,6 +32,12 @@ export const Home = () => {
 
   const nostalgiaBox = products.find((p) => p.price === 499) || products[0];
   const chocoBox = products.find((p) => p.price === 199) || products[1];
+  const diwaliProduct = products.find((product) =>
+    /diwali/i.test([product.name, product.tagline, product.tag].filter(Boolean).join(' '))
+  );
+  const diwaliCampaignActive =
+    Date.now() >= Date.parse('2026-10-29T00:00:00+05:30') &&
+    Date.now() < Date.parse('2026-11-09T00:00:00+05:30');
 
   return (
     <div className="space-y-20 pb-16">
@@ -157,6 +163,51 @@ export const Home = () => {
             </div>
 
             {/* Right Visual Hero Feature Cards */}
+            {diwaliCampaignActive ? (
+              <div className="diwali-ad relative min-h-[390px] rounded-[2rem] border border-amber-300/30 bg-gradient-to-br from-[#35121f] via-[#20132c] to-[#100d1c] p-6 sm:p-8 flex flex-col items-center justify-between overflow-hidden shadow-[0_25px_80px_rgba(245,158,11,0.12)]">
+                <div className="absolute -top-20 -right-16 h-56 w-56 rounded-full bg-amber-400/20 blur-3xl" />
+                <div className="absolute -bottom-20 -left-16 h-56 w-56 rounded-full bg-rose-500/20 blur-3xl" />
+                <div className="relative z-10 w-full text-center">
+                  <span className="inline-flex items-center gap-2 rounded-full border border-amber-300/30 bg-black/25 px-4 py-2 text-[10px] sm:text-xs font-black uppercase tracking-[0.18em] text-amber-200">
+                    <Sparkles className="h-4 w-4" /> Diwali week · Limited edition
+                  </span>
+                  <h2 className="mt-4 text-2xl sm:text-3xl font-black font-display text-white">
+                    {diwaliProduct?.name || 'Diwali Edition Mystery Box'}
+                  </h2>
+                  <p className="mt-2 text-sm text-amber-100/80">The lid lifts. The surprise is yours.</p>
+                </div>
+
+                <div className="diwali-stage relative z-10 my-2 flex h-48 w-full items-center justify-center" role="img" aria-label="Animated illustration of a Diwali gift box opening to reveal festive surprises">
+                  <div className="diwali-spark diwali-spark-one" aria-hidden="true">✦</div>
+                  <div className="diwali-spark diwali-spark-two" aria-hidden="true">✧</div>
+                  <div className="diwali-spark diwali-spark-three" aria-hidden="true">✦</div>
+                  <div className="diwali-surprises" aria-hidden="true">
+                    <span>✨</span><span>🎁</span><span>🪔</span><span>⭐</span>
+                  </div>
+                  <div className="diwali-gift-box" aria-hidden="true">
+                    <div className="diwali-box-base">
+                      <div className="diwali-box-ribbon" />
+                    </div>
+                    <div className="diwali-box-lid">
+                      <div className="diwali-lid-ribbon" />
+                      <div className="diwali-box-bow">🎀</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="relative z-10 flex w-full flex-col items-center gap-3 text-center">
+                  <p className="text-sm font-bold text-amber-100">
+                    {diwaliProduct?.price ? `Diwali surprise box · ₹${diwaliProduct.price}` : 'A festive surprise, made to delight'}
+                  </p>
+                  <Link
+                    to={diwaliProduct ? `/product/${diwaliProduct._id}` : '/shop'}
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-rose-600 via-orange-500 to-amber-400 px-6 py-3.5 text-sm font-black uppercase tracking-wide text-white shadow-lg shadow-amber-500/20 transition-transform hover:scale-[1.03] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-200"
+                  >
+                    <Gift className="h-5 w-5" /> Open your surprise · Order now <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </div>
+              </div>
+            ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               
               {/* Product 1 Card */}
@@ -202,6 +253,7 @@ export const Home = () => {
               </div>
 
             </div>
+            )}
 
           </div>
         </div>
