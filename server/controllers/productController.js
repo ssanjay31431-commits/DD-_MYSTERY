@@ -1,9 +1,172 @@
 const Product = require('../models/Product');
+const mongoose = require('mongoose');
 const PRODUCT_QUERY_MAX_TIME_MS = 5000;
 const MAX_PRODUCT_PAGE_SIZE = 48;
-const PRODUCT_LIST_FIELDS = 'name slug price originalPrice tag tagline description contents image categoryName status isFeatured stock rating numReviews createdAt';
+const IMAGE_CHUNK_SIZE = 256 * 1024;
+const MAX_IMAGE_SOURCE_SIZE = 12 * 1024 * 1024;
+const PRODUCT_RESPONSE_FIELDS = [
+  'name', 'slug', 'price', 'originalPrice', 'tag', 'tagline', 'description',
+  'fullDescription', 'contents._id', 'contents.name', 'contents.description',
+  'contents.quantity', 'contents.category', 'contents.isMystery', 'contents.sortOrder',
+  'contents.active', 'highlights', 'features', 'categoryName', 'status',
+  'isFeatured', 'stock', 'rating', 'numReviews', 'createdAt', 'updatedAt',
+  'sku', 'weight', 'deliveryCharge', 'advanceAmount'
+].join(' ');
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const getImageUrl = (req, productId, contentId) => {
+  const contentPath = contentId ? `/content/${contentId}` : '';
+  return `${req.protocol}://${req.get('host')}/api/products/${productId}/image${contentPath}`;
+};
+
+const serializeProduct = (product, req) => {
+  const result = product.toObject ? product.toObject() : { ...product };
+  result.image = getImageUrl(req, result._id);
+  if (Array.isArray(result.contents)) {
+    result.contents = result.contents.map((content) => ({
+      ...content,
+      image: getImageUrl(req, result._id, content._id)
+    }));
+  }
+  return result;
+};
+
+const isProductImageReference = (value, productId, contentId) => {
+  if (typeof value !== 'string') return false;
+  try {
+    const url = new URL(value, 'http://localhost');
+    const path = `/api/products/${productId}/image${contentId ? `/content/${contentId}` : ''}`;
+    return url.pathname === path;
+  } catch {
+    return false;
+  }
+};
+
+const getImageExpression = (contentId) => {
+  if (!contentId) return '$image';
+
+  return {
+    $let: {
+      vars: {
+        content: {
+          $arrayElemAt: [
+            {
+              $filter: {
+                input: { $ifNull: ['$contents', []] },
+                as: 'item',
+                cond: { $eq: ['$$item._id', new mongoose.Types.ObjectId(contentId)] }
+              }
+            },
+            0
+          ]
+        }
+      },
+      in: { $ifNull: ['$$content.image', ''] }
+    }
+  };
+};
+
+const readImageChunk = async (productId, imageExpression, offset, length) => {
+  const result = await Product.aggregate([
+    { $match: { _id: new mongoose.Types.ObjectId(productId) } },
+    {
+      $project: {
+        chunk: {
+          $substrBytes: [
+            { $ifNull: [imageExpression, ''] },
+            offset,
+            length
+          ]
+        }
+      }
+    }
+  ]).option({ maxTimeMS: PRODUCT_QUERY_MAX_TIME_MS });
+
+  return result[0]?.chunk || '';
+};
+
+const getProductImage = async (req, res, next) => {
+  try {
+    const { id, itemId } = req.params;
+    if (!/^[0-9a-fA-F]{24}$/.test(id) || (itemId && !/^[0-9a-fA-F]{24}$/.test(itemId))) {
+      return res.status(404).json({ message: 'Product image not found' });
+    }
+
+    const imageExpression = getImageExpression(itemId);
+    const fallbackExpression = { $ifNull: [imageExpression, ''] };
+    const [metadata] = await Product.aggregate([
+      { $match: { _id: new mongoose.Types.ObjectId(id) } },
+      {
+        $project: {
+          status: 1,
+          sourceLength: { $strLenBytes: fallbackExpression },
+          prefix: { $substrBytes: [fallbackExpression, 0, 64] }
+        }
+      }
+    ]).option({ maxTimeMS: PRODUCT_QUERY_MAX_TIME_MS });
+
+    if (!metadata || !metadata.sourceLength) {
+      return res.status(404).json({ message: 'Product image not found' });
+    }
+    if (metadata.sourceLength > MAX_IMAGE_SOURCE_SIZE) {
+      return res.status(413).json({ message: 'Product image exceeds the supported size' });
+    }
+
+    res.set({
+      'Cache-Control': metadata.status === 'ACTIVE' ? 'public, max-age=300' : 'private, no-store',
+      'Cross-Origin-Resource-Policy': 'cross-origin',
+      'X-Content-Type-Options': 'nosniff'
+    });
+
+    const dataUriMatch = /^data:(image\/[a-zA-Z0-9.+-]+);base64,/.exec(metadata.prefix);
+    if (!dataUriMatch) {
+      if (metadata.sourceLength > 2048) {
+        return res.status(415).json({ message: 'Unsupported product image format' });
+      }
+      const source = await readImageChunk(id, imageExpression, 0, metadata.sourceLength);
+      let target;
+      try {
+        target = new URL(source);
+      } catch {
+        return res.status(415).json({ message: 'Unsupported product image format' });
+      }
+      if (!['http:', 'https:'].includes(target.protocol) || target.username || target.password) {
+        return res.status(415).json({ message: 'Unsupported product image URL' });
+      }
+      return res.redirect(302, target.toString());
+    }
+
+    const encodedChunks = [];
+    for (let offset = 0; offset < metadata.sourceLength; offset += IMAGE_CHUNK_SIZE * 4) {
+      const offsets = [];
+      for (let batchOffset = offset; batchOffset < metadata.sourceLength && batchOffset < offset + IMAGE_CHUNK_SIZE * 4; batchOffset += IMAGE_CHUNK_SIZE) {
+        offsets.push(batchOffset);
+      }
+      const chunks = await Promise.all(offsets.map((chunkOffset) => readImageChunk(
+        id,
+        imageExpression,
+        chunkOffset,
+        Math.min(IMAGE_CHUNK_SIZE, metadata.sourceLength - chunkOffset)
+      )));
+      encodedChunks.push(...chunks);
+    }
+
+    const encodedImage = encodedChunks.join('').slice(dataUriMatch[0].length);
+    if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(encodedImage)) {
+      return res.status(422).json({ message: 'Product image data is invalid' });
+    }
+
+    const imageBuffer = Buffer.from(encodedImage, 'base64');
+    if (!imageBuffer.length) {
+      return res.status(422).json({ message: 'Product image data is empty' });
+    }
+
+    return res.type(dataUriMatch[1]).send(imageBuffer);
+  } catch (error) {
+    next(error);
+  }
+};
 
 // @desc Get all products (Filter ACTIVE for customer, All for admin)
 // @route GET /api/products
@@ -42,17 +205,16 @@ const getProducts = async (req, res, next) => {
     }
 
     let query = Product.find(filter)
+      .select(PRODUCT_RESPONSE_FIELDS)
       .maxTimeMS(PRODUCT_QUERY_MAX_TIME_MS)
       .sort({ createdAt: -1, _id: -1 });
 
     if (hasPagination) {
-      if (includeInactive !== 'true') {
-        query = query.select(PRODUCT_LIST_FIELDS);
-      }
       query = query.skip((page - 1) * limit).limit(limit + 1);
     }
 
     let products = await query.lean();
+    products = products.map((product) => serializeProduct(product, req));
 
     if (hasPagination) {
       const hasNext = products.length > limit;
@@ -75,13 +237,19 @@ const getProductById = async (req, res, next) => {
     let product;
 
     if (param.match(/^[0-9a-fA-F]{24}$/)) {
-      product = await Product.findById(param).maxTimeMS(PRODUCT_QUERY_MAX_TIME_MS).lean();
+      product = await Product.findById(param)
+        .select(PRODUCT_RESPONSE_FIELDS)
+        .maxTimeMS(PRODUCT_QUERY_MAX_TIME_MS)
+        .lean();
     } else {
-      product = await Product.findOne({ slug: param }).maxTimeMS(PRODUCT_QUERY_MAX_TIME_MS).lean();
+      product = await Product.findOne({ slug: param })
+        .select(PRODUCT_RESPONSE_FIELDS)
+        .maxTimeMS(PRODUCT_QUERY_MAX_TIME_MS)
+        .lean();
     }
 
     if (product) {
-      res.json(product);
+      res.json(serializeProduct(product, req));
     } else {
       res.status(404).json({ message: 'Product box tier not found' });
     }
@@ -143,7 +311,7 @@ const createProduct = async (req, res) => {
     });
 
     const createdProduct = await product.save();
-    res.status(201).json(createdProduct);
+    res.status(201).json(serializeProduct(createdProduct, req));
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -163,11 +331,24 @@ const updateProduct = async (req, res) => {
       product.tagline = req.body.tagline ?? product.tagline;
       product.description = req.body.description || product.description;
       product.fullDescription = req.body.fullDescription || product.fullDescription;
-      product.contents = req.body.contents || product.contents;
       product.highlights = req.body.highlights || product.highlights;
       product.features = req.body.features || product.features;
-      product.image = req.body.image || product.image;
+      if (req.body.image && !isProductImageReference(req.body.image, product._id)) {
+        product.image = req.body.image;
+      }
       product.galleryImages = req.body.galleryImages || product.galleryImages;
+      if (Array.isArray(req.body.contents)) {
+        const existingContents = product.contents;
+        product.contents = req.body.contents.map((content) => {
+          const existingContent = content._id ? existingContents.id(content._id) : null;
+          const image = existingContent && isProductImageReference(content.image, product._id, content._id)
+            ? existingContent.image
+            : content.image;
+          return { ...content, image };
+        });
+      } else if (req.body.contents) {
+        product.contents = req.body.contents;
+      }
       product.categoryName = req.body.categoryName || product.categoryName;
       product.status = req.body.status || product.status;
       product.isFeatured = req.body.isFeatured ?? product.isFeatured;
@@ -177,7 +358,7 @@ const updateProduct = async (req, res) => {
       product.deliveryCharge = req.body.deliveryCharge ?? product.deliveryCharge;
 
       const updatedProduct = await product.save();
-      res.json(updatedProduct);
+      res.json(serializeProduct(updatedProduct, req));
     } else {
       res.status(404).json({ message: 'Product not found' });
     }
@@ -222,7 +403,7 @@ const duplicateProduct = async (req, res) => {
     });
 
     const savedClone = await clonedProduct.save();
-    res.status(201).json(savedClone);
+    res.status(201).json(serializeProduct(savedClone, req));
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -247,6 +428,7 @@ const deleteProduct = async (req, res) => {
 module.exports = {
   getProducts,
   getProductById,
+  getProductImage,
   createProduct,
   updateProduct,
   duplicateProduct,
