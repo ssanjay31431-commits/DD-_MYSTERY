@@ -4,6 +4,19 @@ const getResponsiveSources = (src) => {
   try {
     const url = new URL(src);
 
+    if (/\/api\/products\/[0-9a-f]{24}\/image(?:\/content\/[0-9a-f]{24})?$/i.test(url.pathname)) {
+      const buildUrl = (width) => {
+        const responsiveUrl = new URL(url);
+        responsiveUrl.searchParams.set('width', String(width));
+        return responsiveUrl.toString();
+      };
+
+      return {
+        src: buildUrl(640),
+        srcSet: [320, 640, 960].map((width) => `${buildUrl(width)} ${width}w`).join(', ')
+      };
+    }
+
     if (url.hostname === 'images.unsplash.com') {
       const buildUrl = (width) => {
         const responsiveUrl = new URL(url);

@@ -1,9 +1,12 @@
 const Product = require('../models/Product');
 const mongoose = require('mongoose');
+const sharp = require('sharp');
 const PRODUCT_QUERY_MAX_TIME_MS = 5000;
 const MAX_PRODUCT_PAGE_SIZE = 48;
 const IMAGE_CHUNK_SIZE = 256 * 1024;
 const MAX_IMAGE_SOURCE_SIZE = 12 * 1024 * 1024;
+const PRODUCT_IMAGE_WIDTHS = new Set([320, 640, 960]);
+const DEFAULT_PRODUCT_IMAGE_WIDTH = 640;
 const PRODUCT_RESPONSE_FIELDS = [
   'name', 'slug', 'price', 'originalPrice', 'tag', 'tagline', 'description',
   'fullDescription', 'contents._id', 'contents.name', 'contents.description',
@@ -92,6 +95,12 @@ const getProductImage = async (req, res, next) => {
     if (!/^[0-9a-fA-F]{24}$/.test(id) || (itemId && !/^[0-9a-fA-F]{24}$/.test(itemId))) {
       return res.status(404).json({ message: 'Product image not found' });
     }
+    const width = req.query.width === undefined
+      ? DEFAULT_PRODUCT_IMAGE_WIDTH
+      : Number(req.query.width);
+    if (!Number.isSafeInteger(width) || !PRODUCT_IMAGE_WIDTHS.has(width)) {
+      return res.status(400).json({ message: 'Image width must be 320, 640, or 960' });
+    }
 
     const imageExpression = getImageExpression(itemId);
     const fallbackExpression = { $ifNull: [imageExpression, ''] };
@@ -112,12 +121,12 @@ const getProductImage = async (req, res, next) => {
     if (metadata.sourceLength > MAX_IMAGE_SOURCE_SIZE) {
       return res.status(413).json({ message: 'Product image exceeds the supported size' });
     }
-
     res.set({
       'Cache-Control': metadata.status === 'ACTIVE' ? 'public, max-age=300' : 'private, no-store',
       'Cross-Origin-Resource-Policy': 'cross-origin',
       'X-Content-Type-Options': 'nosniff'
     });
+    res.vary('Accept');
 
     const dataUriMatch = /^data:(image\/[a-zA-Z0-9.+-]+);base64,/.exec(metadata.prefix);
     if (!dataUriMatch) {
@@ -162,7 +171,23 @@ const getProductImage = async (req, res, next) => {
       return res.status(422).json({ message: 'Product image data is empty' });
     }
 
-    return res.type(dataUriMatch[1]).send(imageBuffer);
+    const mimeType = dataUriMatch[1].toLowerCase();
+    const acceptsWebp = (req.get('accept') || '').includes('image/webp');
+    if (acceptsWebp && mimeType !== 'image/gif' && mimeType !== 'image/svg+xml') {
+      try {
+        const webpImage = await sharp(imageBuffer, { limitInputPixels: 40000000 })
+          .resize({ width, withoutEnlargement: true })
+          .webp({ quality: 78, effort: 4 })
+          .toBuffer();
+        return res.type('image/webp').send(webpImage);
+      } catch (error) {
+        error.status = 422;
+        error.message = 'Product image could not be optimized';
+        return next(error);
+      }
+    }
+
+    return res.type(mimeType).send(imageBuffer);
   } catch (error) {
     next(error);
   }
