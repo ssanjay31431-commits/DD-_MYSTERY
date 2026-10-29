@@ -20,6 +20,7 @@ const getBaseURL = () => {
 
 const API = axios.create({
   baseURL: getBaseURL(),
+  timeout: 12000,
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json'
@@ -48,7 +49,23 @@ API.interceptors.request.use(
 // Response interceptor to handle token expiration & 401 unauthorized cleanly
 API.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
+    const config = error.config;
+    const responseStatus = error.response?.status;
+    const canRetry = config
+      && config.method?.toLowerCase() === 'get'
+      && !config.signal?.aborted
+      && !config.__retryCount
+      && (['ERR_NETWORK', 'ECONNABORTED', 'ETIMEDOUT'].includes(error.code) || [502, 503, 504].includes(responseStatus));
+
+    if (canRetry) {
+      config.__retryCount = 1;
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      if (!config.signal?.aborted) {
+        return API.request(config);
+      }
+    }
+
     const status = error.response?.status;
     const requestUrl = error.config?.url || '';
 

@@ -100,7 +100,7 @@ npm run dev
 ### 4. Frontend Setup
 
 ```bash
-cd ../client
+cd ../customer
 npm install
 
 # Start Vite Development Server
@@ -108,6 +108,10 @@ npm run dev
 ```
 
 The application will be accessible at: `http://localhost:5173`.
+
+For production builds, configure `VITE_API_URL` as a build-time environment variable in the customer and admin hosting projects. The deployed backend is `https://dd-mystery-production.up.railway.app`; do not set a production frontend URL to `localhost`. The local `.env.development` files intentionally target a locally running API.
+
+The storefront requests products in pages (`GET /api/products?page=1&limit=12`). The endpoint returns `{ products, page, limit, hasNext }`; product detail pages load the selected database record directly. API product responses are not cached so stock and catalog changes are not served stale.
 
 ---
 

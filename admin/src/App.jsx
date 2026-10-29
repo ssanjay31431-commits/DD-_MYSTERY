@@ -1,20 +1,21 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ToastProvider } from './context/ToastContext';
 import { AdminAuthProvider, useAdminAuth } from './context/AdminAuthContext';
-import { AdminLogin } from './pages/AdminLogin';
-import { Dashboard } from './pages/Dashboard';
-import { AdminProducts } from './pages/AdminProducts';
-import { ProductForm } from './pages/ProductForm';
-import { AdminOrders } from './pages/AdminOrders';
-import { OrderDetailsView } from './pages/OrderDetailsView';
-import { AdminPaymentVerification } from './pages/AdminPaymentVerification';
-import { AdminCustomers } from './pages/AdminCustomers';
-import { AdminSettings } from './pages/AdminSettings';
-import { AdminNotificationLogs } from './pages/AdminNotificationLogs';
-import { AdminInventory } from './pages/AdminInventory';
-import { AdminCoupons } from './pages/AdminCoupons';
 import { ScrollToTop } from './components/ScrollToTop';
+
+const AdminLogin = lazy(() => import('./pages/AdminLogin').then((module) => ({ default: module.AdminLogin })));
+const Dashboard = lazy(() => import('./pages/Dashboard').then((module) => ({ default: module.Dashboard })));
+const AdminProducts = lazy(() => import('./pages/AdminProducts').then((module) => ({ default: module.AdminProducts })));
+const ProductForm = lazy(() => import('./pages/ProductForm').then((module) => ({ default: module.ProductForm })));
+const AdminOrders = lazy(() => import('./pages/AdminOrders').then((module) => ({ default: module.AdminOrders })));
+const OrderDetailsView = lazy(() => import('./pages/OrderDetailsView').then((module) => ({ default: module.OrderDetailsView })));
+const AdminPaymentVerification = lazy(() => import('./pages/AdminPaymentVerification').then((module) => ({ default: module.AdminPaymentVerification })));
+const AdminCustomers = lazy(() => import('./pages/AdminCustomers').then((module) => ({ default: module.AdminCustomers })));
+const AdminSettings = lazy(() => import('./pages/AdminSettings').then((module) => ({ default: module.AdminSettings })));
+const AdminNotificationLogs = lazy(() => import('./pages/AdminNotificationLogs').then((module) => ({ default: module.AdminNotificationLogs })));
+const AdminInventory = lazy(() => import('./pages/AdminInventory').then((module) => ({ default: module.AdminInventory })));
+const AdminCoupons = lazy(() => import('./pages/AdminCoupons').then((module) => ({ default: module.AdminCoupons })));
 
 const AdminProtectedRoute = ({ children }) => {
   const { admin, loading } = useAdminAuth();
@@ -31,6 +32,7 @@ export default function App() {
       <AdminAuthProvider>
         <Router>
           <ScrollToTop />
+          <Suspense fallback={<div className="min-h-[40vh] flex items-center justify-center text-sm font-bold text-slate-300">Loading page...</div>}>
           <Routes>
             <Route path="/admin/login" element={<AdminLogin />} />
             
@@ -144,6 +146,7 @@ export default function App() {
 
             <Route path="*" element={<Navigate to="/admin" replace />} />
           </Routes>
+          </Suspense>
         </Router>
       </AdminAuthProvider>
     </ToastProvider>

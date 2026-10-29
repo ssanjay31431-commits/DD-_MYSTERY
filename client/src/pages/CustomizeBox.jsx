@@ -5,7 +5,6 @@ import API from '../services/api';
 import { LiveBoxPreview } from '../components/customization/LiveBoxPreview';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
-import { DEFAULT_PRODUCTS } from '../utils/defaultProducts';
 import { safeSetSessionItem, sanitizeProduct } from '../utils/storage';
 
 export const CustomizeBox = () => {
@@ -15,9 +14,11 @@ export const CustomizeBox = () => {
   const { addToCart } = useCart();
   const { addToast } = useToast();
 
-  const [products, setProducts] = useState(DEFAULT_PRODUCTS);
-  const [selectedProduct, setSelectedProduct] = useState(DEFAULT_PRODUCTS[0]);
+  const [products, setProducts] = useState([]);
+  const [selectedProduct, setSelectedProduct] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
 
   // Form State
   const [recipientName, setRecipientName] = useState('Rahul');
@@ -39,29 +40,43 @@ export const CustomizeBox = () => {
   ];
 
   useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    setError('');
+
     const fetchProducts = async () => {
       try {
-        const { data } = await API.get('/products');
-        const list = Array.isArray(data) && data.length > 0 ? data : DEFAULT_PRODUCTS;
-        setProducts(list);
-        if (productId && productId !== 'default') {
-          const found = list.find((p) => p._id === productId || p.price === Number(productId));
-          if (found) setSelectedProduct(found);
-          else setSelectedProduct(list[0]);
-        } else {
-          setSelectedProduct(list[0]);
+        const { data } = await API.get('/products', {
+          params: { limit: 48 },
+          signal: controller.signal
+        });
+        const list = Array.isArray(data) ? data : data.products || [];
+        let selected = productId && productId !== 'default'
+          ? list.find((product) => product._id === productId || product.price === Number(productId))
+          : list[0];
+
+        if (!selected && productId && productId !== 'default') {
+          const productResponse = await API.get(`/products/${productId}`, { signal: controller.signal });
+          selected = productResponse.data;
+          list.unshift(selected);
         }
+
+        if (controller.signal.aborted) return;
+        setProducts(list);
+        setSelectedProduct(selected || null);
+        if (!selected) setError('No products are currently available.');
       } catch (err) {
-        console.error('CustomizeBox fetch error, using default products fallback:', err);
-        setProducts(DEFAULT_PRODUCTS);
-        const found = DEFAULT_PRODUCTS.find((p) => p._id === productId || p.price === Number(productId)) || DEFAULT_PRODUCTS[0];
-        setSelectedProduct(found);
+        if (controller.signal.aborted) return;
+        console.error('Customize product request failed:', err);
+        setError(err.response?.data?.message || 'Product options could not be loaded. Please try again.');
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     };
+
     fetchProducts();
-  }, [productId]);
+    return () => controller.abort();
+  }, [productId, reloadKey]);
 
   const handleAddToCart = async (e) => {
     e.preventDefault();
@@ -121,7 +136,18 @@ export const CustomizeBox = () => {
     navigate('/checkout', { state: { isBuyNow: true } });
   };
 
-  const productList = Array.isArray(products) && products.length > 0 ? products : DEFAULT_PRODUCTS;
+  if (loading) {
+    return <div className="min-h-[40vh] flex items-center justify-center text-sm font-bold text-slate-300">Loading product options...</div>;
+  }
+
+  if (error || !selectedProduct) {
+    return (
+      <div className="min-h-[40vh] flex flex-col items-center justify-center gap-3 px-4 text-center">
+        <p className="text-sm text-rose-300" role="alert">{error || 'Product unavailable.'}</p>
+        <button onClick={() => setReloadKey((key) => key + 1)} className="font-bold text-pink-300 hover:text-white">Retry</button>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -158,7 +184,7 @@ export const CustomizeBox = () => {
                 Select Mystery Box Budget Tier:
               </label>
               <div className="grid grid-cols-1 xs:grid-cols-3 gap-2">
-                {productList.map((p) => (
+                {products.map((p) => (
                   <button
                     key={p._id}
                     type="button"

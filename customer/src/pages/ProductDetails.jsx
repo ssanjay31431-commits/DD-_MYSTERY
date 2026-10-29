@@ -3,10 +3,9 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Sparkles, Check, Gift, Heart, Star, ArrowLeft, ShoppingBag, Zap, Award, ShieldCheck } from 'lucide-react';
 import API from '../services/api';
 import { CardSkeleton } from '../components/common/SkeletonLoader';
+import { OptimizedImage } from '../components/common/OptimizedImage';
 import { useWishlist } from '../context/WishlistContext';
 import { useCart } from '../context/CartContext';
-import { useToast } from '../context/ToastContext';
-import { DEFAULT_PRODUCTS } from '../utils/defaultProducts';
 import { safeSetSessionItem, sanitizeProduct } from '../utils/storage';
 
 export const ProductDetails = () => {
@@ -15,41 +14,34 @@ export const ProductDetails = () => {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
+  const [error, setError] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
 
   const { toggleWishlist, isInWishlist } = useWishlist();
   const { addToCart } = useCart();
-  const { addToast } = useToast();
-
-  const findFallbackProduct = (paramId) => {
-    if (!paramId) return DEFAULT_PRODUCTS[0];
-    const found = DEFAULT_PRODUCTS.find(
-      (p) => p._id === paramId || String(p.price) === String(paramId) || p.name.toLowerCase().includes(String(paramId).toLowerCase())
-    );
-    return found || DEFAULT_PRODUCTS[0];
-  };
 
   useEffect(() => {
-    const fetchProduct = async () => {
-      try {
-        const { data } = await API.get(`/products/${id}`);
-        const isValid = data && data._id && data.name && data.price !== undefined && !data.message;
-        if (isValid) {
-          setProduct(data);
-        } else {
-          setProduct(findFallbackProduct(id));
-        }
-      } catch (err) {
-        console.error('Product details fetch error, using fallback:', err);
-        setProduct(findFallbackProduct(id));
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchProduct();
-  }, [id]);
+    const controller = new AbortController();
+    setLoading(true);
+    setError('');
+    setProduct(null);
+
+    API.get(`/products/${id}`, { signal: controller.signal })
+      .then(({ data }) => setProduct(data))
+      .catch((err) => {
+        if (controller.signal.aborted) return;
+        console.error('Product details request failed:', err);
+        setError(err.response?.data?.message || 'Product details could not be loaded. Please try again.');
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [id, reloadKey]);
 
   const handleAddToCart = async () => {
-    const targetProduct = product || findFallbackProduct(id);
+    const targetProduct = product;
     const customizationDefault = {
       recipientName: 'Birthday Star',
       birthdayDate: '2026-08-25',
@@ -61,7 +53,7 @@ export const ProductDetails = () => {
   };
 
   const handleBuyNow = async () => {
-    const targetProduct = product || findFallbackProduct(id);
+    const targetProduct = product;
     const customizationDefault = {
       recipientName: 'Birthday Star',
       birthdayDate: new Date().toISOString().split('T')[0],
@@ -84,7 +76,17 @@ export const ProductDetails = () => {
     return <div className="max-w-5xl mx-auto p-8"><CardSkeleton /></div>;
   }
 
-  const currentProduct = product && product.name ? product : findFallbackProduct(id);
+  if (error || !product) {
+    return (
+      <div className="min-h-[40vh] flex flex-col items-center justify-center gap-3 px-4 text-center">
+        <p className="text-sm text-rose-300" role="alert">{error || 'Product unavailable.'}</p>
+        <button onClick={() => setReloadKey((key) => key + 1)} className="font-bold text-pink-300 hover:text-white">Retry</button>
+        <Link to="/shop" className="text-sm font-bold text-slate-300 hover:text-white">Back to products</Link>
+      </div>
+    );
+  }
+
+  const currentProduct = product;
   const isWishlisted = isInWishlist(currentProduct._id);
   const contents = currentProduct.contents || [];
   const price = currentProduct.price || 499;
@@ -100,7 +102,7 @@ export const ProductDetails = () => {
         {/* Left Column: Product Image & Highlights */}
         <div className="space-y-6">
           <div className="relative rounded-3xl overflow-hidden bg-slate-900 aspect-square flex items-center justify-center border-2 border-purple-500/30 shadow-2xl">
-            <img src={currentProduct.image} alt={currentProduct.name} className="w-full h-full object-cover rounded-3xl" />
+            <OptimizedImage src={currentProduct.image} alt={currentProduct.name} sizes="(max-width: 768px) 100vw, 50vw" loading="eager" fetchPriority="high" className="w-full h-full object-cover rounded-3xl" />
             
             {currentProduct.tag && (
               <span className="absolute top-4 left-4 px-4 py-1.5 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 text-white font-black text-xs uppercase tracking-widest shadow-lg shadow-pink-500/30">
@@ -201,7 +203,7 @@ export const ProductDetails = () => {
                   return (
                     <div key={idx} className="flex items-center gap-2.5 bg-slate-900/80 p-2 rounded-xl border border-slate-800">
                       {img ? (
-                        <img src={img} alt={name} className="w-9 h-9 rounded-lg object-cover shrink-0 border border-purple-500/30" />
+                        <OptimizedImage src={img} alt={name} className="w-9 h-9 rounded-lg object-cover shrink-0 border border-purple-500/30" />
                       ) : (
                         <span className="w-6 h-6 rounded-full bg-pink-500/20 text-pink-400 font-bold text-[10px] flex items-center justify-center shrink-0">
                           {idx + 1}

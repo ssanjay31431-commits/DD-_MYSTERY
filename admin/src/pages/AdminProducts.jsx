@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Plus, Edit3, Copy, Trash2, Eye, Package, Check, X, ShieldAlert } from 'lucide-react';
 import API from '../services/api';
 import { AdminSidebar } from '../components/AdminSidebar';
+import { OptimizedImage } from '../components/OptimizedImage';
 import { useToast } from '../context/ToastContext';
 import { Modal } from '../components/Modal';
 
@@ -10,15 +11,22 @@ export const AdminProducts = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [previewProduct, setPreviewProduct] = useState(null);
+  const [page, setPage] = useState(1);
+  const [hasNext, setHasNext] = useState(false);
+  const [error, setError] = useState('');
   const { addToast } = useToast();
   const navigate = useNavigate();
 
   const fetchProducts = async () => {
+    setLoading(true);
+    setError('');
     try {
-      const { data } = await API.get('/products?includeInactive=true');
-      setProducts(data);
+      const { data } = await API.get('/products', { params: { includeInactive: true, page, limit: 12 } });
+      setProducts(data.products || (Array.isArray(data) ? data : []));
+      setHasNext(data.hasNext);
     } catch (err) {
-      console.error(err);
+      console.error('Admin product request failed:', err);
+      setError(err.response?.data?.message || 'Products could not be loaded. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -26,7 +34,7 @@ export const AdminProducts = () => {
 
   useEffect(() => {
     fetchProducts();
-  }, []);
+  }, [page]);
 
   const handleDuplicate = async (id) => {
     try {
@@ -73,6 +81,8 @@ export const AdminProducts = () => {
           <div className="p-12 text-center text-slate-400 font-bold text-sm">
             Fetching product box catalog from MongoDB...
           </div>
+        ) : error ? (
+          <div className="p-8 text-center text-sm text-rose-300" role="alert">{error}</div>
         ) : products.length === 0 ? (
           <div className="p-8 sm:p-12 glass-panel rounded-3xl border border-purple-500/20 text-center space-y-4 max-w-lg mx-auto">
             <Package className="w-12 h-12 text-purple-400 mx-auto" />
@@ -95,7 +105,7 @@ export const AdminProducts = () => {
               <div key={prod._id} className="glass-panel p-5 rounded-3xl border border-purple-500/20 flex flex-col justify-between space-y-4">
                 <div>
                   <div className="relative mb-3">
-                    <img src={prod.image} alt={prod.name} className="w-full h-44 object-cover rounded-2xl" />
+                    <OptimizedImage src={prod.image} alt={prod.name} sizes="(max-width: 640px) 100vw, 33vw" className="w-full h-44 object-cover rounded-2xl" />
                     <span className={`absolute top-3 right-3 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
                       prod.status === 'ACTIVE'
                         ? 'bg-emerald-500 text-slate-950'
@@ -156,12 +166,19 @@ export const AdminProducts = () => {
             ))}
           </div>
         )}
+        {!loading && !error && products.length > 0 && (
+          <div className="flex items-center justify-center gap-4">
+            <button type="button" disabled={page === 1} onClick={() => setPage((current) => Math.max(1, current - 1))} className="px-4 py-2 rounded-xl bg-slate-900 border border-purple-500/30 text-sm font-bold text-white disabled:opacity-40">Previous</button>
+            <span className="text-sm text-slate-400">Page {page}</span>
+            <button type="button" disabled={!hasNext} onClick={() => setPage((current) => current + 1)} className="px-4 py-2 rounded-xl bg-slate-900 border border-purple-500/30 text-sm font-bold text-white disabled:opacity-40">Next</button>
+          </div>
+        )}
 
         {/* Customer Page Preview Modal */}
         {previewProduct && (
           <Modal isOpen={Boolean(previewProduct)} onClose={() => setPreviewProduct(null)} title="Customer View Preview">
             <div className="space-y-4 max-h-[75vh] overflow-y-auto text-xs text-slate-300 pr-1">
-              <img src={previewProduct.image} alt={previewProduct.name} className="w-full h-48 object-cover rounded-2xl" />
+              <OptimizedImage src={previewProduct.image} alt={previewProduct.name} className="w-full h-48 object-cover rounded-2xl" />
               <div>
                 <span className="text-[10px] font-black uppercase text-pink-400 tracking-wider">{previewProduct.tag}</span>
                 <h2 className="text-xl font-bold text-white font-display">{previewProduct.name}</h2>
@@ -174,7 +191,7 @@ export const AdminProducts = () => {
                 <div className="grid grid-cols-2 gap-2">
                   {previewProduct.contents?.map((item, idx) => (
                     <div key={idx} className="p-2 rounded-xl bg-slate-900 border border-slate-800 flex items-center gap-2">
-                      <img src={item.image} alt={item.name} className="w-10 h-10 rounded-lg object-cover" />
+                      <OptimizedImage src={item.image} alt={item.name} sizes="40px" className="w-10 h-10 rounded-lg object-cover" />
                       <div>
                         <span className="font-bold text-white block text-[11px]">{item.name}</span>
                         <span className="text-[10px] text-slate-400">Qty: {item.quantity}</span>

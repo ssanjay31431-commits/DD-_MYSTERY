@@ -33,8 +33,13 @@ export const ReviewsPage = () => {
     if (!comment) return;
     try {
       // Pick first product as target review item
-      const prods = await API.get('/products');
-      const targetProdId = prods.data[0]?._id;
+      const { data: productPage } = await API.get('/products', { params: { limit: 1 } });
+      const targetProdId = (Array.isArray(productPage) ? productPage : productPage.products || [])[0]?._id;
+
+      if (!targetProdId) {
+        addToast('No products are currently available for review.', 'error');
+        return;
+      }
 
       await API.post('/reviews', {
         productId: targetProdId,

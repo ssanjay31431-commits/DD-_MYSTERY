@@ -4,35 +4,31 @@ import { Sparkles, Gift, Heart, ShieldCheck, Star, ArrowRight, Truck, PartyPoppe
 import API from '../services/api';
 import { ProductCard } from '../components/product/ProductCard';
 import { CardSkeleton } from '../components/common/SkeletonLoader';
-import { DEFAULT_PRODUCTS } from '../utils/defaultProducts';
 
 export const Home = () => {
   const [products, setProducts] = useState([]);
-  const [themes, setThemes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [productsError, setProductsError] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [prodRes, themeRes] = await Promise.all([
-          API.get('/products').catch(() => ({ data: null })),
-          API.get('/themes').catch(() => ({ data: null }))
-        ]);
-        if (Array.isArray(prodRes?.data) && prodRes.data.length > 0) {
-          setProducts(prodRes.data);
-        } else {
-          setProducts(DEFAULT_PRODUCTS);
-        }
-        setThemes(themeRes?.data || []);
-      } catch (err) {
-        console.error('Home page fetch error, using default products fallback:', err);
-        setProducts(DEFAULT_PRODUCTS);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
+    const controller = new AbortController();
+    setLoading(true);
+    setProductsError('');
+
+    API.get('/products', { params: { limit: 3 }, signal: controller.signal })
+      .then(({ data }) => setProducts(Array.isArray(data) ? data.slice(0, 3) : data.products || []))
+      .catch((err) => {
+        if (controller.signal.aborted) return;
+        console.error('Home product request failed:', err);
+        setProductsError(err.response?.data?.message || 'Products could not be loaded. Please try again.');
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [reloadKey]);
 
   const nostalgiaBox = products.find((p) => p.price === 499) || products[0];
   const chocoBox = products.find((p) => p.price === 199) || products[1];
@@ -231,12 +227,19 @@ export const Home = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <CardSkeleton /><CardSkeleton />
           </div>
-        ) : (
+        ) : productsError ? (
+          <div className="text-center text-sm text-rose-300" role="alert">
+            <p>{productsError}</p>
+            <button onClick={() => setReloadKey((key) => key + 1)} className="mt-3 font-bold text-pink-300 hover:text-white">Retry</button>
+          </div>
+        ) : products.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             {products.map((product) => (
               <ProductCard key={product._id} product={product} />
             ))}
           </div>
+        ) : (
+          <p className="text-center text-sm text-slate-400">No products are currently available.</p>
         )}
       </section>
 

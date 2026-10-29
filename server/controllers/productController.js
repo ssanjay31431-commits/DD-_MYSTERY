@@ -1,85 +1,25 @@
 const Product = require('../models/Product');
-const PRODUCT_QUERY_MAX_TIME_MS = 8000;
+const PRODUCT_QUERY_MAX_TIME_MS = 5000;
+const MAX_PRODUCT_PAGE_SIZE = 48;
+const PRODUCT_LIST_FIELDS = 'name slug price originalPrice tag tagline description contents image categoryName status isFeatured stock rating numReviews createdAt';
 
-const DEFAULT_MYSTERY_BOXES = [
-  {
-    name: 'DD MYSTERY BOX – 90s KIDS EDITION',
-    slug: 'dd-mystery-box-90s-kids-edition',
-    price: 499,
-    originalPrice: 799,
-    tag: '90s NOSTALGIA 🎁',
-    tagline: 'Relive Childhood Memories & Pure Nostalgia!',
-    description: 'A grand childhood nostalgia mystery box packed with authentic 90s candies, retro games, toys, memory keepsakes and lucky rewards!',
-    fullDescription: 'Experience the magic of 90s childhood! Every box contains 16 carefully curated nostalgic collectibles including classic candies, retro toys, and a chance to win ₹5,000 in our scratch reward card.',
-    contents: [
-      { name: 'Poppins Roll', image: 'https://images.unsplash.com/photo-1582058091505-f87a2e55a40f?auto=format&fit=crop&w=300&q=80', description: 'Classic colorful candy roll', quantity: 1, category: 'Candy' },
-      { name: 'Mango Bite', image: 'https://images.unsplash.com/photo-1541781774459-bb2af2f05b55?auto=format&fit=crop&w=300&q=80', description: 'Authentic mango candy', quantity: 2, category: 'Candy' },
-      { name: 'Melody', image: 'https://images.unsplash.com/photo-1606312619070-d48b4c652a52?auto=format&fit=crop&w=300&q=80', description: 'Melody chocolaty candy', quantity: 2, category: 'Candy' },
-      { name: 'Boomer Bubble Gum', image: 'https://images.unsplash.com/photo-1563227812-0ea4c22e6cc8?auto=format&fit=crop&w=300&q=80', description: 'Boomer bubble gum', quantity: 1, category: 'Gum' },
-      { name: 'Water Ring Toss Game', image: 'https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?auto=format&fit=crop&w=300&q=80', description: 'Handheld handheld water ring toss toy', quantity: 1, category: 'Toy' },
-      { name: 'Spinning Top / Bambaram', image: 'https://images.unsplash.com/photo-1596461404969-9ae70f2830c1?auto=format&fit=crop&w=300&q=80', description: 'Wooden spinning top toy with string', quantity: 1, category: 'Toy' },
-      { name: 'Glass Marbles Set', image: 'https://images.unsplash.com/photo-1590402494587-44b71d7772f6?auto=format&fit=crop&w=300&q=80', description: 'Pack of 10 colorful glass marbles', quantity: 1, category: 'Toy' },
-      { name: 'Back to Childhood Card', image: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=300&q=80', description: 'Nostalgic greeting card with custom message', quantity: 1, category: 'Card' }
-    ],
-    highlights: [
-      'Packed with Nostalgia, Fun & Surprises!',
-      'Relive Childhood Memories',
-      'Perfect Gift for All Occasions',
-      'Premium Quality Packaging'
-    ],
-    features: [
-      '16+ Authentic Nostalgia Items',
-      'Retro Water Ring Game & Bambaram',
-      'Back to Childhood Thank You Card',
-      'Eligible for ₹5,000 Lucky Scratch Reward'
-    ],
-    image: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=800&q=80',
-    categoryName: 'Nostalgia Mystery Box',
-    status: 'ACTIVE',
-    isFeatured: true,
-    stock: 200,
-    rating: 4.9,
-    numReviews: 142
-  },
-  {
-    name: 'DD CHOCO MYSTERY BOX',
-    slug: 'dd-choco-mystery-box',
-    price: 199,
-    originalPrice: 399,
-    tag: 'CHOCO SURPRISE 🍫',
-    tagline: '5 Surprise Gifts + Large Brand Chocolates!',
-    description: 'The ultimate chocolate surprise mystery box loaded with large brand chocolates, 5 surprise gifts, and a chance to discover MrBeast Chocolate!',
-    fullDescription: 'Indulge in rich chocolate surprises! Packed with large full-size brand chocolate bars plus 5 handpicked surprise gifts.',
-    contents: [
-      { name: 'Dairy Milk Large', image: 'https://images.unsplash.com/photo-1541781774459-bb2af2f05b55?auto=format&fit=crop&w=300&q=80', description: 'Full size Cadbury Dairy Milk bar', quantity: 1, category: 'Chocolate' },
-      { name: 'KitKat Large', image: 'https://images.unsplash.com/photo-1582058091505-f87a2e55a40f?auto=format&fit=crop&w=300&q=80', description: 'Full size Nestlé KitKat 4-finger bar', quantity: 1, category: 'Chocolate' },
-      { name: '5 Surprise Gifts', image: 'https://images.unsplash.com/photo-1513885535751-8b9238bd48?auto=format&fit=crop&w=300&q=80', description: '5 handpicked surprise gifts & MrBeast chance', quantity: 5, isMystery: true, category: 'Surprise' }
-    ],
-    highlights: [
-      '5 Surprise Gifts Inside!',
-      'Chance to Get MrBeast Chocolate',
-      '100% Original Products'
-    ],
-    features: [
-      'Full-size Brand Chocolates',
-      '5 Handpicked Surprise Gifts',
-      'Chance to win MrBeast Chocolate'
-    ],
-    image: 'https://images.unsplash.com/photo-1511381939415-e44015466834?auto=format&fit=crop&w=800&q=80',
-    categoryName: 'Choco Mystery Box',
-    status: 'ACTIVE',
-    isFeatured: true,
-    stock: 300,
-    rating: 4.8,
-    numReviews: 94
-  }
-];
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 // @desc Get all products (Filter ACTIVE for customer, All for admin)
 // @route GET /api/products
 const getProducts = async (req, res, next) => {
   try {
     const { status, category, search, includeInactive } = req.query;
+    const hasPagination = req.query.page !== undefined || req.query.limit !== undefined;
+    const page = req.query.page === undefined ? 1 : Number(req.query.page);
+    const requestedLimit = req.query.limit === undefined ? 12 : Number(req.query.limit);
+
+    if (hasPagination && (!Number.isSafeInteger(page) || page < 1 || !Number.isSafeInteger(requestedLimit) || requestedLimit < 1)) {
+      return res.status(400).json({ message: 'Page and limit must be positive integers' });
+    }
+    const limit = Math.min(requestedLimit, MAX_PRODUCT_PAGE_SIZE);
+    res.set('Cache-Control', 'no-store');
+
     let filter = {};
 
     if (includeInactive !== 'true' && req.user?.role !== 'admin') {
@@ -92,27 +32,32 @@ const getProducts = async (req, res, next) => {
       filter.categoryName = category;
     }
 
-    if (search) {
+    if (typeof search === 'string' && search.trim()) {
+      const searchRegex = new RegExp(escapeRegex(search.trim().slice(0, 100)), 'i');
       filter.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
-        { tagline: { $regex: search, $options: 'i' } }
+        { name: searchRegex },
+        { description: searchRegex },
+        { tagline: searchRegex }
       ];
     }
 
-    let products = await Product.find(filter).maxTimeMS(PRODUCT_QUERY_MAX_TIME_MS).sort({ createdAt: -1 }).lean();
+    let query = Product.find(filter)
+      .maxTimeMS(PRODUCT_QUERY_MAX_TIME_MS)
+      .sort({ createdAt: -1, _id: -1 });
 
-    // Keep the development catalog convenient without writing defaults in production.
-    if (products.length === 0 && process.env.NODE_ENV !== 'production') {
-      const totalCount = await Product.countDocuments().maxTimeMS(PRODUCT_QUERY_MAX_TIME_MS);
-      if (totalCount === 0) {
-        try {
-          await Product.insertMany(DEFAULT_MYSTERY_BOXES);
-          products = await Product.find(filter).maxTimeMS(PRODUCT_QUERY_MAX_TIME_MS).sort({ createdAt: -1 }).lean();
-        } catch (e) {
-          console.warn('Auto-seed default products notice:', e.message);
-        }
+    if (hasPagination) {
+      if (includeInactive !== 'true') {
+        query = query.select(PRODUCT_LIST_FIELDS);
       }
+      query = query.skip((page - 1) * limit).limit(limit + 1);
+    }
+
+    let products = await query.lean();
+
+    if (hasPagination) {
+      const hasNext = products.length > limit;
+      products = products.slice(0, limit);
+      return res.json({ products, page, limit, hasNext });
     }
 
     res.json(products);
@@ -123,15 +68,16 @@ const getProducts = async (req, res, next) => {
 
 // @desc Get product by ID or Slug
 // @route GET /api/products/:id
-const getProductById = async (req, res) => {
+const getProductById = async (req, res, next) => {
   try {
     const param = req.params.id;
+    res.set('Cache-Control', 'no-store');
     let product;
 
     if (param.match(/^[0-9a-fA-F]{24}$/)) {
-      product = await Product.findById(param).lean();
+      product = await Product.findById(param).maxTimeMS(PRODUCT_QUERY_MAX_TIME_MS).lean();
     } else {
-      product = await Product.findOne({ slug: param }).lean();
+      product = await Product.findOne({ slug: param }).maxTimeMS(PRODUCT_QUERY_MAX_TIME_MS).lean();
     }
 
     if (product) {
@@ -140,7 +86,7 @@ const getProductById = async (req, res) => {
       res.status(404).json({ message: 'Product box tier not found' });
     }
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
 

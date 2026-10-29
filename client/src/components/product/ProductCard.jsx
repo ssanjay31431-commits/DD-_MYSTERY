@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Sparkles, Check, ShoppingBag, Heart, Star, Eye, Zap } from 'lucide-react';
 import { useWishlist } from '../../context/WishlistContext';
+import { OptimizedImage } from '../common/OptimizedImage';
 import { safeSetSessionItem, sanitizeProduct } from '../../utils/storage';
 
 export const ProductCard = ({ product }) => {
@@ -52,11 +53,10 @@ export const ProductCard = ({ product }) => {
 
       {/* Product Visual Image */}
       <div className="relative w-full aspect-square rounded-2xl overflow-hidden mb-5 bg-slate-900 flex items-center justify-center group-hover:scale-[1.02] transition-transform duration-500">
-        <img
+        <OptimizedImage
           src={product.image}
           alt={product.name}
-          loading="lazy"
-          decoding="async"
+          sizes="(max-width: 768px) 100vw, 33vw"
           className="w-full h-full object-cover rounded-2xl group-hover:opacity-90 transition-opacity"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#18132a] via-transparent to-transparent opacity-80" />

@@ -67,6 +67,9 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 if (process.env.NODE_ENV !== 'production') {
   app.use(morgan('dev'));
+} else {
+  morgan.token('path', (req) => req.path);
+  app.use(morgan(':method :path :status :response-time ms'));
 }
 
 // API Health Check
