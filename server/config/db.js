@@ -28,13 +28,18 @@ const connectDB = async () => {
     throw error;
   }
 
-  connectionPromise = mongoose.connect(mongoUri)
+  connectionPromise = mongoose.connect(mongoUri, {
+    connectTimeoutMS: 5000,
+    serverSelectionTimeoutMS: 5000,
+    socketTimeoutMS: 10000
+  })
     .then((conn) => {
       console.log(`[MongoDB Connected] Host: ${conn.connection.host}`);
       return conn.connection;
     })
     .catch((error) => {
       connectionPromise = null;
+      error.status = 503;
       console.error('[MongoDB Connection Error]', {
         name: error.name || 'Error',
         code: typeof error.code === 'number' || /^[A-Z0-9_-]+$/i.test(String(error.code || ''))

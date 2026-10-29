@@ -1,4 +1,5 @@
 const Product = require('../models/Product');
+const PRODUCT_QUERY_MAX_TIME_MS = 8000;
 
 const DEFAULT_MYSTERY_BOXES = [
   {
@@ -99,15 +100,15 @@ const getProducts = async (req, res, next) => {
       ];
     }
 
-    let products = await Product.find(filter).sort({ createdAt: -1 }).lean();
+    let products = await Product.find(filter).maxTimeMS(PRODUCT_QUERY_MAX_TIME_MS).sort({ createdAt: -1 }).lean();
 
     // Keep the development catalog convenient without writing defaults in production.
     if (products.length === 0 && process.env.NODE_ENV !== 'production') {
-      const totalCount = await Product.countDocuments();
+      const totalCount = await Product.countDocuments().maxTimeMS(PRODUCT_QUERY_MAX_TIME_MS);
       if (totalCount === 0) {
         try {
           await Product.insertMany(DEFAULT_MYSTERY_BOXES);
-          products = await Product.find(filter).sort({ createdAt: -1 }).lean();
+          products = await Product.find(filter).maxTimeMS(PRODUCT_QUERY_MAX_TIME_MS).sort({ createdAt: -1 }).lean();
         } catch (e) {
           console.warn('Auto-seed default products notice:', e.message);
         }

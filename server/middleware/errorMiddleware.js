@@ -5,7 +5,14 @@ const notFound = (req, res, next) => {
 };
 
 const errorHandler = (err, req, res, next) => {
-  const statusCode = err.status || err.statusCode || (res.statusCode === 200 ? 500 : res.statusCode);
+  const isDatabaseUnavailable = [
+    'MongoNetworkError',
+    'MongoNetworkTimeoutError',
+    'MongoServerSelectionError',
+    'MongooseServerSelectionError',
+    'MongoWaitQueueTimeoutError'
+  ].includes(err.name) || err.code === 50;
+  const statusCode = err.status || err.statusCode || (isDatabaseUnavailable ? 503 : res.statusCode === 200 ? 500 : res.statusCode);
   if (statusCode >= 500) {
     const routeGroup = req.path.split('/').filter(Boolean).slice(0, 2).join('/') || 'root';
     const route = req.route?.path ? `${req.baseUrl}${req.route.path}` : `/${routeGroup}`;
