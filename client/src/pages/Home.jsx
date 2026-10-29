@@ -174,25 +174,22 @@ export const Home = () => {
                   <h2 className="mt-4 text-2xl sm:text-3xl font-black font-display text-white">
                     {diwaliProduct?.name || 'Diwali Edition Mystery Box'}
                   </h2>
-                  <p className="mt-2 text-sm text-amber-100/80">The lid lifts. The surprise is yours.</p>
+                  <p className="mt-2 text-sm text-amber-100/80">Celebrate the season with a sky full of sparkle.</p>
                 </div>
 
-                <div className="diwali-stage relative z-10 my-2 flex h-48 w-full items-center justify-center" role="img" aria-label="Animated illustration of a Diwali gift box opening to reveal festive surprises">
-                  <div className="diwali-spark diwali-spark-one" aria-hidden="true">✦</div>
-                  <div className="diwali-spark diwali-spark-two" aria-hidden="true">✧</div>
-                  <div className="diwali-spark diwali-spark-three" aria-hidden="true">✦</div>
-                  <div className="diwali-surprises" aria-hidden="true">
-                    <span>✨</span><span>🎁</span><span>🪔</span><span>⭐</span>
-                  </div>
-                  <div className="diwali-gift-box" aria-hidden="true">
-                    <div className="diwali-box-base">
-                      <div className="diwali-box-ribbon" />
-                    </div>
-                    <div className="diwali-box-lid">
-                      <div className="diwali-lid-ribbon" />
-                      <div className="diwali-box-bow">🎀</div>
-                    </div>
-                  </div>
+                <div className="diwali-stage relative z-10 my-2 flex h-48 w-full items-center justify-center" role="img" aria-label="Colorful Diwali fireworks launch and burst into sparkling lights across a night sky">
+                  <div className="diwali-rocket diwali-rocket-one" aria-hidden="true" />
+                  <div className="diwali-rocket diwali-rocket-two" aria-hidden="true" />
+                  <div className="diwali-rocket diwali-rocket-three" aria-hidden="true" />
+                  <div className="diwali-firework diwali-firework-one" aria-hidden="true" />
+                  <div className="diwali-firework diwali-firework-two" aria-hidden="true" />
+                  <div className="diwali-firework diwali-firework-three" aria-hidden="true" />
+                  <div className="diwali-firework diwali-firework-four" aria-hidden="true" />
+                  <div className="diwali-sparkler diwali-sparkler-left" aria-hidden="true" />
+                  <div className="diwali-sparkler diwali-sparkler-right" aria-hidden="true" />
+                  <div className="diwali-ground-glow" aria-hidden="true" />
+                  <div className="diwali-skyline" aria-hidden="true">🪔　✨　🪔</div>
+                  <div className="diwali-caption" aria-hidden="true">HAPPY DIWALI</div>
                 </div>
 
                 <div className="relative z-10 flex w-full flex-col items-center gap-3 text-center">
