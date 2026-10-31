@@ -53,9 +53,9 @@ export const Home = () => {
             <div className="text-center lg:text-left space-y-6">
               
               {/* Badge */}
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-pink-500/10 border border-pink-500/30 text-pink-300 text-xs sm:text-sm font-extrabold uppercase tracking-widest shadow-inner max-w-full">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-pink-500/10 border border-pink-500/30 text-pink-300 text-xs font-bold shadow-inner max-w-full">
                 <Sparkles className="w-4 h-4 text-pink-400 animate-pulse shrink-0" />
-                <span className="truncate">✨ THE SURPRISE BOX FOR EVERY MOMENT</span>
+                <span className="truncate">The Surprise Box for Every Moment</span>
               </div>
 
               {/* Logo & Heading Container */}
@@ -94,15 +94,32 @@ export const Home = () => {
                 From birthdays and anniversaries to friendship, celebrations, nostalgia, thank-you moments, or simply 'just because' — choose a mystery box made to turn ordinary moments into unforgettable surprises.
               </p>
 
-              {/* Highlight Box */}
-              <div className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-purple-950/60 border border-amber-500/30 text-amber-300 font-bold text-xs sm:text-sm shadow-lg shadow-purple-900/20 max-w-full">
-                <span className="text-base sm:text-lg shrink-0">🎁</span>
-                <span className="truncate">One Box. Endless Reasons to Surprise.</span>
+              {/* Highlight Callout */}
+              <div className="flex items-center justify-center lg:justify-start gap-2 text-xs sm:text-sm font-semibold text-amber-300 py-1 select-none">
+                <span className="text-base sm:text-lg shrink-0" aria-hidden="true">🎁</span>
+                <span>One Box. Endless Reasons to Surprise.</span>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 pt-1">
+                <Link
+                  to="/shop"
+                  className="w-full sm:w-auto h-12 px-7 rounded-xl bg-gradient-to-r from-pink-500 via-purple-600 to-amber-500 text-white font-bold text-sm tracking-wide shadow-lg shadow-pink-500/25 hover:scale-[1.02] hover:opacity-95 transition-all flex items-center justify-center gap-2"
+                >
+                  <Gift className="w-4 h-4" /> <span>Explore Mystery Boxes</span>
+                </Link>
+
+                <Link
+                  to={nostalgiaBox ? `/customize/${nostalgiaBox._id}` : '/shop'}
+                  className="w-full sm:w-auto h-12 px-7 rounded-xl bg-slate-900 border border-purple-500/30 text-slate-200 hover:text-white hover:border-purple-500 font-bold text-sm text-center flex items-center justify-center gap-2 transition-all hover:bg-slate-800"
+                >
+                  <Sparkles className="w-4 h-4 text-pink-400" /> <span>Customize Surprise</span>
+                </Link>
               </div>
 
               {/* Occasion Tags List */}
               <div className="pt-1">
-                <p className="text-[11px] font-extrabold text-pink-400 uppercase tracking-widest mb-2">
+                <p className="text-xs font-bold text-pink-400 uppercase tracking-wider mb-2">
                   Surprise Someone For:
                 </p>
                 <div className="flex flex-wrap items-center justify-center lg:justify-start gap-1.5 sm:gap-2">
@@ -120,7 +137,7 @@ export const Home = () => {
                   ].map((occasion, idx) => (
                     <span
                       key={idx}
-                      className="px-2.5 py-1 rounded-full bg-slate-900/80 border border-purple-500/20 text-slate-300 text-[10px] sm:text-[11px] font-semibold hover:border-pink-500/40 hover:text-white transition-all shadow-sm"
+                      className="px-2.5 py-1 rounded-full bg-slate-900/80 border border-purple-500/20 text-slate-300 text-xs font-medium hover:border-pink-500/40 hover:text-white transition-all shadow-sm"
                     >
                       {occasion}
                     </span>
@@ -128,51 +145,34 @@ export const Home = () => {
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-2">
-                <Link
-                  to="/shop"
-                  className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-gradient-to-r from-pink-500 via-purple-600 to-amber-500 text-white font-extrabold text-sm uppercase tracking-wider shadow-2xl shadow-pink-500/30 hover:scale-105 hover:opacity-95 transition-all flex items-center justify-center gap-2"
-                >
-                  <Gift className="w-5 h-5" /> Explore Mystery Boxes
-                </Link>
-
-                <Link
-                  to={nostalgiaBox ? `/customize/${nostalgiaBox._id}` : '/shop'}
-                  className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-slate-900/90 border border-purple-500/30 text-slate-200 hover:text-white hover:border-purple-500 font-bold text-sm text-center flex items-center justify-center gap-2 transition-all hover:bg-slate-800"
-                >
-                  Customize Surprise <Sparkles className="w-4 h-4 text-pink-400" />
-                </Link>
-              </div>
-
               {/* Trust Badges */}
               <div className="pt-6 grid grid-cols-1 xs:grid-cols-3 gap-3 sm:gap-4 border-t border-slate-800/80 max-w-lg mx-auto lg:mx-0">
                 <div className="text-center lg:text-left">
                   <span className="block text-xl font-black text-white font-display">10,000+</span>
-                  <span className="text-[11px] text-slate-400 font-medium">Happy Surprises</span>
+                  <span className="text-xs text-slate-400 font-medium">Happy Surprises</span>
                 </div>
                 <div className="text-center lg:text-left">
                   <span className="block text-xl font-black text-amber-400 font-display">4.9 ★</span>
-                  <span className="text-[11px] text-slate-400 font-medium">Customer Rating</span>
+                  <span className="text-xs text-slate-400 font-medium">Customer Rating</span>
                 </div>
                 <div className="text-center lg:text-left">
                   <span className="block text-xl font-black text-emerald-400 font-display">Full Payment</span>
-                  <span className="text-[11px] text-slate-400 font-medium">100% Safe & Instant</span>
+                  <span className="text-xs text-slate-400 font-medium">100% Safe & Instant</span>
                 </div>
               </div>
             </div>
 
             {/* Right Visual Hero Feature Cards */}
             {diwaliCampaignActive ? (
-              <div className="diwali-ad relative min-h-[390px] rounded-[2rem] border border-amber-300/30 bg-gradient-to-br from-[#35121f] via-[#20132c] to-[#100d1c] p-6 sm:p-8 flex flex-col items-center justify-between overflow-hidden shadow-[0_25px_80px_rgba(245,158,11,0.12)]">
+              <div className="diwali-ad relative min-h-[390px] rounded-2xl border border-amber-300/30 bg-gradient-to-br from-[#35121f] via-[#20132c] to-[#100d1c] p-6 sm:p-8 flex flex-col items-center justify-between overflow-hidden shadow-[0_25px_80px_rgba(245,158,11,0.12)]">
                 <div className="absolute -top-20 -right-16 h-56 w-56 rounded-full bg-amber-400/20 blur-3xl" />
                 <div className="absolute -bottom-20 -left-16 h-56 w-56 rounded-full bg-rose-500/20 blur-3xl" />
                 <div className="relative z-10 w-full text-center">
-                  <span className="inline-flex items-center gap-2 rounded-full border border-amber-300/30 bg-black/25 px-4 py-2 text-[10px] sm:text-xs font-black uppercase tracking-[0.18em] text-amber-200">
-                    <Sparkles className="h-4 w-4" /> Diwali week · Limited edition
+                  <span className="inline-flex items-center gap-2 rounded-full border border-amber-300/30 bg-black/25 px-4 py-2 text-xs font-bold uppercase tracking-wider text-amber-200">
+                    <Sparkles className="h-4 w-4" /> Diwali Week · Limited Edition
                   </span>
                   <h2 className="mt-4 text-2xl sm:text-3xl font-black font-display text-white">
-                    {diwaliProduct?.name || 'Diwali Edition Mystery Box'}
+                    {diwaliProduct?.name ? diwaliProduct.name.replace(/eddition/gi, 'Edition') : 'Diwali Edition Mystery Box'}
                   </h2>
                   <p className="mt-2 text-sm text-amber-100/80">Celebrate the season with a sky full of sparkle.</p>
                 </div>
@@ -198,9 +198,9 @@ export const Home = () => {
                   </p>
                   <Link
                     to={diwaliProduct ? `/product/${diwaliProduct._id}` : '/shop'}
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-rose-600 via-orange-500 to-amber-400 px-6 py-3.5 text-sm font-black uppercase tracking-wide text-white shadow-lg shadow-amber-500/20 transition-transform hover:scale-[1.03] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-200"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-amber-400/20 border border-amber-400/40 px-6 py-3.5 text-sm font-bold tracking-wide text-amber-200 backdrop-blur-md shadow-md transition-all hover:bg-amber-400/30 hover:border-amber-400/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-200"
                   >
-                    <Gift className="h-5 w-5" /> Open your surprise · Order now <ArrowRight className="h-4 w-4" />
+                    <Gift className="h-4 w-4" /> Open Your Surprise · Order Now <ArrowRight className="h-4 w-4" />
                   </Link>
                 </div>
               </div>
@@ -208,20 +208,20 @@ export const Home = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               
               {/* Product 1 Card */}
-              <div className="glass-panel p-5 rounded-3xl border border-pink-500/30 flex flex-col justify-between space-y-3 relative overflow-hidden group hover:scale-[1.02] transition-transform">
-                <span className="px-2.5 py-0.5 rounded-full bg-pink-500 text-white font-black text-[9px] uppercase tracking-wider self-start">
+              <div className="glass-panel p-5 rounded-2xl border border-pink-500/30 flex flex-col justify-between space-y-3 relative overflow-hidden group hover:scale-[1.02] transition-transform">
+                <span className="px-2.5 py-0.5 rounded-full bg-pink-500 text-white font-bold text-xs uppercase tracking-wider self-start">
                   90s NOSTALGIA
                 </span>
                 <div>
                   <h3 className="font-black text-white text-base font-display">90s KIDS EDITION</h3>
-                  <p className="text-[11px] text-amber-300 italic font-semibold">"Relive Your Childhood!"</p>
-                  <p className="text-[10px] text-slate-400 mt-1">Poppins, Boomer, Water Game, Glass Marbles & 16+ Items.</p>
+                  <p className="text-xs text-amber-300 italic font-semibold">"Relive Your Childhood!"</p>
+                  <p className="text-xs text-slate-400 mt-1">Poppins, Boomer, Water Game, Glass Marbles & 16+ Items.</p>
                 </div>
                 <div className="flex items-center justify-between pt-2 border-t border-slate-800">
                   <span className="text-xl font-black text-white font-display">₹499</span>
                   <Link
                     to={nostalgiaBox ? `/product/${nostalgiaBox._id}` : '/shop'}
-                    className="px-3 py-1.5 rounded-xl bg-pink-500 text-white font-bold text-[10px] uppercase flex items-center gap-1"
+                    className="px-3 py-1.5 rounded-xl bg-pink-500 text-white font-bold text-xs uppercase flex items-center gap-1"
                   >
                     View Details
                   </Link>
@@ -229,20 +229,20 @@ export const Home = () => {
               </div>
 
               {/* Product 2 Card */}
-              <div className="glass-panel p-5 rounded-3xl border border-purple-500/30 flex flex-col justify-between space-y-3 relative overflow-hidden group hover:scale-[1.02] transition-transform">
-                <span className="px-2.5 py-0.5 rounded-full bg-purple-600 text-white font-black text-[9px] uppercase tracking-wider self-start">
+              <div className="glass-panel p-5 rounded-2xl border border-purple-500/30 flex flex-col justify-between space-y-3 relative overflow-hidden group hover:scale-[1.02] transition-transform">
+                <span className="px-2.5 py-0.5 rounded-full bg-purple-600 text-white font-bold text-xs uppercase tracking-wider self-start">
                   CHOCO SURPRISE
                 </span>
                 <div>
                   <h3 className="font-black text-white text-base font-display">CHOCO MYSTERY BOX</h3>
-                  <p className="text-[11px] text-pink-400 italic font-semibold">"5 Surprise Gifts Inside!"</p>
-                  <p className="text-[10px] text-slate-400 mt-1">Large Brand Chocolates + MrBeast Surprise Chance!</p>
+                  <p className="text-xs text-pink-400 italic font-semibold">"5 Surprise Gifts Inside!"</p>
+                  <p className="text-xs text-slate-400 mt-1">Large Brand Chocolates + MrBeast Surprise Chance!</p>
                 </div>
                 <div className="flex items-center justify-between pt-2 border-t border-slate-800">
                   <span className="text-xl font-black text-white font-display">₹199</span>
                   <Link
                     to={chocoBox ? `/product/${chocoBox._id}` : '/shop'}
-                    className="px-3 py-1.5 rounded-xl bg-purple-600 text-white font-bold text-[10px] uppercase flex items-center gap-1"
+                    className="px-3 py-1.5 rounded-xl bg-purple-600 text-white font-bold text-xs uppercase flex items-center gap-1"
                   >
                     View Details
                   </Link>
@@ -260,21 +260,21 @@ export const Home = () => {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col sm:flex-row items-center justify-between mb-12 gap-4">
           <div>
-            <span className="text-xs font-extrabold text-amber-400 uppercase tracking-widest block mb-1">
+            <span className="text-xs font-bold text-amber-400 uppercase tracking-wider block mb-1">
               Featured Products
             </span>
             <h2 className="text-3xl font-black text-white font-display">
               Our Signature Mystery Boxes
             </h2>
           </div>
-          <Link to="/shop" className="text-xs font-bold text-pink-400 hover:text-pink-300 flex items-center gap-1">
-            View All Boxes <ChevronRight className="w-4 h-4" />
+          <Link to="/shop" className="px-3.5 py-1.5 rounded-full bg-pink-500/10 border border-pink-500/30 text-pink-300 hover:bg-pink-500/20 text-xs font-semibold flex items-center gap-1 transition-colors">
+            View All Boxes <ChevronRight className="w-3.5 h-3.5" />
           </Link>
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <CardSkeleton /><CardSkeleton />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 max-w-7xl mx-auto">
+            <CardSkeleton /><CardSkeleton /><CardSkeleton />
           </div>
         ) : productsError ? (
           <div className="text-center text-sm text-rose-300" role="alert">
@@ -282,10 +282,20 @@ export const Home = () => {
             <button onClick={() => setReloadKey((key) => key + 1)} className="mt-3 font-bold text-pink-300 hover:text-white">Retry</button>
           </div>
         ) : products.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            {products.map((product) => (
-              <ProductCard key={product._id} product={product} />
-            ))}
+          <div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 max-w-7xl mx-auto">
+              {products.map((product) => (
+                <ProductCard key={product._id} product={product} />
+              ))}
+            </div>
+            <div className="mt-10 text-center">
+              <Link
+                to="/shop"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-slate-900 border border-purple-500/30 text-slate-200 hover:text-white hover:border-purple-500 text-xs font-bold uppercase tracking-wider transition-all"
+              >
+                Browse Full Mystery Collection <ArrowRight className="w-4 h-4 text-pink-400" />
+              </Link>
+            </div>
           </div>
         ) : (
           <p className="text-center text-sm text-slate-400">No products are currently available.</p>
@@ -294,10 +304,10 @@ export const Home = () => {
 
       {/* How Ordering & Full Payment Works Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="glass-panel p-8 sm:p-12 rounded-3xl border border-purple-500/30 bg-gradient-to-r from-purple-950/40 via-[#18132a] to-pink-950/40">
+        <div className="glass-panel p-8 sm:p-12 rounded-2xl border border-purple-500/30 bg-gradient-to-r from-purple-950/40 via-[#18132a] to-pink-950/40">
           <div className="text-center max-w-2xl mx-auto mb-10">
-            <span className="text-xs font-extrabold text-emerald-400 uppercase tracking-widest block mb-1">
-              Secure & Fast Process
+            <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider block mb-1">
+              Secure &amp; Fast Process
             </span>
             <h2 className="text-3xl font-black text-white font-display">
               How Full Online Payment Works
@@ -309,20 +319,20 @@ export const Home = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
             <div className="p-6 rounded-2xl bg-slate-900/80 border border-slate-800">
-              <span className="w-8 h-8 rounded-full bg-pink-500/20 text-pink-400 font-black text-xs inline-flex items-center justify-center mb-3">1</span>
-              <h4 className="font-bold text-white text-sm mb-1">Select & Customize Box</h4>
+              <span className="w-10 h-10 rounded-full bg-pink-500/15 border border-pink-500/30 text-pink-400 font-extrabold text-sm inline-flex items-center justify-center mb-3">1</span>
+              <h3 className="font-bold text-white text-sm mb-1">Select &amp; Customize Box</h3>
               <p className="text-xs text-slate-400">Pick your favorite mystery box tier or customize birthday details in seconds.</p>
             </div>
 
             <div className="p-6 rounded-2xl bg-slate-900/80 border border-slate-800">
-              <span className="w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 font-black text-xs inline-flex items-center justify-center mb-3">2</span>
-              <h4 className="font-bold text-white text-sm mb-1">Instant Full Online Payment</h4>
+              <span className="w-10 h-10 rounded-full bg-purple-500/15 border border-purple-500/30 text-purple-400 font-extrabold text-sm inline-flex items-center justify-center mb-3">2</span>
+              <h3 className="font-bold text-white text-sm mb-1">Instant Full Online Payment</h3>
               <p className="text-xs text-slate-400">Complete 100% full online payment for your item safely at checkout.</p>
             </div>
 
             <div className="p-6 rounded-2xl bg-slate-900/80 border border-slate-800">
-              <span className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 font-black text-xs inline-flex items-center justify-center mb-3">3</span>
-              <h4 className="font-bold text-white text-sm mb-1">Express Dispatch & Delivery</h4>
+              <span className="w-10 h-10 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-extrabold text-sm inline-flex items-center justify-center mb-3">3</span>
+              <h3 className="font-bold text-white text-sm mb-1">Express Dispatch &amp; Delivery</h3>
               <p className="text-xs text-slate-400">Your surprise gift box is packed and delivered directly to your doorstep!</p>
             </div>
           </div>
