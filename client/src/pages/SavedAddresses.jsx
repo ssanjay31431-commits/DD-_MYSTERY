@@ -24,7 +24,7 @@ export const SavedAddresses = () => {
   const fetchAddresses = async () => {
     try {
       const { data } = await API.get('/addresses');
-      setAddresses(data);
+      setAddresses(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error(err);
     } finally {

@@ -32,7 +32,7 @@ export const AdminProducts = () => {
     setError('');
     try {
       const { data } = await API.get('/products', { params: { includeInactive: true, page, limit: 12 } });
-      setProducts(data.products || (Array.isArray(data) ? data : []));
+      setProducts(Array.isArray(data?.products) ? data.products : Array.isArray(data) ? data : []);
       setHasNext(data.hasNext);
     } catch (err) {
       console.error('Admin product request failed:', err);

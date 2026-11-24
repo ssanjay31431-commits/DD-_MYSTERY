@@ -48,7 +48,17 @@ API.interceptors.request.use(
 
 // Response interceptor to handle token expiration & 401 unauthorized cleanly
 API.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // A misrouted /api request can get the SPA's index.html back with 200; never hand that to pages as data.
+    const contentType = String(response.headers?.['content-type'] || '');
+    if (contentType.includes('text/html') || (typeof response.data === 'string' && /^\s*<!doctype html/i.test(response.data))) {
+      const error = new Error('The server returned a web page instead of API data. Check the API URL configuration.');
+      error.config = response.config;
+      error.response = { ...response, status: 502, data: { message: 'Backend API is unreachable from this site. Please try again shortly.' } };
+      return Promise.reject(error);
+    }
+    return response;
+  },
   async (error) => {
     const config = error.config;
     const responseStatus = error.response?.status;
@@ -72,6 +82,7 @@ API.interceptors.response.use(
     if (status === 401) {
       const isAuthRoute = requestUrl.includes('/auth/login') || requestUrl.includes('/auth/register') || requestUrl.includes('/auth/google');
 
+      // Clear expired token & user state if 401 occurs on protected endpoints
       const hadToken = Boolean(localStorage.getItem('dd_token'));
       localStorage.removeItem('dd_token');
       localStorage.removeItem('dd_user');

@@ -14,7 +14,7 @@ export const MyOrders = () => {
       try {
         const { data } = await API.get('/orders');
         if (Array.isArray(data)) {
-          setOrders(data);
+          setOrders(Array.isArray(data) ? data : []);
         }
       } catch (err) {
         console.warn('API get orders notice:', err.message);

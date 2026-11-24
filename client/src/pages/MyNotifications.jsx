@@ -11,7 +11,7 @@ export const MyNotifications = () => {
   const fetchNotifications = async () => {
     try {
       const { data } = await API.get('/notifications');
-      setNotifications(data || []);
+      setNotifications(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching notifications:', error);
     } finally {
