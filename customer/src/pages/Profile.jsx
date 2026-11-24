@@ -21,7 +21,7 @@ export const Profile = () => {
     const fetchOrders = async () => {
       try {
         const { data } = await API.get('/orders');
-        setOrders(data);
+        setOrders(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error(err);
       }

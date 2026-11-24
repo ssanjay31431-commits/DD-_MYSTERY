@@ -5,6 +5,8 @@ import react from '@vitejs/plugin-react';
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   const apiUrl = env.VITE_API_URL;
+  // `vite preview` serves the production build on localhost, where the app calls /api; send that to the live backend.
+  const previewApiTarget = (apiUrl || 'https://dd-mystery-production.up.railway.app').replace(/\/api\/?$/, '').replace(/\/$/, '');
 
   return {
     plugins: [react()],
@@ -26,6 +28,14 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true
         }
       } : {}
+    },
+    preview: {
+      proxy: {
+        '/api': {
+          target: previewApiTarget,
+          changeOrigin: true
+        }
+      }
     }
   };
 });

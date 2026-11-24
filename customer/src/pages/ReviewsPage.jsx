@@ -18,7 +18,7 @@ export const ReviewsPage = () => {
     const fetchReviews = async () => {
       try {
         const { data } = await API.get('/reviews');
-        setReviews(data);
+        setReviews(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error(err);
       } finally {
@@ -51,7 +51,7 @@ export const ReviewsPage = () => {
       setComment('');
       // Refresh list
       const { data } = await API.get('/reviews');
-      setReviews(data);
+      setReviews(Array.isArray(data) ? data : []);
     } catch (err) {
       addToast(err.response?.data?.message || 'Error submitting review', 'error');
     }

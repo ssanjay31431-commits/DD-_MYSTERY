@@ -52,7 +52,7 @@ import { MobileBottomNav } from './components/common/MobileBottomNav';
 
 function CustomerLayout({ children }) {
   return (
-    <div className="flex flex-col min-h-screen bg-[#0f0c1b] text-slate-100 overflow-x-clip">
+    <div className="flex flex-col min-h-screen text-slate-100 overflow-x-clip">
       <Navbar />
       <main className="flex-grow pb-20 md:pb-0">{children}</main>
       <Footer />

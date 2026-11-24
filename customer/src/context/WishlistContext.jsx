@@ -14,7 +14,7 @@ export const WishlistProvider = ({ children }) => {
     if (!user) return;
     try {
       const { data } = await API.get('/wishlist');
-      setWishlist(data.products || []);
+      setWishlist(Array.isArray(data?.products) ? data.products : []);
     } catch (error) {
       console.error('[Wishlist Error]', error);
     }
@@ -36,7 +36,7 @@ export const WishlistProvider = ({ children }) => {
 
     try {
       const { data } = await API.post('/wishlist/toggle', { productId });
-      setWishlist(data.products || []);
+      setWishlist(Array.isArray(data?.products) ? data.products : []);
       const exists = (data.products || []).some((p) => (p._id || p) === productId);
       if (exists) {
         addToast('Saved to Wishlist!', 'success');

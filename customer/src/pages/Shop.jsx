@@ -33,7 +33,7 @@ export const Shop = () => {
             setHasNext(matchingProducts.length > start + 12);
             return;
           }
-          setProducts(data.products || []);
+          setProducts(Array.isArray(data?.products) ? data.products : []);
           setHasNext(data.hasNext);
         })
         .catch((err) => {
