@@ -1,6 +1,38 @@
 import React, { useState, useRef } from 'react';
 import { UploadCloud, Image as ImageIcon, X, RefreshCw, Link as LinkIcon, Check } from 'lucide-react';
 
+const MAX_IMAGE_DIMENSION = 1600;
+const IMAGE_QUALITY = 0.82;
+
+// Phone photos are often 3-10 MB; as base64 they make product saves slow or exceed the
+// server's body limit. Downscale and re-encode to WebP before storing the data URI.
+const compressImage = (dataUrl, mimeType) => new Promise((resolve) => {
+  if (mimeType === 'image/gif' || mimeType === 'image/svg+xml') {
+    resolve(dataUrl);
+    return;
+  }
+
+  const img = new Image();
+  img.onload = () => {
+    try {
+      const scale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(img.width, img.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      let compressed = canvas.toDataURL('image/webp', IMAGE_QUALITY);
+      if (!compressed.startsWith('data:image/webp')) {
+        compressed = canvas.toDataURL('image/jpeg', IMAGE_QUALITY);
+      }
+      resolve(compressed.length < dataUrl.length ? compressed : dataUrl);
+    } catch {
+      resolve(dataUrl);
+    }
+  };
+  img.onerror = () => resolve(dataUrl);
+  img.src = dataUrl;
+});
+
 export const ImageUploader = ({ value, onChange, label = 'Upload Image', placeholder = 'Click or drag image file here...' }) => {
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [urlInputValue, setUrlInputValue] = useState('');
@@ -16,11 +48,12 @@ export const ImageUploader = ({ value, onChange, label = 'Upload Image', placeho
     }
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       const base64 = event.target?.result;
       if (base64) {
-        onChange(base64);
+        onChange(await compressImage(base64, file.type));
       }
+      e.target.value = '';
     };
     reader.readAsDataURL(file);
   };

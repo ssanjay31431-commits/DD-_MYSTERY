@@ -446,10 +446,13 @@ const adminGetPendingPayments = async (req, res) => {
       .populate('customer', 'name email phone')
       .populate({
         path: 'order',
+        // Only the fields the admin list shows; full orders carry base64 image snapshots.
+        select: 'orderId orderNumber totalAmount orderStatus paymentInfo.status paymentInfo.transactionId createdAt user',
         populate: { path: 'user', select: 'name email phone' }
       })
       .sort({ createdAt: -1 })
-      .limit(100);
+      .limit(100)
+      .lean();
 
     res.json(payments);
   } catch (error) {

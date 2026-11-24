@@ -117,17 +117,29 @@ export const ProductForm = () => {
       deliveryCharge: Number(deliveryCharge)
     };
 
+    // Payloads carry base64 images, so allow more than the default 12s API timeout.
+    const saveConfig = { timeout: 120000 };
+
     try {
       if (isEdit) {
-        await API.put(`/products/${id}`, payload);
+        await API.put(`/products/${id}`, payload, saveConfig);
         addToast('Mystery Box updated successfully');
       } else {
-        await API.post('/products', payload);
+        await API.post('/products', payload, saveConfig);
         addToast('New Mystery Box published to Customer Website!');
       }
       navigate('/admin/products');
     } catch (err) {
-      addToast(err.response?.data?.message || 'Failed to save product', 'error');
+      const status = err.response?.status;
+      let message = err.response?.data?.message || 'Failed to save product';
+      if (err.code === 'ECONNABORTED') {
+        message = 'Saving took too long. Try smaller images or check your connection, then save again.';
+      } else if (status === 413) {
+        message = 'Images are too large. Use smaller photos (or image URLs) and try again.';
+      } else if (status === 401) {
+        message = 'Your admin session expired. Please log in again and re-submit the product.';
+      }
+      addToast(message, 'error');
     } finally {
       setLoading(false);
     }
