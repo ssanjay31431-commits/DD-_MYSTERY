@@ -30,8 +30,31 @@ export const Home = () => {
     return () => controller.abort();
   }, [reloadKey]);
 
+  // Marvel Edition is the hero ad, so fetch it directly instead of hoping it is among the first products.
+  const [marvelProduct, setMarvelProduct] = useState(null);
+  const [marvelLoading, setMarvelLoading] = useState(true);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    API.get('/products', { params: { search: 'marvel', limit: 5 }, signal: controller.signal })
+      .then(({ data }) => {
+        const list = Array.isArray(data?.products) ? data.products : Array.isArray(data) ? data : [];
+        setMarvelProduct(list.find((p) => /marvel/i.test(p.name || '')) || null);
+      })
+      .catch((err) => {
+        if (!controller.signal.aborted) console.error('Marvel product request failed:', err);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setMarvelLoading(false);
+      });
+    return () => controller.abort();
+  }, []);
+
+  const marvelSavings = marvelProduct?.originalPrice > marvelProduct?.price
+    ? Math.round((1 - marvelProduct.price / marvelProduct.originalPrice) * 100)
+    : 0;
+
   const nostalgiaBox = products.find((p) => p.price === 499) || products[0];
-  const chocoBox = products.find((p) => p.price === 199) || products[1];
   const diwaliProduct = products.find((product) =>
     /diwali/i.test([product.name, product.tagline, product.tag].filter(Boolean).join(' '))
   );
@@ -147,7 +170,7 @@ export const Home = () => {
               </div>
 
               {/* Trust Badges */}
-              <div className="frost-glass mt-2 p-4 rounded-2xl grid grid-cols-1 xs:grid-cols-3 gap-3 sm:gap-4 max-w-lg mx-auto lg:mx-0">
+              <div className="frost-glass mt-2 p-4 rounded-2xl grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 max-w-lg mx-auto lg:mx-0">
                 <div className="text-center lg:text-left">
                   <span className="block text-xl font-black ice-text font-display">10,000+</span>
                   <span className="text-xs text-slate-400 font-medium">Happy Surprises</span>
@@ -206,75 +229,88 @@ export const Home = () => {
                 </div>
               </div>
             ) : (
-            <div className="relative">
-              {/* Frozen glass showcase panel */}
-              <div className="frost-glass rounded-[2rem] p-5 sm:p-7">
-                <div className="flex items-center justify-between mb-5">
-                  <div>
-                    <p className="text-[10px] font-extrabold uppercase tracking-[0.3em] text-sky-300">Winter Collection</p>
-                    <p className="font-display text-lg sm:text-xl font-black text-white">Unwrap the Frost ❄️</p>
+            <div className="order-first lg:order-none lg:self-start">
+              {marvelLoading ? (
+                <div className="marvel-ad h-[460px] animate-pulse" aria-label="Loading Marvel Edition" />
+              ) : marvelProduct ? (
+                <Link
+                  to={`/product/${marvelProduct._id}`}
+                  className="marvel-ad group block p-5 sm:p-7 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-300"
+                  aria-label={`${marvelProduct.name}: view details and order for ₹${marvelProduct.price}`}
+                >
+                  {/* Top ribbon */}
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-red-600 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-white shadow-lg shadow-red-600/40">
+                      <span className="h-1.5 w-1.5 rounded-full bg-white animate-ping" aria-hidden="true" /> New Drop
+                    </span>
+                    {marvelSavings > 0 && (
+                      <span className="rounded-full border border-amber-300/50 bg-amber-300/15 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-amber-200">
+                        Save {marvelSavings}%
+                      </span>
+                    )}
                   </div>
-                  <span className="hidden xs:inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-sky-100">
-                    <span className="h-1.5 w-1.5 rounded-full bg-teal-300 shadow-[0_0_8px_#5eead4]" /> In Stock
-                  </span>
-                </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {[
-                    {
-                      tag: '90s Nostalgia',
-                      title: '90s KIDS EDITION',
-                      quote: '"Relive Your Childhood!"',
-                      text: 'Poppins, Boomer, Water Game, Glass Marbles & 16+ Items.',
-                      price: '₹499',
-                      emoji: '🕹️',
-                      to: nostalgiaBox ? `/product/${nostalgiaBox._id}` : '/shop'
-                    },
-                    {
-                      tag: 'Choco Surprise',
-                      title: 'CHOCO MYSTERY BOX',
-                      quote: '"5 Surprise Gifts Inside!"',
-                      text: 'Large Brand Chocolates + MrBeast Surprise Chance!',
-                      price: '₹199',
-                      emoji: '🍫',
-                      to: chocoBox ? `/product/${chocoBox._id}` : '/shop'
-                    }
-                  ].map((card) => (
-                    <div
-                      key={card.title}
-                      className="frost-glass frost-glass-hover frost-sheen p-5 rounded-3xl flex flex-col justify-between gap-4"
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <span className="px-2.5 py-1 rounded-full bg-sky-300/15 border border-sky-200/30 text-sky-100 font-bold text-[10px] uppercase tracking-wider">
-                          {card.tag}
-                        </span>
-                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-white/10 text-lg" aria-hidden="true">
-                          {card.emoji}
-                        </span>
-                      </div>
-                      <div>
-                        <h3 className="font-black text-white text-base font-display tracking-tight">{card.title}</h3>
-                        <p className="text-xs text-sky-200 italic font-semibold">{card.quote}</p>
-                        <p className="text-xs text-slate-300/80 mt-1.5 leading-relaxed">{card.text}</p>
-                      </div>
-                      <div className="flex items-center justify-between pt-3 border-t border-white/10">
-                        <span className="text-2xl font-black ice-text font-display">{card.price}</span>
-                        <Link
-                          to={card.to}
-                          className="ice-button px-3.5 py-2 rounded-xl font-extrabold text-[11px] uppercase tracking-wide flex items-center gap-1 transition-all"
-                        >
-                          View <ArrowRight className="w-3.5 h-3.5" />
-                        </Link>
+                  <div className="mt-4 grid grid-cols-1 sm:grid-cols-[1fr_auto] items-center gap-4">
+                    <div className="order-2 sm:order-1 text-left">
+                      <p className="text-[11px] font-extrabold uppercase tracking-[0.3em] text-red-300">Limited Edition</p>
+                      <h2 className="marvel-title font-display text-4xl sm:text-5xl font-black leading-none tracking-tight">
+                        MARVEL
+                        <span className="block text-2xl sm:text-3xl tracking-[0.25em]">EDITION</span>
+                      </h2>
+                      <div className="mt-3 flex items-center gap-1 text-amber-300 text-xs font-bold">
+                        <Star className="h-3.5 w-3.5 fill-amber-300" /> {marvelProduct.rating || 4.9}
+                        <span className="text-slate-400 font-medium">({marvelProduct.numReviews || 0} reviews)</span>
                       </div>
                     </div>
-                  ))}
-                </div>
+                    <div className="order-1 sm:order-2 mx-auto w-40 sm:w-44 aspect-square">
+                      <img
+                        src={`${marvelProduct.image}${marvelProduct.image?.includes('?') ? '&' : '?'}width=640`}
+                        alt={marvelProduct.name}
+                        className="marvel-image h-full w-full rounded-3xl object-cover border border-white/15"
+                        onError={(e) => { e.currentTarget.src = marvelProduct.image; }}
+                      />
+                    </div>
+                  </div>
 
-                <div className="mt-5 flex items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-xs text-slate-300">
-                  <Truck className="h-4 w-4 text-sky-300 shrink-0" />
-                  <span>Packed with care &amp; delivered to your doorstep</span>
-                </div>
-              </div>
+                  {/* Perks */}
+                  <ul className="mt-5 space-y-2 text-left">
+                    <li className="marvel-ticket flex items-center gap-3 rounded-2xl border border-amber-300/40 bg-amber-300/10 px-4 py-3">
+                      <span className="text-xl" aria-hidden="true">🎟️</span>
+                      <span className="text-sm font-extrabold text-amber-100">
+                        2 FREE Avengers: Doomsday movie tickets
+                      </span>
+                    </li>
+                    <li className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3">
+                      <span className="text-xl" aria-hidden="true">🦸</span>
+                      <span className="text-sm font-semibold text-slate-100">₹500+ worth of Marvel goodies inside</span>
+                    </li>
+                    <li className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3">
+                      <span className="text-xl" aria-hidden="true">🚚</span>
+                      <span className="text-sm font-semibold text-slate-100">
+                        {marvelProduct.deliveryCharge === 0 ? 'Free delivery' : 'Fast delivery'} to your doorstep
+                      </span>
+                    </li>
+                  </ul>
+
+                  {/* Price + CTA */}
+                  <div className="mt-5 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-white/10 pt-5">
+                    <div className="text-center sm:text-left">
+                      <div className="flex items-baseline gap-2">
+                        <span className="font-display text-4xl font-black text-white">₹{marvelProduct.price}</span>
+                        {marvelProduct.originalPrice > marvelProduct.price && (
+                          <span className="text-base font-bold text-slate-400 line-through">₹{marvelProduct.originalPrice}</span>
+                        )}
+                      </div>
+                      {marvelProduct.stock > 0 && marvelProduct.stock <= 50 && (
+                        <p className="text-[11px] font-bold text-red-300">Only {marvelProduct.stock} left!</p>
+                      )}
+                    </div>
+                    <span className="marvel-cta inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-2xl px-6 py-3.5 text-sm font-black uppercase tracking-wide transition-transform group-hover:scale-105">
+                      Grab It Now <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                    </span>
+                  </div>
+                </Link>
+              ) : null}
             </div>
             )}
 
