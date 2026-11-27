@@ -7,6 +7,15 @@ export default {
   theme: {
     extend: {
       colors: {
+        glass: {
+          midnight: '#060B1F',
+          indigo: '#14103A',
+          plum: '#2A0F2E',
+          violet: '#7C5CFF',
+          cyan: '#3DD9FF',
+          magenta: '#FF4FA3',
+          gold: '#FFB84D'
+        },
         brand: {
           dark: '#0f0c1b',
           card: '#18132a',
@@ -22,8 +31,16 @@ export default {
         }
       },
       fontFamily: {
-        sans: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
-        display: ['Outfit', 'Plus Jakarta Sans', 'sans-serif']
+        sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
+        display: ['Sora', 'Inter', 'system-ui', 'sans-serif'],
+        accent: ['"Instrument Serif"', 'Georgia', 'serif']
+      },
+      borderRadius: {
+        'glass-lg': '28px',
+        'glass-md': '18px'
+      },
+      transitionTimingFunction: {
+        'out-expo': 'cubic-bezier(0.22, 1, 0.36, 1)'
       },
       animation: {
         'pulse-glow': 'pulseGlow 2s infinite alternate',

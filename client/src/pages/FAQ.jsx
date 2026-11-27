@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown, HelpCircle, Sparkles } from 'lucide-react';
+import { Plus, HelpCircle } from 'lucide-react';
 
 export const FAQ = () => {
   const faqs = [
@@ -28,32 +28,57 @@ export const FAQ = () => {
   const [openIdx, setOpenIdx] = useState(0);
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8">
-      <div className="text-center max-w-xl mx-auto space-y-2">
-        <span className="text-xs font-black text-pink-400 uppercase tracking-widest inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-pink-500/10 border border-pink-500/20">
-          <HelpCircle className="w-3.5 h-3.5" /> Help Center
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 space-y-10">
+      <div data-reveal className="text-center max-w-xl mx-auto space-y-3">
+        <span className="pill pill-aurora px-3.5 py-1 text-xs font-semibold text-white/90 tracking-wide">
+          <HelpCircle className="w-3.5 h-3.5 text-[#3DD9FF]" /> Help Center
         </span>
-        <h1 className="text-3xl font-black text-white font-display">Frequently Asked Questions</h1>
-        <p className="text-slate-400 text-sm">Everything you need to know about customizing and ordering DD Mystery Boxes.</p>
+        <h1 className="text-3xl sm:text-5xl font-extrabold font-display text-shimmer">Frequently Asked Questions</h1>
+        <p className="text-white/60 text-sm sm:text-base">Everything you need to know about customizing and ordering DD Mystery Boxes.</p>
       </div>
 
-      <div className="space-y-4">
-        {faqs.map((faq, idx) => (
-          <div key={idx} className="glass-panel rounded-2xl border border-purple-500/20 overflow-hidden">
-            <button
-              onClick={() => setOpenIdx(openIdx === idx ? null : idx)}
-              className="w-full p-5 text-left font-bold text-white text-base flex justify-between items-center hover:text-pink-400 transition-colors"
+      <div className="space-y-3">
+        {faqs.map((faq, idx) => {
+          const isOpen = openIdx === idx;
+          return (
+            <div
+              key={idx}
+              data-reveal
+              style={{ '--reveal-delay': `${idx * 70}ms` }}
             >
-              <span>{faq.q}</span>
-              <ChevronDown className={`w-5 h-5 transition-transform ${openIdx === idx ? 'rotate-180 text-pink-400' : 'text-slate-500'}`} />
-            </button>
-            {openIdx === idx && (
-              <div className="px-5 pb-5 text-xs text-slate-300 leading-relaxed border-t border-slate-800/80 pt-3">
-                {faq.a}
+              <div className={`glass-2 rounded-[18px] transition-shadow duration-500 ${isOpen ? 'glass-glow' : ''}`}>
+                <h2 className="text-base">
+                  <button
+                    id={`faq-q-${idx}`}
+                    onClick={() => setOpenIdx(isOpen ? null : idx)}
+                    aria-expanded={isOpen}
+                    aria-controls={`faq-a-${idx}`}
+                    className="w-full p-5 sm:px-6 text-left font-semibold text-white text-[15px] sm:text-base flex justify-between items-center gap-4 rounded-[18px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#3DD9FF]"
+                  >
+                    <span>{faq.q}</span>
+                    <span className="accordion-icon glass-icon w-8 h-8 rounded-full text-white" aria-hidden="true">
+                      <Plus className="w-4 h-4" />
+                    </span>
+                  </button>
+                </h2>
+                <div
+                  id={`faq-a-${idx}`}
+                  role="region"
+                  aria-labelledby={`faq-q-${idx}`}
+                  className="accordion-panel"
+                  data-open={isOpen}
+                  inert={isOpen ? undefined : ''}
+                >
+                  <div>
+                    <p className="mx-5 sm:mx-6 pb-5 pt-4 border-t border-white/10 text-sm text-white/65 leading-relaxed">
+                      {faq.a}
+                    </p>
+                  </div>
+                </div>
               </div>
-            )}
-          </div>
-        ))}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

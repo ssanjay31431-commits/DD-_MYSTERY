@@ -1,9 +1,10 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Sparkles, Check, ShoppingBag, Heart, Star, Eye, Zap } from 'lucide-react';
+import { Sparkles, Heart, Eye, Zap } from 'lucide-react';
 import { useWishlist } from '../../context/WishlistContext';
 import { OptimizedImage } from '../common/OptimizedImage';
 import { safeSetSessionItem, sanitizeProduct } from '../../utils/storage';
+import { productAccent } from '../../hooks/useGlassFx';
 
 const diwaliCampaignStartsAt = Date.parse('2026-10-29T00:00:00+05:30');
 const diwaliCampaignEndsAt = Date.parse('2026-11-09T00:00:00+05:30');
@@ -16,6 +17,7 @@ export const ProductCard = ({ product }) => {
     /diwali/i.test([product.name, product.tagline, product.tag].filter(Boolean).join(' ')) &&
     Date.now() >= diwaliCampaignStartsAt &&
     Date.now() < diwaliCampaignEndsAt;
+  const accent = isDiwaliEdition ? '255, 160, 60' : productAccent(product);
 
   const contentsCount = product.contents?.length || (product.price === 499 ? 16 : 5);
   const contentsLabel = product.price === 499 ? `${contentsCount}+ Nostalgia Items` : `${contentsCount} Surprise Gifts`;
@@ -40,22 +42,29 @@ export const ProductCard = ({ product }) => {
   };
 
   return (
-    <div className={`group relative glass-panel glass-panel-hover rounded-3xl p-4 sm:p-6 flex flex-col justify-between overflow-hidden border w-full ${
-      isDiwaliEdition
-        ? 'border-amber-300/70 bg-gradient-to-b from-amber-950/35 via-[#18132a] to-[#18132a] shadow-[0_0_36px_rgba(245,158,11,0.2)]'
-        : 'border-purple-500/20'
-    }`}>
+    <div
+      style={{ '--accent-rgb': accent }}
+      className="group glass-2 glass-glow glass-lift glass-sheen rounded-[28px] p-4 sm:p-5 flex flex-col justify-between w-full"
+    >
+      {/* Accent glow bleeding in from the top */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -top-28 left-1/2 -translate-x-1/2 w-[85%] h-56 rounded-full opacity-50 transition-opacity duration-700 group-hover:opacity-80"
+        style={{ background: `radial-gradient(closest-side, rgba(${accent}, 0.55), transparent)` }}
+      />
       {isDiwaliEdition && (
         <div aria-hidden="true" className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-rose-500 via-amber-300 to-orange-500" />
       )}
-      
+
       {/* Product Tag / Badge */}
       {(product.tag || isDiwaliEdition) && (
-        <span className={`absolute top-4 left-4 z-10 px-3 py-1 rounded-full text-white font-extrabold text-[10px] tracking-wider uppercase shadow-lg ${
-          isDiwaliEdition
-            ? 'bg-gradient-to-r from-rose-600 via-orange-500 to-amber-400 shadow-amber-500/40'
-            : 'bg-gradient-to-r from-pink-500 to-purple-600 shadow-pink-500/30'
-        }`}>
+        <span
+          className="pill absolute top-7 left-7 z-10 px-3 py-1 text-white font-bold text-[10px] tracking-wider uppercase"
+          style={{
+            background: `linear-gradient(135deg, rgba(${accent}, 0.95), rgba(${accent}, 0.6))`,
+            boxShadow: `inset 0 1px 0 rgba(255,255,255,0.4), 0 0 20px -4px rgba(${accent}, 0.9)`
+          }}
+        >
           {isDiwaliEdition ? 'Diwali Edition' : product.tag}
         </span>
       )}
@@ -63,27 +72,29 @@ export const ProductCard = ({ product }) => {
       {/* Wishlist Toggle Button */}
       <button
         onClick={() => toggleWishlist(product._id)}
-        className="absolute top-4 right-4 z-10 p-2 rounded-full bg-slate-900/80 backdrop-blur-md border border-slate-700 text-slate-300 hover:text-pink-400 hover:scale-110 transition-all"
+        className="glass-round absolute top-6 right-6 z-10 w-9 h-9 bg-[rgba(6,11,31,0.45)]"
         title="Save to Wishlist"
+        aria-label={isWishlisted ? 'Remove from wishlist' : 'Save to wishlist'}
+        aria-pressed={isWishlisted}
       >
-        <Heart className={`w-4 h-4 ${isWishlisted ? 'text-pink-500 fill-pink-500' : ''}`} />
+        <Heart className={`w-4 h-4 ${isWishlisted ? 'text-[#FF4FA3] fill-[#FF4FA3]' : ''}`} />
       </button>
 
       {/* Product Visual Image */}
-      <div className={`relative w-full aspect-square rounded-2xl overflow-hidden mb-5 bg-slate-900 flex items-center justify-center group-hover:scale-[1.02] transition-transform duration-500 ${
-        isDiwaliEdition ? 'ring-2 ring-amber-300/70 ring-offset-2 ring-offset-[#18132a]' : ''
+      <div className={`relative w-full aspect-square rounded-[18px] overflow-hidden mb-5 bg-white/[0.03] ring-1 ring-white/10 flex items-center justify-center ${
+        isDiwaliEdition ? 'ring-2 ring-amber-300/70' : ''
       }`}>
         <OptimizedImage
           src={product.image}
           alt={product.name}
           sizes="(max-width: 768px) 100vw, 33vw"
-          className="w-full h-full object-cover rounded-2xl group-hover:opacity-90 transition-opacity"
+          className="w-full h-full object-cover rounded-[18px] transition-transform duration-700 ease-out-expo group-hover:scale-[1.05]"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#18132a] via-transparent to-transparent opacity-80" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0b0a26]/85 via-transparent to-transparent" />
 
         {/* Contents Pill Overlay */}
-        <div className="absolute bottom-3 left-3 flex items-center gap-1.5 bg-slate-950/90 backdrop-blur-md px-3 py-1 rounded-lg border border-pink-500/40 text-pink-300 text-xs font-bold">
-          <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+        <div className="pill glass-1 absolute bottom-3 left-3 px-3 py-1 text-white text-xs font-semibold">
+          <Sparkles className="w-3.5 h-3.5 text-[#FFB84D]" />
           <span>{contentsLabel}</span>
         </div>
       </div>
@@ -97,36 +108,34 @@ export const ProductCard = ({ product }) => {
       )}
 
       {/* Product Header & Description */}
-      <div>
-        <h3 className={`text-xl font-black font-display tracking-wide mb-1 transition-colors ${
-          isDiwaliEdition ? 'text-amber-100 group-hover:text-amber-300' : 'text-white group-hover:text-pink-400'
-        }`}>
+      <div className="relative">
+        <h3 className="text-xl font-bold font-display tracking-[-0.02em] mb-1 text-white">
           {product.name}
         </h3>
         {product.tagline && (
-          <p className="text-xs font-bold text-amber-300 mb-2 italic">
+          <p className="text-xs font-semibold mb-2 italic" style={{ color: `rgb(${accent})` }}>
             "{product.tagline}"
           </p>
         )}
-        <p className="text-xs text-slate-300 line-clamp-2 mb-4 leading-relaxed">
+        <p className="text-sm text-white/60 line-clamp-2 mb-4 leading-relaxed">
           {product.description}
         </p>
 
         {/* What's Inside Preview Items */}
         {product.contents && product.contents.length > 0 && (
-          <div className="mb-5 p-3 rounded-xl bg-slate-950/60 border border-purple-500/20">
-            <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1.5">What's Inside Preview:</span>
-            <div className="flex flex-wrap gap-1">
+          <div className="mb-5 p-3 rounded-[14px] bg-white/[0.03] ring-1 ring-white/[0.07]">
+            <span className="text-[10px] font-semibold text-white/45 uppercase tracking-wider block mb-2">What's Inside Preview:</span>
+            <div className="flex flex-wrap gap-1.5">
               {product.contents.slice(0, 4).map((item, idx) => {
                 const itemName = typeof item === 'object' ? item.name : item;
                 return (
-                  <span key={idx} className="px-2 py-0.5 rounded-md bg-purple-950/60 text-purple-200 text-[10px] font-semibold border border-purple-500/20">
+                  <span key={idx} className="chip px-2 py-0.5 text-white/75 text-[10px] font-medium">
                     ✓ {itemName}
                   </span>
                 );
               })}
               {product.contents.length > 4 && (
-                <span className="px-2 py-0.5 rounded-md bg-pink-950/60 text-pink-300 text-[10px] font-bold">
+                <span className="chip px-2 py-0.5 text-[10px] font-semibold" style={{ color: `rgb(${accent})` }}>
                   +{product.contents.length - 4} More Items
                 </span>
               )}
@@ -136,19 +145,19 @@ export const ProductCard = ({ product }) => {
       </div>
 
       {/* Pricing & Call-to-action */}
-      <div className="pt-4 border-t border-slate-800 flex flex-col gap-3">
+      <div className="relative pt-4 border-t border-white/10 flex flex-col gap-3">
         <div className="flex items-baseline justify-between">
           <div>
-            <span className="text-2xl font-black text-white font-display">
+            <span className="text-2xl font-extrabold text-white font-display tracking-[-0.02em]">
               ₹{product.price}
             </span>
             {product.originalPrice && product.originalPrice > product.price && (
-              <span className="ml-2 text-sm text-slate-400 line-through">
+              <span className="ml-2 text-sm text-white/35 line-through">
                 ₹{product.originalPrice}
               </span>
             )}
           </div>
-          <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md">
+          <span className="pill text-[10px] font-semibold text-emerald-300 bg-emerald-400/10 ring-1 ring-emerald-300/20 px-2.5 py-0.5">
             Full Online Payment
           </span>
         </div>
@@ -156,27 +165,23 @@ export const ProductCard = ({ product }) => {
         <div className="flex flex-col gap-2">
           <button
             onClick={handleBuyNow}
-            className={`w-full py-2.5 px-3 rounded-xl text-white font-black text-xs uppercase tracking-wider shadow-lg flex items-center justify-center gap-1.5 transition-all hover:scale-[1.02] ${
-              isDiwaliEdition
-                ? 'bg-gradient-to-r from-rose-600 via-orange-500 to-amber-400 hover:from-rose-500 hover:to-amber-300 shadow-amber-500/25'
-                : 'bg-gradient-to-r from-pink-500 via-purple-600 to-amber-500 hover:from-pink-600 hover:to-amber-600 shadow-pink-500/25'
-            }`}
+            className="btn btn-accent w-full h-11 px-3 text-xs uppercase tracking-wider"
           >
             <Zap className="w-4 h-4 fill-white" /> Buy Now (₹{product.price})
           </button>
           <div className="grid grid-cols-2 gap-2">
             <Link
               to={`/product/${product._id}`}
-              className="w-full py-2 px-2 rounded-xl bg-slate-900 border border-purple-500/30 text-slate-200 hover:text-white hover:border-purple-500 font-bold text-xs text-center flex items-center justify-center gap-1 transition-all"
+              className="btn btn-glass btn-flat w-full h-10 px-2 text-xs font-semibold"
             >
               <Eye className="w-3.5 h-3.5" /> Details
             </Link>
 
             <Link
               to={`/customize/${product._id}`}
-              className="w-full py-2 px-2 rounded-xl bg-slate-900 border border-purple-500/30 text-slate-200 hover:text-white hover:border-purple-500 font-bold text-xs text-center flex items-center justify-center gap-1 transition-all"
+              className="btn btn-glass btn-flat w-full h-10 px-2 text-xs font-semibold"
             >
-              <Sparkles className="w-3.5 h-3.5 text-pink-400" /> Customize
+              <Sparkles className="w-3.5 h-3.5" style={{ color: `rgb(${accent})` }} /> Customize
             </Link>
           </div>
         </div>

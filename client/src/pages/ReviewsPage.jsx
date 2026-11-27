@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Star, CheckCircle2, MessageSquarePlus, Sparkles } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Star, CheckCircle2, MessageSquarePlus, ChevronLeft, ChevronRight } from 'lucide-react';
 import API from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -13,6 +13,14 @@ export const ReviewsPage = () => {
   const [comment, setComment] = useState('');
   const [rating, setRating] = useState(5);
   const [showAddModal, setShowAddModal] = useState(false);
+  const scrollerRef = useRef(null);
+
+  const scrollReviews = (direction) => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    el.scrollBy({ left: direction * el.clientWidth * 0.85, behavior: reduce ? 'auto' : 'smooth' });
+  };
 
   useEffect(() => {
     const fetchReviews = async () => {
@@ -58,35 +66,48 @@ export const ReviewsPage = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8">
-      
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 space-y-8">
+
+      <div data-reveal className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div>
-          <span className="text-xs font-black text-amber-400 uppercase tracking-widest block mb-1">
+          <span className="eyebrow block mb-2">
             Verified Unboxing Experiences
           </span>
-          <h1 className="text-3xl font-black text-white font-display">Customer Birthday Reviews</h1>
+          <h1 className="text-3xl sm:text-5xl font-extrabold font-display text-shimmer">Customer Birthday Reviews</h1>
         </div>
 
-        {user && (
-          <button
-            onClick={() => setShowAddModal(!showAddModal)}
-            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 text-white font-bold text-xs uppercase flex items-center gap-2 shadow-lg shadow-pink-500/20"
-          >
-            <MessageSquarePlus className="w-4 h-4" /> Write a Review
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {reviews.length > 1 && (
+            <div className="hidden sm:flex items-center gap-2">
+              <button onClick={() => scrollReviews(-1)} className="glass-round w-11 h-11" aria-label="Previous reviews">
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <button onClick={() => scrollReviews(1)} className="glass-round w-11 h-11" aria-label="Next reviews">
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          )}
+          {user && (
+            <button
+              onClick={() => setShowAddModal(!showAddModal)}
+              className="btn btn-luminous h-11 px-5 text-xs uppercase tracking-wide"
+            >
+              <MessageSquarePlus className="w-4 h-4" /> Write a Review
+            </button>
+          )}
+        </div>
       </div>
 
       {showAddModal && (
-        <form onSubmit={handleAddReview} className="glass-panel p-6 rounded-3xl border border-pink-500/30 space-y-4 max-w-xl mx-auto">
-          <h3 className="text-sm font-bold text-white uppercase">Share Your Birthday Surprise Review</h3>
+        <form onSubmit={handleAddReview} className="glass-2 p-6 sm:p-8 rounded-[28px] space-y-4 max-w-xl mx-auto">
+          <h3 className="text-base font-semibold text-white">Share Your Birthday Surprise Review</h3>
           <div>
-            <label className="block text-xs text-slate-300 mb-1">Rating (1 to 5 Stars)</label>
+            <label htmlFor="review-rating" className="block text-xs text-white/60 mb-1.5">Rating (1 to 5 Stars)</label>
             <select
+              id="review-rating"
               value={rating}
               onChange={(e) => setRating(Number(e.target.value))}
-              className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs"
+              className="glass-input px-3.5 py-2.5 text-sm"
             >
               <option value="5">5 ★ - Outstanding Birthday Surprise!</option>
               <option value="4">4 ★ - Great Experience</option>
@@ -94,56 +115,81 @@ export const ReviewsPage = () => {
             </select>
           </div>
           <div>
-            <label className="block text-xs text-slate-300 mb-1">Your Review Comment</label>
+            <label htmlFor="review-comment" className="block text-xs text-white/60 mb-1.5">Your Review Comment</label>
             <textarea
+              id="review-comment"
               required
               rows="3"
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               placeholder="Tell us about the unboxing reaction..."
-              className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs"
+              className="glass-input px-3.5 py-2.5 text-sm placeholder:text-white/35"
             />
           </div>
-          <button type="submit" className="px-6 py-2.5 rounded-xl bg-pink-500 text-white font-bold text-xs uppercase">
+          <button type="submit" className="btn btn-luminous h-11 px-6 text-xs uppercase tracking-wide">
             Submit Verified Review
           </button>
         </form>
       )}
 
-      {/* Reviews Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {reviews.length === 0 ? (
-          <div className="col-span-3 text-center py-12 text-slate-400">No reviews published yet. Be the first to review!</div>
-        ) : (
-          reviews.map((rev) => (
-            <div key={rev._id} className="glass-panel p-6 rounded-2xl border border-purple-500/20 space-y-3 flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-1 text-amber-400">
-                    {[...Array(rev.rating || 5)].map((_, i) => (
-                      <Star key={i} className="w-4 h-4 fill-amber-400" />
-                    ))}
+      {/* Reviews: horizontal glass carousel */}
+      {reviews.length === 0 ? (
+        <div className="glass-1 rounded-[28px] text-center py-14 text-white/55">
+          {loading ? 'Loading reviews...' : 'No reviews published yet. Be the first to review!'}
+        </div>
+      ) : (
+        <div
+          ref={scrollerRef}
+          className="h-scroller -mx-4 sm:-mx-6 lg:-mx-8"
+          role="region"
+          aria-label="Customer reviews"
+          tabIndex={0}
+        >
+          {reviews.map((rev, idx) => {
+            const name = rev.user?.name || 'Happy Customer';
+            return (
+              <article
+                key={rev._id}
+                data-reveal
+                style={{ '--reveal-delay': `${Math.min(idx, 5) * 80}ms` }}
+              >
+                <div className="glass-2 glass-lift h-full p-6 rounded-[28px] flex flex-col justify-between gap-5">
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-0.5 text-[#FFB84D]" aria-label={`${rev.rating || 5} out of 5 stars`}>
+                        {[...Array(rev.rating || 5)].map((_, i) => (
+                          <Star key={i} className="w-4 h-4 fill-[#FFB84D]" aria-hidden="true" />
+                        ))}
+                      </div>
+                      {rev.isVerifiedPurchase && (
+                        <span className="pill text-[10px] font-semibold text-emerald-300 bg-emerald-400/10 ring-1 ring-emerald-300/20 px-2.5 py-0.5">
+                          <CheckCircle2 className="w-3 h-3" /> Verified Purchase
+                        </span>
+                      )}
+                    </div>
+
+                    <p className="font-accent italic text-lg sm:text-xl text-white/85 leading-snug">
+                      "{rev.comment}"
+                    </p>
                   </div>
-                  {rev.isVerifiedPurchase && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
-                      <CheckCircle2 className="w-3 h-3" /> Verified Purchase
+
+                  <div className="pt-4 border-t border-white/10 flex items-center gap-3">
+                    <span className="avatar-ring w-10 h-10 shrink-0">
+                      <span className="w-full h-full rounded-full bg-[#14103A] flex items-center justify-center font-display font-bold text-sm text-white">
+                        {name.trim().charAt(0).toUpperCase() || 'H'}
+                      </span>
                     </span>
-                  )}
+                    <div className="min-w-0">
+                      <span className="block font-semibold text-white text-sm truncate">{name}</span>
+                      <span className="block text-[11px] text-white/45">{new Date(rev.createdAt).toLocaleDateString()}</span>
+                    </div>
+                  </div>
                 </div>
-
-                <p className="text-xs text-slate-200 italic leading-relaxed">
-                  "{rev.comment}"
-                </p>
-              </div>
-
-              <div className="pt-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
-                <span className="font-bold text-white">{rev.user?.name || 'Happy Customer'}</span>
-                <span className="text-[10px]">{new Date(rev.createdAt).toLocaleDateString()}</span>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
 
     </div>
   );

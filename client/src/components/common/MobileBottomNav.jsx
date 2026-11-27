@@ -53,8 +53,8 @@ export const MobileBottomNav = () => {
   };
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0c0a17]/95 backdrop-blur-2xl border-t border-purple-500/20 shadow-[0_-8px_30px_rgba(0,0,0,0.7)] px-2 py-1 pb-[max(0.5rem,env(safe-area-inset-bottom))] transition-all">
-      <div className="flex items-center justify-around max-w-md mx-auto h-14">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pointer-events-none">
+      <div className="glass-1 nav-pill is-scrolled pointer-events-auto flex items-center justify-around max-w-md mx-auto h-16 rounded-full px-1.5">
         {navItems.map((item) => {
           const active = isItemActive(item);
           const Icon = item.icon;
@@ -63,27 +63,29 @@ export const MobileBottomNav = () => {
             <Link
               key={item.label}
               to={item.path}
-              className={`relative flex flex-col items-center justify-center flex-1 h-full py-1 rounded-xl transition-all duration-200 active:scale-95 ${
+              className={`relative flex flex-col items-center justify-center flex-1 h-full py-1 rounded-full transition-all duration-300 active:scale-95 ${
                 active
-                  ? 'text-pink-400 font-extrabold'
-                  : 'text-slate-400 hover:text-slate-200 font-bold'
+                  ? 'text-white font-semibold'
+                  : 'text-white/50 hover:text-white/80 font-medium'
               }`}
             >
               {/* Active Indicator Top Pill */}
               {active && (
-                <span className="absolute top-0 w-8 h-0.5 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full shadow-lg shadow-pink-500/50" />
+                <span className="absolute inset-y-1 inset-x-0.5 rounded-full bg-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]" aria-hidden="true">
+                  <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-full bg-gradient-to-r from-[#7C5CFF] to-[#3DD9FF] shadow-[0_0_10px_rgba(61,217,255,0.9)]" />
+                </span>
               )}
 
-              <div className="relative flex items-center justify-center">
-                <Icon className={`w-5 h-5 transition-transform duration-200 ${active ? 'scale-110 text-pink-400' : 'text-slate-400'}`} />
+              <div className="relative flex items-center justify-center z-[1]">
+                <Icon className={`w-5 h-5 transition-transform duration-200 ${active ? 'scale-110 text-white' : ''}`} />
                 {item.badge > 0 && (
-                  <span className="absolute -top-1.5 -right-2.5 w-4 h-4 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 text-white font-black text-[9px] flex items-center justify-center shadow-md shadow-pink-500/50">
+                  <span className="glow-badge absolute -top-1.5 -right-2.5 min-w-[16px] h-4 px-0.5 rounded-full font-bold text-[9px] flex items-center justify-center">
                     {item.badge > 99 ? '99+' : item.badge}
                   </span>
                 )}
               </div>
 
-              <span className={`text-[10px] uppercase tracking-wider mt-1 leading-none ${active ? 'text-pink-300 font-black' : 'text-slate-400'}`}>
+              <span className={`relative z-[1] text-[9px] uppercase tracking-wider mt-1 leading-none ${active ? 'text-white' : ''}`}>
                 {item.label}
               </span>
             </Link>

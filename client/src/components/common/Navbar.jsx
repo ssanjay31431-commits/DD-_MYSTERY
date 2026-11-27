@@ -1,9 +1,34 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Gift, ShoppingBag, Heart, User, LogOut, Package, MapPin, Shield, ChevronDown, Sparkles, Menu, X } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { ShoppingBag, Heart, User, LogOut, Package, MapPin, Shield, ChevronDown, Sparkles, Menu, X, ChevronRight } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
+
+const desktopLinks = [
+  { to: '/', label: 'Home', end: true },
+  { to: '/shop', label: 'All Mystery Boxes' },
+  { to: '/reviews', label: 'Reviews' },
+  { to: '/faq', label: 'FAQ' },
+  { to: '/contact', label: 'Contact' },
+];
+
+const mobileLinks = [
+  { to: '/', label: 'Home', end: true },
+  { to: '/shop', label: 'All Mystery Boxes' },
+  { to: '/reviews', label: 'Customer Reviews' },
+  { to: '/faq', label: 'FAQ' },
+  { to: '/contact', label: 'Contact Us' },
+  { to: '/track', label: 'Track Order' },
+];
+
+const CountBadge = ({ count }) =>
+  count > 0 ? (
+    <span className="glow-badge absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full font-bold text-[10px] leading-none flex items-center justify-center">
+      {count > 99 ? '99+' : count}
+    </span>
+  ) : null;
 
 export const Navbar = () => {
   const { user, logout } = useAuth();
@@ -11,8 +36,10 @@ export const Navbar = () => {
   const { wishlistCount } = useWishlist();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
+  const { pathname } = useLocation();
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -24,6 +51,32 @@ export const Navbar = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Shrink the pill and deepen its blur once the page scrolls.
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 12);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  useEffect(() => {
+    setMobileMenuOpen(false);
+    setDropdownOpen(false);
+  }, [pathname]);
+
+  // Bottom sheet: lock page scroll and close on Escape.
+  useEffect(() => {
+    if (!mobileMenuOpen) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKey = (e) => e.key === 'Escape' && setMobileMenuOpen(false);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [mobileMenuOpen]);
+
   const handleLogout = () => {
     setDropdownOpen(false);
     setMobileMenuOpen(false);
@@ -31,143 +84,118 @@ export const Navbar = () => {
     navigate('/');
   };
 
+  const dropdownItem = 'flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-white/75 hover:bg-white/[0.08] hover:text-white transition-colors';
+
   return (
-    <header className="sticky top-0 z-50 backdrop-blur-2xl backdrop-saturate-150 bg-slate-950/40 border-b border-white/10 shadow-[inset_0_-1px_0_rgba(186,230,253,0.08),0_10px_30px_-15px_rgba(2,6,23,0.9)]">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-2">
-        
-        {/* Mobile Hamburger Toggle & Brand Logo */}
+    <header className="sticky top-0 z-50 px-3 pt-3 sm:px-4 sm:pt-4 pointer-events-none">
+      <div
+        className={`nav-pill glass-1 pointer-events-auto mx-auto rounded-full flex items-center justify-between gap-2 pl-2 pr-2 sm:pl-3 sm:pr-3 ${
+          scrolled ? 'is-scrolled h-14 sm:h-[60px] max-w-6xl' : 'h-16 sm:h-[72px] max-w-7xl'
+        }`}
+      >
+        {/* Mobile menu toggle & brand */}
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 rounded-xl bg-white/5 border border-white/15 text-slate-200 hover:text-white shrink-0"
-            aria-label="Toggle navigation menu"
+            onClick={() => setMobileMenuOpen(true)}
+            className="glass-round md:hidden w-10 h-10 shrink-0"
+            aria-label="Open navigation menu"
+            aria-expanded={mobileMenuOpen}
           >
-            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            <Menu className="w-[18px] h-[18px]" />
           </button>
 
-          <Link to="/" className="flex items-center gap-2 sm:gap-3 group min-w-0" onClick={() => setMobileMenuOpen(false)}>
-            <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-gradient-to-tr from-sky-200 via-sky-400 to-violet-400 p-0.5 shadow-lg shadow-sky-400/30 group-hover:scale-105 transition-transform overflow-hidden shrink-0">
+          <Link to="/" className="flex items-center gap-2 sm:gap-3 group min-w-0">
+            <div className="medallion-ring w-9 h-9 sm:w-11 sm:h-11 p-[3px] shrink-0 transition-transform duration-500 ease-out-expo group-hover:scale-105">
               <img
                 src="/logo.png"
                 alt="DD Mystery Box Logo"
-                className="w-full h-full object-contain rounded-full bg-[#0f0c1b]"
+                className="w-full h-full object-contain rounded-full bg-[#060B1F]"
                 onError={(e) => {
                   e.target.style.display = 'none';
                 }}
               />
             </div>
             <div className="min-w-0">
-              <span className="font-display font-black text-sm sm:text-xl text-white tracking-tight flex items-center gap-1 truncate">
-                DD MYSTERY BOX <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400 shrink-0" />
+              <span className="font-display font-extrabold text-sm sm:text-lg text-white tracking-[-0.02em] flex items-center gap-1 truncate">
+                DD MYSTERY BOX <Sparkles className="w-3.5 h-3.5 text-[#FFB84D] shrink-0" />
               </span>
-              <span className="text-[9px] sm:text-[10px] font-bold text-sky-300 uppercase tracking-widest block -mt-0.5 sm:-mt-1 truncate hidden sm:block">
+              <span className="text-[10px] font-medium text-white/50 tracking-wide -mt-0.5 truncate hidden sm:block">
                 "Surprise Boxes for Every Moment"
               </span>
             </div>
           </Link>
         </div>
 
-        {/* Desktop Navigation Links */}
-        <nav className="hidden md:flex items-center gap-6 lg:gap-8 text-xs font-extrabold uppercase tracking-wider text-slate-300">
-          <Link to="/" className="hover:text-sky-300 transition-colors">Home</Link>
-          <Link to="/shop" className="hover:text-sky-300 transition-colors">All Mystery Boxes</Link>
-          <Link to="/reviews" className="hover:text-sky-300 transition-colors">Reviews</Link>
-          <Link to="/faq" className="hover:text-sky-300 transition-colors">FAQ</Link>
-          <Link to="/contact" className="hover:text-sky-300 transition-colors">Contact</Link>
+        {/* Desktop navigation */}
+        <nav className="hidden md:flex items-center gap-0.5 lg:gap-1 text-[13px] font-medium">
+          {desktopLinks.map((link) => (
+            <NavLink key={link.to} to={link.to} end={link.end} className="nav-link whitespace-nowrap">
+              {link.label}
+            </NavLink>
+          ))}
         </nav>
 
-        {/* User Utilities (Wishlist, Cart, Profile Dropdown) */}
-        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
-          
-          {/* Wishlist Icon Badge */}
-          <Link
-            to="/wishlist"
-            className="relative p-2 sm:p-2.5 rounded-xl bg-white/5 border border-white/15 text-slate-200 hover:text-sky-300 hover:bg-white/10 transition-all hover:scale-105"
-            title="Wishlist"
-          >
-            <Heart className="w-4 h-4 sm:w-5 sm:h-5" />
-            {wishlistCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-sky-400 text-slate-950 font-extrabold text-[9px] sm:text-[10px] flex items-center justify-center shadow-lg shadow-sky-400/50">
-                {wishlistCount}
-              </span>
-            )}
+        {/* Wishlist, cart, profile */}
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <Link to="/wishlist" className="glass-round w-10 h-10" title="Wishlist" aria-label={`Wishlist (${wishlistCount} items)`}>
+            <Heart className="w-[18px] h-[18px]" />
+            <CountBadge count={wishlistCount} />
           </Link>
 
-          {/* Cart Icon Badge */}
-          <Link
-            to="/cart"
-            className="relative p-2 sm:p-2.5 rounded-xl bg-white/5 border border-white/15 text-slate-200 hover:text-sky-300 hover:bg-white/10 transition-all hover:scale-105"
-            title="Shopping Cart"
-          >
-            <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5 text-sky-300" />
-            {cartCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-gradient-to-r from-sky-300 to-violet-400 text-slate-950 font-extrabold text-[9px] sm:text-[10px] flex items-center justify-center shadow-lg shadow-sky-400/50">
-                {cartCount}
-              </span>
-            )}
+          <Link to="/cart" className="glass-round w-10 h-10" title="Shopping Cart" aria-label={`Cart (${cartCount} items)`}>
+            <ShoppingBag className="w-[18px] h-[18px]" />
+            <CountBadge count={cartCount} />
           </Link>
 
-          {/* Auth Button or User Profile Dropdown */}
           {user ? (
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setDropdownOpen(!dropdownOpen)}
-                className="flex items-center gap-1.5 p-1 sm:p-1.5 sm:pr-3 rounded-2xl bg-white/5 border border-white/15 text-slate-200 hover:border-sky-300/60 transition-all"
+                className="glass-round h-10 gap-1.5 p-1 sm:pr-3"
+                aria-haspopup="menu"
+                aria-expanded={dropdownOpen}
               >
-                <img
-                  src={user.profileImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=8b5cf6&color=fff`}
-                  alt={user.name}
-                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl object-cover border border-purple-500/40"
-                />
-                <span className="font-bold text-xs max-w-[70px] sm:max-w-[100px] truncate text-white hidden xs:inline">{user.name}</span>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                <span className="avatar-ring w-8 h-8 shrink-0">
+                  <img
+                    src={user.profileImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=7C5CFF&color=fff`}
+                    alt={user.name}
+                    className="w-full h-full rounded-full object-cover bg-[#14103A]"
+                  />
+                </span>
+                <span className="font-semibold text-xs max-w-[70px] sm:max-w-[100px] truncate text-white hidden xs:inline">{user.name}</span>
+                <ChevronDown className={`w-3.5 h-3.5 text-white/50 hidden sm:block transition-transform duration-300 ${dropdownOpen ? 'rotate-180' : ''}`} />
               </button>
 
-              {/* Profile Dropdown Menu */}
               {dropdownOpen && (
-                <div className="absolute right-0 mt-2 w-56 glass-panel rounded-2xl p-2 border border-purple-500/30 shadow-2xl z-50 space-y-1">
-                  <div className="p-3 border-b border-slate-800">
-                    <span className="block font-bold text-white text-xs truncate">{user.name}</span>
-                    <span className="block text-[10px] text-slate-400 truncate">{user.email}</span>
+                <div className="absolute right-0 mt-3 w-60 glass-panel rounded-[18px] p-2 z-50 space-y-0.5" role="menu">
+                  <div className="p-3 mb-1 border-b border-white/10">
+                    <span className="block font-semibold text-white text-xs truncate">{user.name}</span>
+                    <span className="block text-[11px] text-white/50 truncate">{user.email}</span>
                   </div>
 
-                  <Link
-                    to="/profile"
-                    onClick={() => setDropdownOpen(false)}
-                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-300 hover:bg-purple-600/20 hover:text-white transition-colors"
-                  >
-                    <User className="w-4 h-4 text-pink-400" /> My Profile
+                  <Link to="/profile" onClick={() => setDropdownOpen(false)} className={dropdownItem}>
+                    <User className="w-4 h-4 text-[#FF4FA3]" /> My Profile
                   </Link>
-
-                  <Link
-                    to="/my-orders"
-                    onClick={() => setDropdownOpen(false)}
-                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-300 hover:bg-purple-600/20 hover:text-white transition-colors"
-                  >
-                    <Package className="w-4 h-4 text-purple-400" /> My Orders
+                  <Link to="/my-orders" onClick={() => setDropdownOpen(false)} className={dropdownItem}>
+                    <Package className="w-4 h-4 text-[#7C5CFF]" /> My Orders
                   </Link>
-
-                  <Link
-                    to="/saved-addresses"
-                    onClick={() => setDropdownOpen(false)}
-                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-300 hover:bg-purple-600/20 hover:text-white transition-colors"
-                  >
-                    <MapPin className="w-4 h-4 text-emerald-400" /> Saved Addresses
+                  <Link to="/saved-addresses" onClick={() => setDropdownOpen(false)} className={dropdownItem}>
+                    <MapPin className="w-4 h-4 text-[#3DD9FF]" /> Saved Addresses
                   </Link>
 
                   {user.role === 'admin' && (
                     <Link
                       to="/admin"
                       onClick={() => setDropdownOpen(false)}
-                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-amber-300 hover:bg-amber-500/20 transition-colors"
+                      className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-[#FFB84D] hover:bg-[#FFB84D]/10 transition-colors"
                     >
-                      <Shield className="w-4 h-4 text-amber-400" /> Admin Panel
+                      <Shield className="w-4 h-4" /> Admin Panel
                     </Link>
                   )}
 
                   <button
                     onClick={handleLogout}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-rose-400 hover:bg-rose-500/20 transition-colors text-left"
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-rose-300 hover:bg-rose-500/15 transition-colors text-left"
                   >
                     <LogOut className="w-4 h-4" /> Logout
                   </button>
@@ -175,67 +203,52 @@ export const Navbar = () => {
               )}
             </div>
           ) : (
-            <Link
-              to="/login"
-              className="px-3.5 py-2 sm:px-5 sm:py-2.5 rounded-xl ice-button font-extrabold text-[11px] sm:text-xs uppercase tracking-wider hover:scale-105 transition-all"
-            >
+            <Link to="/login" className="btn btn-luminous h-10 px-4 sm:px-5 text-xs tracking-wide">
               Login
             </Link>
           )}
-
         </div>
-
       </div>
 
-      {/* Mobile Drawer Menu */}
-      {mobileMenuOpen && (
-        <div className="md:hidden border-t border-white/10 bg-slate-950/80 backdrop-blur-2xl px-4 py-4 space-y-3 animate-in slide-in-from-top duration-300">
-          <nav className="flex flex-col space-y-2 text-xs font-extrabold uppercase tracking-wider text-slate-200">
-            <Link
-              to="/"
+      {/* Mobile bottom-sheet menu, portalled so it sits above the bottom nav */}
+      {mobileMenuOpen &&
+        createPortal(
+          <div className="md:hidden fixed inset-0 z-[70]" role="dialog" aria-modal="true" aria-label="Navigation menu">
+            <button
+              className="sheet-backdrop absolute inset-0 w-full h-full cursor-default"
+              aria-label="Close navigation menu"
               onClick={() => setMobileMenuOpen(false)}
-              className="px-3 py-2.5 rounded-xl hover:bg-purple-600/20 hover:text-sky-300 transition-colors"
-            >
-              Home
-            </Link>
-            <Link
-              to="/shop"
-              onClick={() => setMobileMenuOpen(false)}
-              className="px-3 py-2.5 rounded-xl hover:bg-purple-600/20 hover:text-sky-300 transition-colors"
-            >
-              All Mystery Boxes
-            </Link>
-            <Link
-              to="/reviews"
-              onClick={() => setMobileMenuOpen(false)}
-              className="px-3 py-2.5 rounded-xl hover:bg-purple-600/20 hover:text-sky-300 transition-colors"
-            >
-              Customer Reviews
-            </Link>
-            <Link
-              to="/faq"
-              onClick={() => setMobileMenuOpen(false)}
-              className="px-3 py-2.5 rounded-xl hover:bg-purple-600/20 hover:text-sky-300 transition-colors"
-            >
-              FAQ
-            </Link>
-            <Link
-              to="/contact"
-              onClick={() => setMobileMenuOpen(false)}
-              className="px-3 py-2.5 rounded-xl hover:bg-purple-600/20 hover:text-sky-300 transition-colors"
-            >
-              Contact Us
-            </Link>
-            <Link
-              to="/track"
-              onClick={() => setMobileMenuOpen(false)}
-              className="px-3 py-2.5 rounded-xl hover:bg-purple-600/20 hover:text-sky-300 transition-colors"
-            >
-              Track Order
-            </Link>
-          </nav>
-        </div>
-      )}
+            />
+            <div className="sheet glass-2 absolute inset-x-0 bottom-0 rounded-t-[28px] px-4 pt-3 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+              <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-white/25" aria-hidden="true" />
+              <div className="flex items-center justify-between mb-3 px-1">
+                <span className="eyebrow">Menu</span>
+                <button onClick={() => setMobileMenuOpen(false)} className="glass-round w-9 h-9" aria-label="Close navigation menu">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <nav className="flex flex-col gap-2">
+                {mobileLinks.map((link) => (
+                  <NavLink
+                    key={link.to}
+                    to={link.to}
+                    end={link.end}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={({ isActive }) =>
+                      `glass-1 rounded-[18px] px-4 py-3.5 flex items-center justify-between text-sm font-semibold transition-colors ${
+                        isActive ? 'is-current text-white' : 'text-white/75'
+                      }`
+                    }
+                  >
+                    {link.label}
+                    <ChevronRight className="w-4 h-4 text-white/40" />
+                  </NavLink>
+                ))}
+              </nav>
+            </div>
+          </div>,
+          document.body
+        )}
     </header>
   );
 };

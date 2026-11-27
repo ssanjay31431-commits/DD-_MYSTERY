@@ -49,10 +49,12 @@ const AdminRewards = lazy(() => import('./pages/admin/AdminRewards').then((modul
 const AdminSettings = lazy(() => import('./pages/admin/AdminSettings').then((module) => ({ default: module.AdminSettings })));
 const AdminNotificationLogs = lazy(() => import('./pages/admin/AdminNotificationLogs').then((module) => ({ default: module.AdminNotificationLogs })));
 import { MobileBottomNav } from './components/common/MobileBottomNav';
+import { AmbientBackground } from './components/common/AmbientBackground';
 
 function CustomerLayout({ children }) {
   return (
     <div className="flex flex-col min-h-screen text-slate-100 overflow-x-clip">
+      <AmbientBackground />
       <Navbar />
       <main className="flex-grow pb-20 md:pb-0">{children}</main>
       <Footer />
